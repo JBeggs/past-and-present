@@ -1,0 +1,9 @@
+# Past and Present Environment Variables
+# Copy this file to .env.local and fill in the values
+
+# API Configuration
+NEXT_PUBLIC_API_URL=https://3pillars.pythonanywhere.com/api
+NEXT_PUBLIC_COMPANY_SLUG=past-and-present
+
+# Optional: Override for local development
+# NEXT_PUBLIC_API_URL=http://localhost:8000/api

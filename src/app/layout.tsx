@@ -1,0 +1,98 @@
+import type { Metadata } from 'next'
+import { Inter, Playfair_Display } from 'next/font/google'
+import { Suspense } from 'react'
+import './globals.css'
+import { serverNewsApi } from '@/lib/api-server'
+import { AuthProvider } from '@/contexts/AuthContext'
+import { ToastProvider } from '@/contexts/ToastContext'
+import { Header } from '@/components/layout/Header'
+import { Footer } from '@/components/layout/Footer'
+
+// Force dynamic rendering since we use cookies in Header/Footer
+export const dynamic = 'force-dynamic'
+
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap'
+})
+
+const playfair = Playfair_Display({ 
+  subsets: ['latin'],
+  variable: '--font-playfair',
+  display: 'swap'
+})
+
+// Get dynamic metadata from database
+async function generateMetadata(): Promise<Metadata> {
+  try {
+    const settings = await serverNewsApi.siteSettings.list() as any
+    const settingsArray = Array.isArray(settings) ? settings : (settings?.results || [])
+    
+    function tryParseJSON(value: string) {
+      try {
+        return JSON.parse(value)
+      } catch {
+        return value
+      }
+    }
+
+    const settingsMap = settingsArray.reduce((acc: Record<string, any>, setting: any) => ({
+      ...acc,
+      [setting.key]: tryParseJSON(setting.value)
+    }), {})
+    
+    const siteName = settingsMap.site_name || 'Past and Present'
+    const tagline = settingsMap.site_tagline || 'Vintage & Modern Treasures'
+    const description = settingsMap.site_description || 'Discover unique vintage treasures and modern finds. Quality second-hand items and new products, all in one place.'
+    
+    return {
+      title: `${siteName} | ${tagline}`,
+      description,
+      openGraph: {
+        title: `${siteName} | ${tagline}`,
+        description,
+        type: 'website',
+      },
+    }
+  } catch (error) {
+    return {
+      title: 'Past and Present | Vintage & Modern Treasures',
+      description: 'Discover unique vintage treasures and modern finds. Quality second-hand items and new products, all in one place.',
+    }
+  }
+}
+
+export const metadata = await generateMetadata()
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en" className={`${inter.variable} ${playfair.variable}`} data-scroll-behavior="smooth">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
+      <body className={`${inter.className} antialiased bg-vintage-background`}>
+        <ToastProvider>
+          <AuthProvider>
+            <div className="min-h-screen flex flex-col">
+              <Suspense fallback={<div className="h-20 bg-white border-b border-gray-200" />}>
+                <Header />
+              </Suspense>
+              <main className="flex-1">
+                {children}
+              </main>
+              <Suspense fallback={<div className="h-64 bg-vintage-primary" />}>
+                <Footer />
+              </Suspense>
+            </div>
+          </AuthProvider>
+        </ToastProvider>
+      </body>
+    </html>
+  )
+}

@@ -1,0 +1,331 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Variables for Past and Present hybrid theme */
+:root {
+  /* Vintage/Second-Hand Section */
+  --color-vintage-primary: #2C5F2D;
+  --color-vintage-primary-dark: #1E4620;
+  --color-vintage-background: #FAF5E9;
+  --color-vintage-accent: #B85042;
+  --color-vintage-accent-dark: #8B3D32;
+  
+  /* New Products Section */
+  --color-modern-primary: #002349;
+  --color-modern-primary-dark: #001830;
+  --color-modern-background: #F1F1F2;
+  --color-modern-accent: #D4AF37;
+  --color-modern-accent-dark: #B8962F;
+  
+  /* Shared */
+  --color-text: #333333;
+  --color-text-light: #666666;
+  --color-text-muted: #999999;
+}
+
+/* Base styles */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-feature-settings: "rlig" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Typography - Vintage/Modern hybrid */
+.heading-xl {
+  @apply text-4xl md:text-5xl lg:text-6xl font-bold font-playfair text-text leading-tight;
+}
+
+.heading-lg {
+  @apply text-3xl md:text-4xl font-bold font-playfair text-text leading-tight;
+}
+
+.heading-md {
+  @apply text-2xl md:text-3xl font-bold font-playfair text-text leading-tight;
+}
+
+.heading-sm {
+  @apply text-xl md:text-2xl font-semibold text-text leading-snug;
+}
+
+.heading-xs {
+  @apply text-lg md:text-xl font-semibold text-text leading-snug;
+}
+
+.body-lg {
+  @apply text-lg leading-relaxed text-text-light;
+}
+
+.body-md {
+  @apply text-base leading-relaxed text-text-light;
+}
+
+.body-sm {
+  @apply text-sm leading-relaxed text-text-muted;
+}
+
+/* Layout utilities */
+.container-wide {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+.container-narrow {
+  @apply max-w-4xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+/* Card components */
+.card {
+  @apply bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200;
+}
+
+.card-elevated {
+  @apply bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200;
+}
+
+.card-vintage {
+  @apply bg-vintage-background border border-vintage-primary/20 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200;
+}
+
+.card-modern {
+  @apply bg-modern-background border border-modern-primary/20 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200;
+}
+
+/* Button styles */
+.btn {
+  @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+}
+
+.btn-primary {
+  @apply bg-vintage-primary text-white hover:bg-vintage-primary-dark focus:ring-vintage-primary;
+}
+
+.btn-secondary {
+  @apply bg-gray-100 text-text hover:bg-gray-200 focus:ring-gray-500;
+}
+
+.btn-accent {
+  @apply bg-vintage-accent text-white hover:bg-vintage-accent-dark focus:ring-vintage-accent;
+}
+
+.btn-modern {
+  @apply bg-modern-primary text-white hover:bg-modern-primary-dark focus:ring-modern-primary;
+}
+
+.btn-gold {
+  @apply bg-modern-accent text-modern-primary hover:bg-modern-accent-dark focus:ring-modern-accent;
+}
+
+/* Navigation */
+.nav-link {
+  @apply text-text hover:text-vintage-primary font-medium transition-colors duration-200;
+}
+
+.nav-link-active {
+  @apply text-vintage-primary font-semibold;
+}
+
+/* Product card styling */
+.product-card {
+  @apply card overflow-hidden;
+}
+
+.product-card-vintage {
+  @apply card-vintage overflow-hidden;
+}
+
+.product-card-modern {
+  @apply card-modern overflow-hidden;
+}
+
+.product-image {
+  @apply w-full h-48 object-cover;
+}
+
+.product-image-lg {
+  @apply w-full h-64 md:h-80 object-cover;
+}
+
+/* Tag/badge styling */
+.tag {
+  @apply inline-block px-2 py-1 text-xs font-medium rounded-full;
+}
+
+.tag-vintage {
+  @apply bg-vintage-primary/10 text-vintage-primary;
+}
+
+.tag-new {
+  @apply bg-modern-primary/10 text-modern-primary;
+}
+
+.tag-sale {
+  @apply bg-vintage-accent/10 text-vintage-accent;
+}
+
+.tag-featured {
+  @apply bg-modern-accent/10 text-modern-accent-dark;
+}
+
+/* Price styling */
+.price {
+  @apply text-lg font-bold text-vintage-primary;
+}
+
+.price-original {
+  @apply text-sm text-text-muted line-through;
+}
+
+.price-sale {
+  @apply text-lg font-bold text-vintage-accent;
+}
+
+/* Section headers */
+.section-header {
+  @apply flex items-center justify-between mb-6 pb-3 border-b-2 border-vintage-primary;
+}
+
+.section-header-modern {
+  @apply flex items-center justify-between mb-6 pb-3 border-b-2 border-modern-accent;
+}
+
+.section-title {
+  @apply heading-md text-text;
+}
+
+/* Grid layouts */
+.product-grid {
+  @apply grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+}
+
+.article-grid {
+  @apply grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3;
+}
+
+/* Article styling */
+.article-content {
+  @apply prose prose-lg max-w-none;
+}
+
+.article-content h1 {
+  @apply heading-lg mb-4;
+}
+
+.article-content h2 {
+  @apply heading-md mb-3 mt-8;
+}
+
+.article-content h3 {
+  @apply heading-sm mb-2 mt-6;
+}
+
+.article-content p {
+  @apply body-md mb-4;
+}
+
+.article-content a {
+  @apply text-vintage-primary hover:text-vintage-primary-dark underline;
+}
+
+/* Form styling */
+.form-input {
+  @apply w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-vintage-primary focus:border-transparent;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-text mb-1;
+}
+
+.form-error {
+  @apply text-sm text-vintage-accent mt-1;
+}
+
+/* Divider lines */
+.divider {
+  @apply border-t border-gray-200;
+}
+
+.divider-vintage {
+  @apply border-t-2 border-vintage-primary;
+}
+
+.divider-modern {
+  @apply border-t-2 border-modern-accent;
+}
+
+/* Responsive text sizes */
+@media (max-width: 640px) {
+  .heading-xl {
+    @apply text-3xl;
+  }
+  
+  .heading-lg {
+    @apply text-2xl;
+  }
+  
+  .heading-md {
+    @apply text-xl;
+  }
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+  @apply outline-2 outline-offset-2 outline-vintage-primary;
+}
+
+/* Loading states */
+.skeleton {
+  @apply bg-gray-200 animate-pulse rounded;
+}
+
+/* Animation utilities */
+@keyframes slide-in-from-right-full {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation-duration: 300ms;
+  animation-fill-mode: both;
+}
+
+.slide-in-from-right-full {
+  animation-name: slide-in-from-right-full;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .card {
+    @apply border-2 border-text;
+  }
+  
+  .btn {
+    @apply border-2 border-current;
+  }
+}
