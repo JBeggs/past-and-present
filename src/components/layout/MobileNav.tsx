@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Menu, X, ShoppingCart, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -12,6 +12,11 @@ interface MobileNavProps {
 export function MobileNav({ menuItems }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { user } = useAuth()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   return (
     <div className="md:hidden">
@@ -45,15 +50,17 @@ export function MobileNav({ menuItems }: MobileNavProps) {
                 </Link>
               ))}
               <div className="border-t border-gray-200 pt-4 flex items-center space-x-4">
-                <Link
-                  href="/cart"
-                  className="flex items-center space-x-2 nav-link"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <ShoppingCart className="w-5 h-5" />
-                  <span>Cart</span>
-                </Link>
-                {user ? (
+                {mounted && user && (
+                  <Link
+                    href="/cart"
+                    className="flex items-center space-x-2 nav-link"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <ShoppingCart className="w-5 h-5" />
+                    <span>Cart</span>
+                  </Link>
+                )}
+                {mounted && user ? (
                   <Link
                     href="/profile"
                     className="flex items-center space-x-2 nav-link"
@@ -62,7 +69,7 @@ export function MobileNav({ menuItems }: MobileNavProps) {
                     <User className="w-5 h-5" />
                     <span>Profile</span>
                   </Link>
-                ) : (
+                ) : mounted ? (
                   <Link
                     href="/login"
                     className="btn btn-primary"
@@ -70,7 +77,7 @@ export function MobileNav({ menuItems }: MobileNavProps) {
                   >
                     Sign In
                   </Link>
-                )}
+                ) : null}
               </div>
             </div>
           </nav>

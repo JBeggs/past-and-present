@@ -5,6 +5,7 @@ import './globals.css'
 import { serverNewsApi } from '@/lib/api-server'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { ToastProvider } from '@/contexts/ToastContext'
+import { CartProvider } from '@/contexts/CartContext'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 
@@ -79,17 +80,19 @@ export default function RootLayout({
       <body className={`${inter.className} antialiased bg-vintage-background`}>
         <ToastProvider>
           <AuthProvider>
-            <div className="min-h-screen flex flex-col">
-              <Suspense fallback={<div className="h-20 bg-white border-b border-gray-200" />}>
-                <Header />
-              </Suspense>
-              <main className="flex-1">
-                {children}
-              </main>
-              <Suspense fallback={<div className="h-64 bg-vintage-primary" />}>
-                <Footer />
-              </Suspense>
-            </div>
+            <CartProvider>
+              <div className="min-h-screen flex flex-col">
+                <Suspense fallback={<div className="h-20 bg-white border-b border-gray-200" />}>
+                  <Header />
+                </Suspense>
+                <main className="flex-1">
+                  {children}
+                </main>
+                <Suspense fallback={<div className="h-64 bg-vintage-primary" />}>
+                  <Footer />
+                </Suspense>
+              </div>
+            </CartProvider>
           </AuthProvider>
         </ToastProvider>
       </body>

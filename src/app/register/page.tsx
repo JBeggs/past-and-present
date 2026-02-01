@@ -49,98 +49,133 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-vintage-background flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full">
-        <div className="card p-8">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-vintage-primary to-modern-accent rounded-lg flex items-center justify-center mx-auto mb-4">
-              <User className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold font-playfair text-text">Create Account</h1>
-            <p className="text-text-muted mt-2">Join our community of treasure hunters</p>
+    <div className="min-h-screen bg-vintage-background flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 animate-in fade-in duration-500">
+        <div className="bg-white p-8 rounded-xl shadow-xl border border-vintage-primary/10">
+          <div className="text-center mb-10">
+            <Link href="/" className="inline-block group transition-transform hover:scale-105 duration-300">
+              <div className="w-20 h-20 bg-gradient-to-br from-vintage-primary to-modern-accent rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-vintage-primary/20 group-hover:shadow-vintage-primary/30 transition-shadow">
+                <User className="w-10 h-10 text-white" />
+              </div>
+            </Link>
+            <h1 className="text-3xl font-bold font-playfair text-text tracking-tight">Create Account</h1>
+            <p className="text-text-muted mt-3 text-lg">Join our community of treasure hunters</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label htmlFor="fullName" className="form-label">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
+            <div className="space-y-2">
+              <label htmlFor="fullName" className="form-label text-sm font-semibold uppercase tracking-wider text-text-light">
+                Full Name
+              </label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none transition-colors group-focus-within:text-vintage-primary z-20">
+                  <User className="w-5 h-5 text-text-muted" />
+                </div>
                 <input
                   id="fullName"
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="form-input pl-10"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-md hover:border-vintage-primary/50 transition-all focus:bg-white focus:ring-4 focus:ring-vintage-primary/10 focus:outline-none focus:border-transparent relative z-10"
                   placeholder="John Doe"
                   required
                 />
               </div>
             </div>
 
-            <div>
-              <label htmlFor="email" className="form-label">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
+            <div className="space-y-2">
+              <label htmlFor="email" className="form-label text-sm font-semibold uppercase tracking-wider text-text-light">
+                Email
+              </label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none transition-colors group-focus-within:text-vintage-primary z-20">
+                  <Mail className="w-5 h-5 text-text-muted" />
+                </div>
                 <input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="form-input pl-10"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-md hover:border-vintage-primary/50 transition-all focus:bg-white focus:ring-4 focus:ring-vintage-primary/10 focus:outline-none focus:border-transparent relative z-10"
                   placeholder="you@example.com"
                   required
                 />
               </div>
             </div>
 
-            <div>
-              <label htmlFor="password" className="form-label">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
+            <div className="space-y-2">
+              <label htmlFor="password" className="form-label text-sm font-semibold uppercase tracking-wider text-text-light">
+                Password
+              </label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none transition-colors group-focus-within:text-vintage-primary z-20">
+                  <Lock className="w-5 h-5 text-text-muted" />
+                </div>
                 <input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="form-input pl-10"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-md hover:border-vintage-primary/50 transition-all focus:bg-white focus:ring-4 focus:ring-vintage-primary/10 focus:outline-none focus:border-transparent relative z-10"
                   placeholder="••••••••"
                   required
                   minLength={8}
                 />
               </div>
-              <p className="text-xs text-text-muted mt-1">At least 8 characters</p>
+              <p className="text-xs text-text-muted flex items-center gap-1 ml-1">
+                <span className="w-1 h-1 bg-text-muted rounded-full"></span>
+                At least 8 characters
+              </p>
             </div>
 
-            <div>
-              <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
+            <div className="space-y-2">
+              <label htmlFor="confirmPassword" className="form-label text-sm font-semibold uppercase tracking-wider text-text-light">
+                Confirm Password
+              </label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none transition-colors group-focus-within:text-vintage-primary z-20">
+                  <Lock className="w-5 h-5 text-text-muted" />
+                </div>
                 <input
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="form-input pl-10"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-md hover:border-vintage-primary/50 transition-all focus:bg-white focus:ring-4 focus:ring-vintage-primary/10 focus:outline-none focus:border-transparent relative z-10"
                   placeholder="••••••••"
                   required
                 />
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn btn-primary w-full py-3"
-            >
-              {isLoading ? 'Creating account...' : 'Create Account'}
-              {!isLoading && <ArrowRight className="w-4 h-4 ml-2" />}
-            </button>
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="btn btn-primary w-full py-4 text-base font-bold shadow-lg shadow-vintage-primary/20 hover:shadow-vintage-primary/30 active:scale-[0.98] transition-all disabled:opacity-70 disabled:scale-100"
+              >
+                {isLoading ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Creating account...
+                  </span>
+                ) : (
+                  <>
+                    Create Account
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </>
+                )}
+              </button>
+            </div>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-10 pt-8 border-t border-gray-100 text-center">
             <p className="text-text-muted">
               Already have an account?{' '}
-              <Link href="/login" className="text-vintage-primary hover:text-vintage-primary-dark font-medium">
+              <Link href="/login" className="text-vintage-primary hover:text-vintage-primary-dark font-bold transition-colors underline underline-offset-4">
                 Sign in
               </Link>
             </p>

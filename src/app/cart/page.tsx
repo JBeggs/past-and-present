@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ecommerceApi } from '@/lib/api'
 import { Cart, CartItem } from '@/lib/types'
 import { useToast } from '@/contexts/ToastContext'
+import { useCart } from '@/contexts/CartContext'
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Clock, Sparkles } from 'lucide-react'
 
 export default function CartPage() {
@@ -12,6 +13,7 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)
   const { showError, showSuccess } = useToast()
+  const { refreshCart } = useCart()
 
   useEffect(() => {
     fetchCart()
@@ -19,8 +21,21 @@ export default function CartPage() {
 
   const fetchCart = async () => {
     try {
-      const data = await ecommerceApi.cart.get() as Cart
-      setCart(data)
+      const response = await ecommerceApi.cart.get() as any
+      console.log('🔍 CART RESPONSE:', JSON.stringify(response, null, 2))
+      
+      // Handle the paginated response structure: { count, results: [cart] }
+      let cartData = null
+      if (response?.results && Array.isArray(response.results)) {
+        cartData = response.results[0]
+      } else if (response?.data) {
+        cartData = response.data
+      } else {
+        cartData = response
+      }
+      
+      setCart(cartData)
+      await refreshCart()
     } catch (error) {
       console.error('Error fetching cart:', error)
     } finally {
@@ -36,7 +51,9 @@ export default function CartPage() {
       await ecommerceApi.cart.updateItem(itemId, newQuantity)
       await fetchCart()
     } catch (error: any) {
-      showError(error.message || 'Failed to update quantity')
+      // Check for specific stock errors from the backend
+      const errorMsg = error?.details?.error?.message || error.message || 'Failed to update quantity'
+      showError(errorMsg)
     } finally {
       setUpdating(null)
     }
@@ -96,15 +113,21 @@ export default function CartPage() {
                 <div key={item.id} className="card p-4 flex gap-4">
                   {/* Product Image */}
                   <div className="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                    {item.product?.featured_image?.file_url ? (
+                    {(item as any).product_image ? (
                       <img
-                        src={item.product.featured_image.file_url}
-                        alt={item.product?.name || 'Product'}
+                        src={(item as any).product_image}
+                        alt={item.product_name || 'Product'}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (item.product?.featured_image?.file_url || item.product?.image) ? (
+                      <img
+                        src={item.product?.featured_image?.file_url || item.product?.image}
+                        alt={item.product_name || 'Product'}
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        {item.product?.is_vintage ? (
+                        {Array.isArray(item.product?.tags) && item.product?.tags.some((t: any) => (typeof t === 'string' ? t : t.name) === 'vintage') ? (
                           <Clock className="w-8 h-8 text-vintage-primary/30" />
                         ) : (
                           <Sparkles className="w-8 h-8 text-modern-primary/30" />
@@ -118,9 +141,9 @@ export default function CartPage() {
                     <div className="flex justify-between">
                       <div>
                         <h3 className="font-semibold text-text">
-                          {item.product?.name || 'Product'}
+                          {item.product_name || item.product?.name || 'Product'}
                         </h3>
-                        {item.product?.is_vintage && (
+                        {Array.isArray(item.product?.tags) && item.product?.tags.some((t: any) => (typeof t === 'string' ? t : t.name) === 'vintage') && (
                           <span className="tag tag-vintage text-xs">Vintage</span>
                         )}
                       </div>
@@ -155,7 +178,7 @@ export default function CartPage() {
 
                       {/* Price */}
                       <span className="font-bold text-vintage-primary">
-                        R{(item.price * item.quantity).toFixed(2)}
+                        R{Number(item.price * item.quantity).toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -171,25 +194,25 @@ export default function CartPage() {
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-text-muted">Subtotal</span>
-                    <span className="font-medium">R{cart?.subtotal?.toFixed(2) || '0.00'}</span>
+                    <span className="font-medium">R{Number(cart?.subtotal || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-text-muted">Shipping</span>
                     <span className="font-medium">
-                      {cart?.shipping ? `R${cart.shipping.toFixed(2)}` : 'Calculated at checkout'}
+                      {cart?.shipping ? `R${Number(cart.shipping).toFixed(2)}` : 'Calculated at checkout'}
                     </span>
                   </div>
-                  {cart?.tax && cart.tax > 0 && (
+                  {cart?.tax && Number(cart.tax) > 0 && (
                     <div className="flex justify-between">
                       <span className="text-text-muted">Tax</span>
-                      <span className="font-medium">R{cart.tax.toFixed(2)}</span>
+                      <span className="font-medium">R{Number(cart.tax).toFixed(2)}</span>
                     </div>
                   )}
                   <div className="divider my-4" />
                   <div className="flex justify-between text-lg">
                     <span className="font-semibold">Total</span>
                     <span className="font-bold text-vintage-primary">
-                      R{cart?.total?.toFixed(2) || cart?.subtotal?.toFixed(2) || '0.00'}
+                      R{Number(cart?.total || cart?.subtotal || 0).toFixed(2)}
                     </span>
                   </div>
                 </div>

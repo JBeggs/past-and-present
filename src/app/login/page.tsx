@@ -8,7 +8,7 @@ import { useToast } from '@/contexts/ToastContext'
 import { Mail, Lock, User, ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { signIn } = useAuth()
@@ -20,7 +20,7 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const { error } = await signIn(email, password)
+      const { error } = await signIn(username, password)
       
       if (error) {
         showError(error)
@@ -36,64 +36,103 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-vintage-background flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full">
-        <div className="card p-8">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-vintage-primary to-vintage-accent rounded-lg flex items-center justify-center mx-auto mb-4">
-              <User className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-2xl font-bold font-playfair text-text">Welcome Back</h1>
-            <p className="text-text-muted mt-2">Sign in to your account</p>
+    <div className="min-h-screen bg-vintage-background flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8 animate-in fade-in duration-500">
+        <div className="bg-white p-8 rounded-xl shadow-xl border border-vintage-primary/10">
+          <div className="text-center mb-10">
+            <Link href="/" className="inline-block group transition-transform hover:scale-105 duration-300">
+              <div className="w-20 h-20 bg-gradient-to-br from-vintage-primary to-vintage-primary-dark rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-vintage-primary/20 group-hover:shadow-vintage-primary/30 transition-shadow">
+                <User className="w-10 h-10 text-white" />
+              </div>
+            </Link>
+            <h1 className="text-3xl font-bold font-playfair text-text tracking-tight">Welcome Back</h1>
+            <p className="text-text-muted mt-3 text-lg">Sign in to your account</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="email" className="form-label">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
+            <div className="space-y-2">
+              <label htmlFor="username" className="form-label text-sm font-semibold uppercase tracking-wider text-text-light">
+                Username
+              </label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none transition-colors group-focus-within:text-vintage-primary z-20">
+                  <User className="w-5 h-5 text-text-muted" />
+                </div>
                 <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="form-input pl-10"
-                  placeholder="you@example.com"
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-md hover:border-vintage-primary/50 transition-all focus:bg-white focus:ring-4 focus:ring-vintage-primary/10 focus:outline-none focus:border-transparent relative z-10"
+                  placeholder="Enter your username"
                   required
                 />
               </div>
             </div>
 
-            <div>
-              <label htmlFor="password" className="form-label">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="form-label text-sm font-semibold uppercase tracking-wider text-text-light">
+                  Password
+                </label>
+                <Link href="#" className="text-xs font-semibold text-vintage-primary hover:text-vintage-primary-dark transition-colors">
+                  Forgot password?
+                </Link>
+              </div>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none transition-colors group-focus-within:text-vintage-primary z-20">
+                  <Lock className="w-5 h-5 text-text-muted" />
+                </div>
                 <input
                   id="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="form-input pl-10"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-md hover:border-vintage-primary/50 transition-all focus:bg-white focus:ring-4 focus:ring-vintage-primary/10 focus:outline-none focus:border-transparent relative z-10"
                   placeholder="••••••••"
                   required
                 />
               </div>
             </div>
 
+            <div className="flex items-center">
+              <input
+                id="remember-me"
+                name="remember-me"
+                type="checkbox"
+                className="h-4 w-4 text-vintage-primary focus:ring-vintage-primary border-gray-300 rounded cursor-pointer"
+              />
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-text-light cursor-pointer select-none">
+                Remember me
+              </label>
+            </div>
+
             <button
               type="submit"
               disabled={isLoading}
-              className="btn btn-primary w-full py-3"
+              className="btn btn-primary w-full py-4 text-base font-bold shadow-lg shadow-vintage-primary/20 hover:shadow-vintage-primary/30 active:scale-[0.98] transition-all disabled:opacity-70 disabled:scale-100"
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
-              {!isLoading && <ArrowRight className="w-4 h-4 ml-2" />}
+              {isLoading ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Signing in...
+                </span>
+              ) : (
+                <>
+                  Sign In
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </>
+              )}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-10 pt-8 border-t border-gray-100 text-center">
             <p className="text-text-muted">
               Don't have an account?{' '}
-              <Link href="/register" className="text-vintage-primary hover:text-vintage-primary-dark font-medium">
+              <Link href="/register" className="text-vintage-primary hover:text-vintage-primary-dark font-bold transition-colors underline underline-offset-4">
                 Create one
               </Link>
             </p>

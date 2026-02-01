@@ -22,7 +22,10 @@ class ServerApiClient {
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      'X-Company-Slug': DEFAULT_COMPANY_SLUG,
+    }
+
+    if (DEFAULT_COMPANY_SLUG) {
+      headers['X-Company-Slug'] = DEFAULT_COMPANY_SLUG
     }
 
     if (token) {
@@ -46,13 +49,52 @@ class ServerApiClient {
       })
     }
 
+    const headers = await this.getHeaders()
+    console.log(`DEBUG: Fetching ${url.toString()} with headers:`, JSON.stringify(headers))
+
     const response = await fetch(url.toString(), {
       method: 'GET',
-      headers: await this.getHeaders(),
-      next: { revalidate: 60 }, // Cache for 60 seconds
+      headers,
+      cache: 'no-store', // Disable caching for authenticated requests
     })
 
     if (!response.ok) {
+      if (response.status === 401) {
+        // Only return empty/null if it's not a public-friendly endpoint
+        // For now, let's log it but allow the error to propagate if it's not a 401 we want to swallow
+        console.warn(`API 401 at ${url.toString()}`)
+        
+        // If it's a GET request to a potentially public endpoint, we might want to throw 
+        // instead of returning empty, so the UI can handle it or we can see the real error.
+        // However, the current behavior is to return empty. Let's make it more selective.
+        
+        const isPublicEndpoint = endpoint.includes('/v1/products/') || 
+                                endpoint.includes('/v1/categories/') ||
+                                endpoint.includes('/news/')
+
+        if (isPublicEndpoint) {
+          // If a public endpoint returns 401, it's likely a backend configuration issue 
+          // or it actually requires a token when it shouldn't.
+          console.error(`Public endpoint ${endpoint} returned 401 Unauthorized. Please check backend permissions.`);
+          if (endpoint.endsWith('/') || endpoint.includes('?')) {
+            return [] as unknown as T
+          }
+          return null as unknown as T
+        }
+
+        if (endpoint.endsWith('/') || endpoint.includes('?')) {
+          return [] as unknown as T
+        }
+        return null as unknown as T
+      }
+      if (response.status === 404) {
+        console.warn(`API 404 at ${url.toString()}`)
+        // Return empty array for list endpoints, or null for single object endpoints
+        if (endpoint.endsWith('/') || endpoint.includes('?')) {
+          return [] as unknown as T
+        }
+        return null as unknown as T
+      }
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
 
@@ -99,14 +141,14 @@ export const serverNewsApi = {
 export const serverEcommerceApi = {
   products: {
     list: (params?: { category?: string; search?: string; page?: number; is_active?: boolean }) =>
-      serverApiClient.get('/ecommerce/products/', params),
-    get: (id: string) => serverApiClient.get(`/ecommerce/products/${id}/`),
-    getBySlug: (slug: string) => serverApiClient.get(`/ecommerce/products/?slug=${slug}`),
+      serverApiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/products/`, params),
+    get: (id: string) => serverApiClient.get(`/v1/products/${id}/`),
+    getBySlug: (slug: string) => serverApiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/products/slug/${slug}/`),
   },
 
   categories: {
-    list: () => serverApiClient.get('/ecommerce/categories/'),
-    get: (id: string) => serverApiClient.get(`/ecommerce/categories/${id}/`),
+    list: () => serverApiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/categories/`),
+    get: (id: string) => serverApiClient.get(`/v1/categories/${id}/`),
   },
 }
 

@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { serverEcommerceApi } from '@/lib/api-server'
 import { Product } from '@/lib/types'
 import { Clock, Sparkles, Filter, Search } from 'lucide-react'
+import AdminActions from '@/components/products/AdminActions'
+import ProductCard from '@/components/products/ProductCard'
 
 interface ProductsPageProps {
   searchParams: Promise<{ condition?: string; category?: string; search?: string; page?: string }>
@@ -16,13 +18,19 @@ async function getProducts(params: { condition?: string; category?: string; sear
       page: params.page ? parseInt(params.page) : 1,
     })
 
-    let products = Array.isArray(productsData) ? productsData : (productsData as any)?.results || []
+    let products = Array.isArray(productsData) ? productsData : (productsData as any)?.data || (productsData as any)?.results || []
     
     // Filter by condition if specified
     if (params.condition === 'vintage') {
-      products = products.filter((p: Product) => p.is_vintage)
+      products = products.filter((p: Product) => {
+        const tags = Array.isArray(p.tags) ? p.tags.map(t => typeof t === 'string' ? t : t.name) : []
+        return tags.includes('vintage')
+      })
     } else if (params.condition === 'new') {
-      products = products.filter((p: Product) => !p.is_vintage)
+      products = products.filter((p: Product) => {
+        const tags = Array.isArray(p.tags) ? p.tags.map(t => typeof t === 'string' ? t : t.name) : []
+        return !tags.includes('vintage')
+      })
     }
 
     return products
@@ -40,6 +48,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   return (
     <div className="min-h-screen bg-vintage-background">
+      {/* Admin Management Actions */}
+      <AdminActions />
+
       {/* Page Header */}
       <section className={`py-12 ${isVintage ? 'bg-vintage-primary' : isNew ? 'bg-modern-primary' : 'bg-gradient-to-r from-vintage-primary to-modern-primary'} text-white`}>
         <div className="container-wide">
@@ -102,57 +113,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           {products.length > 0 ? (
             <div className="product-grid">
               {products.map((product: Product) => (
-                <Link
-                  key={product.id}
-                  href={`/products/${product.slug}`}
-                  className={`${product.is_vintage ? 'product-card-vintage' : 'product-card-modern'} group`}
-                >
-                  <div className="relative overflow-hidden">
-                    {product.featured_image?.file_url ? (
-                      <img
-                        src={product.featured_image.file_url}
-                        alt={product.name}
-                        className="product-image group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="product-image bg-gray-100 flex items-center justify-center">
-                        {product.is_vintage ? (
-                          <Clock className="w-12 h-12 text-vintage-primary/30" />
-                        ) : (
-                          <Sparkles className="w-12 h-12 text-modern-primary/30" />
-                        )}
-                      </div>
-                    )}
-                    <span className={`tag ${product.is_vintage ? 'tag-vintage' : 'tag-new'} absolute top-2 left-2`}>
-                      {product.is_vintage ? 'Vintage' : 'New'}
-                    </span>
-                    {product.compare_at_price && product.compare_at_price > product.price && (
-                      <span className="tag tag-sale absolute top-2 right-2">Sale</span>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <h3 className={`font-semibold text-text group-hover:${product.is_vintage ? 'text-vintage-primary' : 'text-modern-primary'} transition-colors`}>
-                      {product.name}
-                    </h3>
-                    {product.description && (
-                      <p className="text-sm text-text-muted mt-1 line-clamp-2">{product.description}</p>
-                    )}
-                    <div className="mt-3 flex items-center gap-2">
-                      <span className={`price ${product.is_vintage ? '' : 'text-modern-primary'}`}>
-                        R{product.price.toFixed(2)}
-                      </span>
-                      {product.compare_at_price && product.compare_at_price > product.price && (
-                        <span className="price-original">R{product.compare_at_price.toFixed(2)}</span>
-                      )}
-                    </div>
-                    {product.quantity <= 5 && product.quantity > 0 && (
-                      <p className="text-sm text-vintage-accent mt-2">Only {product.quantity} left!</p>
-                    )}
-                    {product.quantity === 0 && (
-                      <p className="text-sm text-text-muted mt-2">Out of stock</p>
-                    )}
-                  </div>
-                </Link>
+                <ProductCard key={product.id} product={product} />
               ))}
             </div>
           ) : (

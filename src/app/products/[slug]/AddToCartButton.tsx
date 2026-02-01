@@ -2,38 +2,61 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { ecommerceApi } from '@/lib/api'
 import { useToast } from '@/contexts/ToastContext'
+import { useCart } from '@/contexts/CartContext'
 import { Product } from '@/lib/types'
-import { ShoppingCart, Plus, Minus } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import { ShoppingCart, Plus, Minus, Lock } from 'lucide-react'
 
 interface AddToCartButtonProps {
   product: Product
 }
 
 export default function AddToCartButton({ product }: AddToCartButtonProps) {
+  const { user } = useAuth()
   const [quantity, setQuantity] = useState(1)
   const [loading, setLoading] = useState(false)
   const { showSuccess, showError } = useToast()
+  const { refreshCart } = useCart()
   const router = useRouter()
 
   const handleAddToCart = async () => {
-    if (product.quantity === 0) return
+    // alert('AddToCartButton: handleAddToCart clicked')
+    console.log('AddToCartButton: handleAddToCart clicked', { productId: product.id, quantity, user: !!user })
+    const stockQuantity = product.stock_quantity ?? product.quantity ?? 0
+    if (stockQuantity === 0) {
+      console.warn('AddToCartButton: Product out of stock')
+      return
+    }
+
+    if (!user) {
+      console.warn('AddToCartButton: No user logged in')
+      return
+    }
 
     setLoading(true)
     try {
-      await ecommerceApi.cart.addItem(product.id, quantity)
+      console.log('AddToCartButton: Calling addItem API...')
+      // Use the correct endpoint from JavaMellow if needed
+      const response = await ecommerceApi.cart.addItem(product.id, quantity)
+      console.log('AddToCartButton: addItem response', response)
       showSuccess(`${product.name} added to cart!`)
+      await refreshCart()
       router.refresh()
     } catch (error: any) {
-      showError(error.message || 'Failed to add to cart')
+      console.error('AddToCartButton: addItem failed', error)
+      const errorMsg = error?.details?.error?.message || error.message || 'Failed to add to cart'
+      showError(errorMsg)
     } finally {
       setLoading(false)
     }
   }
 
-  const isOutOfStock = product.quantity === 0
-  const maxQuantity = Math.min(product.quantity, 10)
+  const stockQuantity = product.stock_quantity ?? product.quantity ?? 0
+  const isOutOfStock = stockQuantity === 0
+  const maxQuantity = Math.min(stockQuantity || 10, 10)
 
   return (
     <div className="space-y-4">
@@ -60,20 +83,30 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       </div>
 
       {/* Add to Cart Button */}
-      <button
-        onClick={handleAddToCart}
-        disabled={loading || isOutOfStock}
-        className={`w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 transition-colors ${
-          isOutOfStock
-            ? 'bg-gray-200 text-text-muted cursor-not-allowed'
-            : product.is_vintage
+      <div className="space-y-2">
+        <button
+          onClick={handleAddToCart}
+          disabled={loading || isOutOfStock || !user}
+          className={`w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 transition-colors ${
+            !user
+              ? 'bg-gray-200 text-text-muted cursor-not-allowed'
+              : isOutOfStock
+              ? 'bg-gray-200 text-text-muted cursor-not-allowed'
+              : (Array.isArray(product.tags) && product.tags.some((t: any) => (typeof t === 'string' ? t : t.name) === 'vintage'))
               ? 'bg-vintage-primary text-white hover:bg-vintage-primary-dark'
               : 'bg-modern-primary text-white hover:bg-modern-primary-dark'
-        }`}
-      >
-        <ShoppingCart className="w-5 h-5" />
-        {loading ? 'Adding...' : isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
-      </button>
+          } shadow-lg shadow-vintage-primary/10`}
+        >
+          {!user ? <Lock className="w-5 h-5" /> : <ShoppingCart className="w-5 h-5" />}
+          {loading ? 'Adding...' : !user ? 'Login to Purchase' : isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+        </button>
+        
+        {!user && (
+          <p className="text-xs text-center text-vintage-accent font-bold uppercase tracking-wider">
+            Please <Link href="/login" className="underline">login</Link> or <Link href="/register" className="underline">register</Link> to add items to your cart
+          </p>
+        )}
+      </div>
     </div>
   )
 }

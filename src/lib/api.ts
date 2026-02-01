@@ -25,19 +25,38 @@ export class ApiClient {
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL
     if (typeof window !== 'undefined') {
-      this.refreshToken = localStorage.getItem('refresh_token')
+      try {
+        this.refreshToken = localStorage.getItem('refresh_token')
+      } catch (e) {
+        console.warn('localStorage is not accessible:', e)
+        this.refreshToken = null
+      }
     }
   }
 
   setToken(token: string | null) {
     this.token = token
     if (typeof window !== 'undefined') {
-      if (token) {
-        localStorage.setItem('auth_token', token)
-        document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Lax`
-      } else {
-        localStorage.removeItem('auth_token')
-        document.cookie = 'auth_token=; path=/; max-age=0'
+      try {
+        const isSecure = window.location.protocol === 'https:'
+        // Use a longer max-age for the access token to avoid frequent refreshes
+        // and ensure it's not session-only. Also add explicit expires for Safari.
+        const maxAge = 31536000
+        const expiryDate = new Date(Date.now() + maxAge * 1000).toUTCString()
+        const cookieBase = `; path=/; max-age=${maxAge}; expires=${expiryDate}; SameSite=Lax${isSecure ? '; Secure' : ''}`
+        
+        if (token) {
+          if (token.length > 3800) {
+            console.warn('Auth token is large and may exceed Safari cookie limits:', token.length)
+          }
+          localStorage.setItem('auth_token', token)
+          document.cookie = `auth_token=${token}${cookieBase}`
+        } else {
+          localStorage.removeItem('auth_token')
+          document.cookie = `auth_token=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT${isSecure ? '; Secure' : ''}`
+        }
+      } catch (e) {
+        console.warn('Storage is not accessible for setting token:', e)
       }
     }
   }
@@ -45,20 +64,45 @@ export class ApiClient {
   setRefreshToken(refreshToken: string | null) {
     this.refreshToken = refreshToken
     if (typeof window !== 'undefined') {
-      if (refreshToken) {
-        localStorage.setItem('refresh_token', refreshToken)
-        document.cookie = `refresh_token=${refreshToken}; path=/; max-age=604800; SameSite=Lax`
-      } else {
-        localStorage.removeItem('refresh_token')
-        document.cookie = 'refresh_token=; path=/; max-age=0'
+      try {
+        const isSecure = window.location.protocol === 'https:'
+        // Refresh tokens should last a long time (1 year)
+        const maxAge = 31536000
+        const expiryDate = new Date(Date.now() + maxAge * 1000).toUTCString()
+        const cookieBase = `; path=/; max-age=${maxAge}; expires=${expiryDate}; SameSite=Lax${isSecure ? '; Secure' : ''}`
+        
+        if (refreshToken) {
+          if (refreshToken.length > 3800) {
+            console.warn('Refresh token is large and may exceed Safari cookie limits:', refreshToken.length)
+          }
+          localStorage.setItem('refresh_token', refreshToken)
+          document.cookie = `refresh_token=${refreshToken}${cookieBase}`
+        } else {
+          localStorage.removeItem('refresh_token')
+          document.cookie = `refresh_token=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT${isSecure ? '; Secure' : ''}`
+        }
+      } catch (e) {
+        console.warn('Storage is not accessible for setting refresh token:', e)
       }
     }
+  }
+
+  private getCookie(name: string): string | null {
+    if (typeof document === 'undefined') return null
+    const value = `; ${document.cookie}`
+    const parts = value.split(`; ${name}=`)
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || null
+    return null
   }
 
   getRefreshToken(): string | null {
     if (this.refreshToken) return this.refreshToken
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('refresh_token')
+      try {
+        return localStorage.getItem('refresh_token') || this.getCookie('refresh_token')
+      } catch (e) {
+        return this.getCookie('refresh_token')
+      }
     }
     return null
   }
@@ -114,7 +158,11 @@ export class ApiClient {
   getToken(): string | null {
     if (this.token) return this.token
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('auth_token')
+      try {
+        return localStorage.getItem('auth_token') || this.getCookie('auth_token')
+      } catch (e) {
+        return this.getCookie('auth_token')
+      }
     }
     return null
   }
@@ -122,12 +170,21 @@ export class ApiClient {
   setCompanyId(companyId: string | null) {
     this.companyId = companyId
     if (typeof window !== 'undefined') {
-      if (companyId) {
-        localStorage.setItem('company_id', companyId)
-        document.cookie = `company_id=${companyId}; path=/; max-age=86400; SameSite=Lax`
-      } else {
-        localStorage.removeItem('company_id')
-        document.cookie = 'company_id=; path=/; max-age=0'
+      try {
+        const isSecure = window.location.protocol === 'https:'
+        const maxAge = 31536000
+        const expiryDate = new Date(Date.now() + maxAge * 1000).toUTCString()
+        const cookieBase = `; path=/; max-age=${maxAge}; expires=${expiryDate}; SameSite=Lax${isSecure ? '; Secure' : ''}`
+        
+        if (companyId) {
+          localStorage.setItem('company_id', companyId)
+          document.cookie = `company_id=${companyId}${cookieBase}`
+        } else {
+          localStorage.removeItem('company_id')
+          document.cookie = `company_id=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT${isSecure ? '; Secure' : ''}`
+        }
+      } catch (e) {
+        console.warn('Storage is not accessible for setting company id:', e)
       }
     }
   }
@@ -135,7 +192,11 @@ export class ApiClient {
   getCompanyId(): string | null {
     if (this.companyId) return this.companyId
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('company_id')
+      try {
+        return localStorage.getItem('company_id') || this.getCookie('company_id')
+      } catch (e) {
+        return this.getCookie('company_id')
+      }
     }
     return null
   }
@@ -259,9 +320,12 @@ export class ApiClient {
       })
     }
 
+    const headers = this.getHeaders()
+    console.log(`DEBUG CLIENT: Fetching ${url.toString()} with headers:`, JSON.stringify(headers))
+
     const makeRequest = () => fetch(url.toString(), {
       method: 'GET',
-      headers: this.getHeaders(),
+      headers,
     })
 
     const response = await makeRequest()
@@ -269,9 +333,12 @@ export class ApiClient {
   }
 
   async post<T>(endpoint: string, data?: any, includeAuth: boolean = true): Promise<T> {
+    const headers = this.getHeaders(includeAuth)
+    console.log(`DEBUG CLIENT: POST ${this.baseURL}${endpoint} with headers:`, JSON.stringify(headers), 'data:', JSON.stringify(data))
+
     const makeRequest = () => fetch(`${this.baseURL}${endpoint}`, {
       method: 'POST',
-      headers: this.getHeaders(includeAuth),
+      headers,
       body: data ? JSON.stringify(data) : undefined,
     })
 
@@ -368,7 +435,7 @@ export const authApi = {
       refresh: string
       user: any
       company?: { id: string; name: string }
-    }>('/auth/login/', { username, password }, false)
+    }>('/auth/login/', { username, password, company_slug: DEFAULT_COMPANY_SLUG }, false)
 
     if (response.access) {
       apiClient.setToken(response.access)
@@ -396,6 +463,7 @@ export const authApi = {
       email: data.email,
       password: data.password,
       password_confirm: data.password_confirm || data.password,
+      company_slug: DEFAULT_COMPANY_SLUG,
     }
     
     if (data.company_name) {
@@ -452,6 +520,7 @@ export const authApi = {
 
   logout() {
     apiClient.setToken(null)
+    apiClient.setRefreshToken(null)
     apiClient.setCompanyId(null)
   },
 }
@@ -503,50 +572,53 @@ export const newsApi = {
 export const ecommerceApi = {
   products: {
     list: (params?: { category?: string; search?: string; page?: number; is_active?: boolean }) =>
-      apiClient.get('/ecommerce/products/', params),
-    get: (id: string) => apiClient.get(`/ecommerce/products/${id}/`),
-    getBySlug: (slug: string) => apiClient.get(`/ecommerce/products/?slug=${slug}`),
-    create: (data: any) => apiClient.post('/ecommerce/products/', data),
-    update: (id: string, data: any) => apiClient.put(`/ecommerce/products/${id}/`, data),
-    delete: (id: string) => apiClient.delete(`/ecommerce/products/${id}/`),
+      apiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/products/`, params),
+    get: (id: string) => apiClient.get(`/v1/products/${id}/`),
+    getBySlug: (slug: string) => apiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/products/slug/${slug}/`),
+    create: (data: any) => apiClient.post('/v1/products/', data),
+    update: (id: string, data: any) => apiClient.put(`/v1/products/${id}/`, data),
+    delete: (id: string) => apiClient.delete(`/v1/products/${id}/`),
   },
 
   categories: {
-    list: () => apiClient.get('/ecommerce/categories/'),
-    get: (id: string) => apiClient.get(`/ecommerce/categories/${id}/`),
+    list: () => apiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/categories/`),
+    get: (id: string) => apiClient.get(`/v1/categories/${id}/`),
+    create: (data: any) => apiClient.post('/v1/categories/', data),
+    update: (id: string, data: any) => apiClient.put(`/v1/categories/${id}/`, data),
+    delete: (id: string) => apiClient.delete(`/v1/categories/${id}/`),
   },
 
   orders: {
     list: (params?: { status?: string; page?: number }) =>
-      apiClient.get('/ecommerce/orders/', params),
-    get: (id: string) => apiClient.get(`/ecommerce/orders/${id}/`),
-    create: (data: any) => apiClient.post('/ecommerce/orders/', data),
-    update: (id: string, data: any) => apiClient.patch(`/ecommerce/orders/${id}/`, data),
+      apiClient.get('/v1/orders/', params),
+    get: (id: string) => apiClient.get(`/v1/orders/${id}/`),
+    create: (data: any) => apiClient.post('/v1/orders/', data),
+    update: (id: string, data: any) => apiClient.patch(`/v1/orders/${id}/`, data),
   },
 
   cart: {
-    get: () => apiClient.get('/ecommerce/cart/'),
+    get: () => apiClient.get('/v1/carts/'),
     addItem: (productId: string, quantity: number) =>
-      apiClient.post('/ecommerce/cart/add/', { product_id: productId, quantity }),
+      apiClient.post('/v1/carts/items/', { product_id: productId, quantity }),
     updateItem: (itemId: string, quantity: number) =>
-      apiClient.patch(`/ecommerce/cart/items/${itemId}/`, { quantity }),
+      apiClient.patch(`/v1/carts/items/${itemId}/`, { quantity }),
     removeItem: (itemId: string) =>
-      apiClient.delete(`/ecommerce/cart/items/${itemId}/`),
-    clear: () => apiClient.delete('/ecommerce/cart/clear/'),
+      apiClient.delete(`/v1/carts/items/${itemId}/`),
+    clear: () => apiClient.delete('/v1/carts/clear/'),
   },
 
   checkout: {
-    initiate: (data: any) => apiClient.post('/ecommerce/checkout/', data),
+    initiate: (data: any) => apiClient.post('/v1/orders/create-from-cart/', data),
     complete: (orderId: string, paymentData: any) =>
-      apiClient.post(`/ecommerce/checkout/${orderId}/complete/`, paymentData),
+      apiClient.post(`/v1/orders/${orderId}/complete/`, paymentData),
   },
 
   // Yoco payment integration
   payments: {
     createCheckout: (orderId: string) =>
-      apiClient.post(`/ecommerce/payments/yoco/checkout/`, { order_id: orderId }),
+      apiClient.post(`/v1/payments/yoco/checkout/`, { order_id: orderId }),
     verifyPayment: (checkoutId: string) =>
-      apiClient.get(`/ecommerce/payments/yoco/verify/${checkoutId}/`),
+      apiClient.get(`/v1/payments/yoco/verify/${checkoutId}/`),
   },
 }
 

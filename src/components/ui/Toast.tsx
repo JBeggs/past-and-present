@@ -55,8 +55,8 @@ export default function ToastComponent({ toast, onClose }: ToastProps) {
     <div
       className={`
         ${colors[toast.type]}
-        border rounded-lg shadow-lg p-4 mb-3 min-w-[300px] max-w-[500px]
-        flex items-start gap-3 animate-in slide-in-from-right-full duration-300
+        border-4 rounded-2xl shadow-2xl p-6 w-full
+        flex items-start gap-4 bg-white
       `}
     >
       <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${iconColors[toast.type]}`} />

@@ -10,13 +10,22 @@ async function getHomeData() {
       serverNewsApi.articles.list({ status: 'published' }),
     ])
 
-    const products = Array.isArray(productsData) ? productsData : (productsData as any)?.results || []
-    const articles = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.results || []
+    const products = Array.isArray(productsData) ? productsData : (productsData as any)?.data || (productsData as any)?.results || []
+    const articles = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.data || (articlesData as any)?.results || []
 
     return {
-      featuredProducts: products.slice(0, 8),
-      vintageProducts: products.filter((p: Product) => p.is_vintage).slice(0, 4),
-      newProducts: products.filter((p: Product) => !p.is_vintage).slice(0, 4),
+      featuredProducts: products.filter((p: Product) => p.featured).map((p: Product) => ({
+        ...p,
+        is_vintage: Array.isArray(p.tags) && p.tags.some(t => (typeof t === 'string' ? t : t.name) === 'vintage')
+      })).slice(0, 8),
+      vintageProducts: products.filter((p: Product) => {
+        const tags = Array.isArray(p.tags) ? p.tags.map(t => typeof t === 'string' ? t : t.name) : []
+        return tags.includes('vintage')
+      }).slice(0, 4),
+      newProducts: products.filter((p: Product) => {
+        const tags = Array.isArray(p.tags) ? p.tags.map(t => typeof t === 'string' ? t : t.name) : []
+        return !tags.includes('vintage')
+      }).slice(0, 4),
       latestArticles: articles.slice(0, 3),
     }
   } catch (error) {
@@ -60,6 +69,59 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Featured Section */}
+      {featuredProducts.length > 0 && (
+        <section className="py-16 bg-white">
+          <div className="container-wide">
+            <div className="section-header">
+              <div>
+                <h2 className="section-title">Featured Treasures</h2>
+                <p className="text-text-muted mt-1">Our most special and unique items</p>
+              </div>
+              <Link href="/products" className="btn btn-secondary">
+                View All <ArrowRight className="w-4 h-4 ml-2" />
+              </Link>
+            </div>
+            
+            <div className="product-grid">
+              {featuredProducts.map((product: any) => (
+                <Link key={product.id} href={`/products/${product.slug}`} className={`group relative flex flex-col ${product.is_vintage ? 'product-card-vintage' : 'product-card-modern'}`}>
+                  <div className="relative overflow-hidden aspect-square">
+                    {product.featured_image?.file_url || product.image ? (
+                      <img
+                        src={product.featured_image?.file_url || product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                        <Sparkles className="w-12 h-12 text-vintage-primary/30" />
+                      </div>
+                    )}
+                    <span className="tag tag-featured absolute top-2 right-2 shadow-sm">Featured</span>
+                    <span className={`tag absolute top-2 left-2 ${product.is_vintage ? 'tag-vintage' : 'tag-new'}`}>
+                      {product.is_vintage ? 'Vintage' : 'New'}
+                    </span>
+                  </div>
+                  <div className="p-4 flex-1 flex flex-col">
+                    <h3 className="font-semibold text-text group-hover:text-vintage-primary transition-colors line-clamp-1">
+                      {product.name}
+                    </h3>
+                    <p className="text-sm text-text-muted mt-1 line-clamp-2 flex-1">{product.description}</p>
+                    <div className="mt-3 flex items-center justify-between pt-3 border-t border-gray-50">
+                      <span className="price">R{Number(product.price).toFixed(2)}</span>
+                      {product.compare_at_price && Number(product.compare_at_price) > Number(product.price) && (
+                        <span className="price-original">R{Number(product.compare_at_price).toFixed(2)}</span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Vintage Section */}
       <section className="py-16 bg-vintage-background">
         <div className="container-wide">
@@ -77,29 +139,29 @@ export default async function HomePage() {
             <div className="product-grid">
               {vintageProducts.map((product: Product) => (
                 <Link key={product.id} href={`/products/${product.slug}`} className="product-card-vintage group">
-                  <div className="relative overflow-hidden">
-                    {product.featured_image?.file_url ? (
-                      <img
-                        src={product.featured_image.file_url}
-                        alt={product.name}
-                        className="product-image group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="product-image bg-vintage-primary/10 flex items-center justify-center">
-                        <Clock className="w-12 h-12 text-vintage-primary/30" />
-                      </div>
-                    )}
-                    <span className="tag tag-vintage absolute top-2 left-2">Vintage</span>
-                  </div>
+        <div className="relative overflow-hidden">
+          {product.featured_image?.file_url || product.image ? (
+            <img
+              src={product.featured_image?.file_url || product.image}
+              alt={product.name}
+              className="product-image group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <div className="product-image bg-vintage-primary/10 flex items-center justify-center">
+              <Clock className="w-12 h-12 text-vintage-primary/30" />
+            </div>
+          )}
+          <span className="tag tag-vintage absolute top-2 left-2">Vintage</span>
+        </div>
                   <div className="p-4">
                     <h3 className="font-semibold text-text group-hover:text-vintage-primary transition-colors">
                       {product.name}
                     </h3>
                     <p className="text-sm text-text-muted mt-1 line-clamp-2">{product.description}</p>
                     <div className="mt-3 flex items-center justify-between">
-                      <span className="price">R{product.price.toFixed(2)}</span>
-                      {product.compare_at_price && product.compare_at_price > product.price && (
-                        <span className="price-original">R{product.compare_at_price.toFixed(2)}</span>
+                      <span className="price">R{Number(product.price).toFixed(2)}</span>
+                      {product.compare_at_price && Number(product.compare_at_price) > Number(product.price) && (
+                        <span className="price-original">R{Number(product.compare_at_price).toFixed(2)}</span>
                       )}
                     </div>
                   </div>
@@ -132,29 +194,29 @@ export default async function HomePage() {
             <div className="product-grid">
               {newProducts.map((product: Product) => (
                 <Link key={product.id} href={`/products/${product.slug}`} className="product-card-modern group">
-                  <div className="relative overflow-hidden">
-                    {product.featured_image?.file_url ? (
-                      <img
-                        src={product.featured_image.file_url}
-                        alt={product.name}
-                        className="product-image group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="product-image bg-modern-primary/10 flex items-center justify-center">
-                        <Sparkles className="w-12 h-12 text-modern-primary/30" />
-                      </div>
-                    )}
-                    <span className="tag tag-new absolute top-2 left-2">New</span>
-                  </div>
+        <div className="relative overflow-hidden">
+          {product.featured_image?.file_url || product.image ? (
+            <img
+              src={product.featured_image?.file_url || product.image}
+              alt={product.name}
+              className="product-image group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <div className="product-image bg-modern-primary/10 flex items-center justify-center">
+              <Sparkles className="w-12 h-12 text-modern-primary/30" />
+            </div>
+          )}
+          <span className="tag tag-new absolute top-2 left-2">New</span>
+        </div>
                   <div className="p-4">
                     <h3 className="font-semibold text-text group-hover:text-modern-primary transition-colors">
                       {product.name}
                     </h3>
                     <p className="text-sm text-text-muted mt-1 line-clamp-2">{product.description}</p>
                     <div className="mt-3 flex items-center justify-between">
-                      <span className="price text-modern-primary">R{product.price.toFixed(2)}</span>
-                      {product.compare_at_price && product.compare_at_price > product.price && (
-                        <span className="price-original">R{product.compare_at_price.toFixed(2)}</span>
+                      <span className="price text-modern-primary">R{Number(product.price).toFixed(2)}</span>
+                      {product.compare_at_price && Number(product.compare_at_price) > Number(product.price) && (
+                        <span className="price-original">R{Number(product.compare_at_price).toFixed(2)}</span>
                       )}
                     </div>
                   </div>

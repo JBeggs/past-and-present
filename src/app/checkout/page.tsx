@@ -7,7 +7,7 @@ import { ecommerceApi } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { Cart } from '@/lib/types'
-import { ArrowLeft, CreditCard, Truck, Shield, Lock } from 'lucide-react'
+import { ArrowLeft, CreditCard, Truck, Shield, Lock, Phone } from 'lucide-react'
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState<Cart | null>(null)
@@ -44,9 +44,19 @@ export default function CheckoutPage() {
 
   const fetchCart = async () => {
     try {
-      const data = await ecommerceApi.cart.get() as Cart
-      setCart(data)
-      if (!data.items || data.items.length === 0) {
+      const response = await ecommerceApi.cart.get() as any
+      // Handle the paginated response structure: { count, results: [cart] }
+      let cartData = null
+      if (response?.results && Array.isArray(response.results)) {
+        cartData = response.results[0]
+      } else if (response?.data) {
+        cartData = response.data
+      } else {
+        cartData = response
+      }
+
+      setCart(cartData)
+      if (!cartData || !cartData.items || cartData.items.length === 0) {
         router.push('/cart')
       }
     } catch (error) {
@@ -62,13 +72,38 @@ export default function CheckoutPage() {
     setProcessing(true)
 
     try {
-      // Create order
+      // Create order from cart using the correct backend format
       const order = await ecommerceApi.checkout.initiate({
-        ...formData,
-        billing_same_as_shipping: true,
+        customer: {
+          name: formData.customer_name,
+          email: formData.customer_email,
+          phone: formData.customer_phone,
+        },
+        shipping_address: {
+          line1: formData.shipping_address_line1,
+          line2: formData.shipping_address_line2,
+          city: formData.shipping_city,
+          state: formData.shipping_state,
+          postal_code: formData.shipping_postal_code,
+          country: formData.shipping_country,
+        },
+        delivery_method: 'standard', // Default delivery method
+        payment_method: 'yoco',
+        notes: formData.customer_notes,
       }) as any
 
-      // Create Yoco checkout
+      // R2000 Rule: If order is over 2000, don't go to payment
+      const total = cart?.total || cart?.subtotal || 0
+      if (total > 2000) {
+        showSuccess('Order Placed! A representative will contact you shortly.')
+        // Redirect to a success page with a message about the high-value order
+        // Use order_number if available, fallback to id
+        const orderNumber = order.order_number || order.id
+        router.push(`/checkout/success?orderId=${orderNumber}&highValue=true`)
+        return
+      }
+
+      // Create Yoco checkout for orders <= 2000
       const checkout = await ecommerceApi.payments.createCheckout(order.id) as any
 
       if (checkout.redirectUrl) {
@@ -254,9 +289,9 @@ export default function CheckoutPage() {
                   {cart?.items?.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm">
                       <span className="text-text-muted">
-                        {item.product?.name || 'Product'} x {item.quantity}
+                        {item.product_name || item.product?.name || 'Product'} x {item.quantity}
                       </span>
-                      <span className="font-medium">R{(item.price * item.quantity).toFixed(2)}</span>
+                      <span className="font-medium">R{Number(item.price * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -267,19 +302,19 @@ export default function CheckoutPage() {
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-text-muted">Subtotal</span>
-                    <span className="font-medium">R{cart?.subtotal?.toFixed(2) || '0.00'}</span>
+                    <span className="font-medium">R{Number(cart?.subtotal || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-text-muted">Shipping</span>
                     <span className="font-medium">
-                      {cart?.shipping ? `R${cart.shipping.toFixed(2)}` : 'Calculated'}
+                      {cart?.shipping ? `R${Number(cart.shipping).toFixed(2)}` : 'Calculated'}
                     </span>
                   </div>
                   <div className="divider my-4" />
                   <div className="flex justify-between text-lg">
                     <span className="font-semibold">Total</span>
                     <span className="font-bold text-vintage-primary">
-                      R{cart?.total?.toFixed(2) || cart?.subtotal?.toFixed(2) || '0.00'}
+                      R{Number(cart?.total || cart?.subtotal || 0).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -290,8 +325,17 @@ export default function CheckoutPage() {
                   disabled={processing}
                   className="btn btn-primary w-full mt-6 py-3"
                 >
-                  <CreditCard className="w-5 h-5 mr-2" />
-                  {processing ? 'Processing...' : 'Pay with Yoco'}
+                  {Number(cart?.total || cart?.subtotal || 0) > 2000 ? (
+                    <>
+                      <Phone className="w-5 h-5 mr-2" />
+                      {processing ? 'Processing...' : 'Place Order'}
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="w-5 h-5 mr-2" />
+                      {processing ? 'Processing...' : 'Pay with Yoco'}
+                    </>
+                  )}
                 </button>
 
                 {/* Security Note */}

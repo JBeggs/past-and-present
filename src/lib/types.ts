@@ -102,6 +102,7 @@ export interface Product {
   name: string
   slug: string
   description?: string
+  short_description?: string
   long_description?: string
   price: number
   compare_at_price?: number
@@ -113,28 +114,36 @@ export interface Product {
   allow_backorder: boolean
   weight?: number
   weight_unit?: string
-  condition: ProductCondition
-  is_vintage: boolean  // True for second-hand/vintage items
+  dimension_length?: number
+  dimension_width?: number
+  dimension_height?: number
   is_active: boolean
-  is_featured: boolean
+  featured: boolean
+  status: 'active' | 'draft' | 'archived'
+  color?: string
   category_id?: string
   featured_image_id?: string
   seo_title?: string
   seo_description?: string
+  seo_keywords?: string
+  canonical_url?: string
   created_at: string
   updated_at: string
+  published_at?: string
   category?: Category
   featured_image?: Media
-  images?: ProductImage[]
-  tags?: Tag[]
-}
+   images?: ProductImage[]
+   tags?: string[] | Tag[]
+   stock_quantity: number | null
+   in_stock: boolean
+   image?: string // Flattened image URL for public API
+ }
 
 export interface ProductImage {
   id: string
   product_id: string
   media_id: string
   sort_order: number
-  is_featured: boolean
   created_at: string
   media?: Media
 }
@@ -143,8 +152,12 @@ export interface ProductImage {
 export interface CartItem {
   id: string
   product_id: string
+  product_name?: string
+  product_image?: string
+  product_sku?: string
   quantity: number
   price: number
+  subtotal: number
   created_at: string
   product?: Product
 }

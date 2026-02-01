@@ -1,13 +1,21 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ShoppingCart, User, LogOut } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCart } from '@/contexts/CartContext'
 
 export default function ClientHeader() {
-  const { user, signOut, loading } = useAuth()
+  const { user, signOut, loading: authLoading } = useAuth()
+  const { itemCount, loading: cartLoading } = useCart()
+  const [mounted, setMounted] = useState(false)
 
-  if (loading) {
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted || authLoading) {
     return (
       <div className="flex items-center space-x-4">
         <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse" />
@@ -17,15 +25,22 @@ export default function ClientHeader() {
 
   return (
     <div className="flex items-center space-x-4">
-      <Link
-        href="/cart"
-        className="p-2 text-text hover:text-vintage-primary transition-colors relative"
-        aria-label="Shopping cart"
-      >
-        <ShoppingCart className="w-5 h-5" />
-      </Link>
+      {user && (
+        <Link
+          href="/cart"
+          className="p-2 text-text hover:text-vintage-primary transition-colors relative group"
+          aria-label="Shopping cart"
+        >
+          <ShoppingCart className="w-5 h-5" />
+          {itemCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-vintage-accent text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full shadow-sm group-hover:scale-110 transition-transform">
+              {itemCount}
+            </span>
+          )}
+        </Link>
+      )}
 
-      {user ? (
+          {user ? (
         <div className="flex items-center space-x-3">
           <Link
             href="/profile"

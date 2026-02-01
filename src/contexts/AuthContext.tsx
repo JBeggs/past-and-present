@@ -47,23 +47,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = apiClient.getToken()
-    const storedCompanyId = apiClient.getCompanyId()
-    
-    if (token && storedCompanyId) {
-      apiClient.setToken(token)
-      apiClient.setCompanyId(storedCompanyId)
-      setCompanyId(storedCompanyId)
-      fetchProfile()
-    } else {
-      setLoading(false)
+    const initializeAuth = async () => {
+      // Check for token in storage/cookies
+      const token = apiClient.getToken()
+      const refreshToken = apiClient.getRefreshToken()
+      
+      console.log('AuthProvider: Initializing...', { hasToken: !!token, hasRefresh: !!refreshToken })
+
+      if (token) {
+        apiClient.setToken(token)
+        const storedCompanyId = apiClient.getCompanyId()
+        if (storedCompanyId) {
+          apiClient.setCompanyId(storedCompanyId)
+          setCompanyId(storedCompanyId)
+        }
+        
+        try {
+          await fetchProfile()
+        } catch (e) {
+          console.error('AuthProvider: Profile fetch failed with token', e)
+          // If profile fetch fails but we have a refresh token, try refreshing
+          if (refreshToken) {
+            await tryRefresh(refreshToken)
+          } else {
+            setLoading(false)
+          }
+        }
+      } else if (refreshToken) {
+        // No access token but have refresh token
+        await tryRefresh(refreshToken)
+      } else {
+        console.log('AuthProvider: No tokens found')
+        setLoading(false)
+      }
     }
+
+    const tryRefresh = async (rToken: string) => {
+      try {
+        console.log('AuthProvider: Attempting token refresh...')
+        const response = await authApi.refreshToken(rToken)
+        if (response.access) {
+          console.log('AuthProvider: Refresh successful')
+          apiClient.setToken(response.access)
+          await fetchProfile()
+        } else {
+          setLoading(false)
+        }
+      } catch (e) {
+        console.error('AuthProvider: Refresh failed', e)
+        setLoading(false)
+      }
+    }
+
+    initializeAuth()
   }, [])
+
+  useEffect(() => {
+    console.log('AuthProvider: State updated', { user: !!user, profile: !!profile, companyId })
+  }, [user, profile, companyId])
 
   const fetchProfile = async () => {
     try {
       const profileData: any = await newsApi.profile.get()
       setProfile(profileData)
+      
+      // Ensure company ID is synced if found in profile/metadata
+      if (profileData.company?.id) {
+        apiClient.setCompanyId(profileData.company.id)
+        setCompanyId(profileData.company.id)
+      } else if (profileData.company_id) {
+        apiClient.setCompanyId(profileData.company_id)
+        setCompanyId(profileData.company_id)
+      }
       
       if (profileData.user) {
         setUser({
@@ -76,6 +131,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error: any) {
       console.error('Error fetching profile:', error)
+      // If unauthorized, check if we can refresh before signing out
+      if (error.status === 401) {
+        const refreshToken = apiClient.getRefreshToken()
+        if (!refreshToken) {
+          signOut()
+        }
+        // If there is a refresh token, initializeAuth will handle it
+      }
     } finally {
       setLoading(false)
     }
@@ -89,6 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true)
     try {
       const response = await authApi.login(username, password)
+      console.log('AuthProvider: signIn response', { companyId: response.company?.id, user: response.user?.id })
       
       setUser(response.user)
       setCompanyId(response.company?.id || null)

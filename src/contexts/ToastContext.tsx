@@ -73,9 +73,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-      <div className="fixed top-4 right-4 z-[99999] flex flex-col items-end pointer-events-none">
+      <div className="fixed top-6 right-6 z-[2147483647] flex flex-col items-end pointer-events-none gap-3 w-full max-w-sm">
         {toasts.map((toast) => (
-          <div key={toast.id} className="pointer-events-auto">
+          <div 
+            key={toast.id} 
+            className="w-full animate-in slide-in-from-right-full duration-300 pointer-events-auto"
+          >
             <ToastComponent toast={toast} onClose={removeToast} />
           </div>
         ))}
