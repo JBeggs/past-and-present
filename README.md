@@ -6,7 +6,7 @@ A Next.js e-commerce site for vintage and modern treasures, built using componen
 
 - **Hybrid Theme**: Vintage olive/cream colors for second-hand items, modern navy/gold for new products
 - **E-commerce**: Full shopping cart and checkout with Yoco payments
-- **Content Management**: Articles and content pages managed via Django CRM backend
+- **Content Management**: Articles and content pages managed via Django CRM backend 
 - **Authentication**: User registration and login
 - **Responsive Design**: Mobile-first approach with Tailwind CSS
 
