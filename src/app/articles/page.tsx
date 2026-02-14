@@ -23,7 +23,13 @@ async function getArticles(params: { search?: string; category?: string }) {
 
 async function getCategories(): Promise<{ id: string; name: string }[]> {
   try {
-    const data: any = await serverNewsApi.categories.list({ for_articles: true })
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://3pillars.pythonanywhere.com/api'
+    const res = await fetch(`${baseUrl}/news/categories/`, {
+      headers: { 'X-Company-Slug': 'riverside-herald', 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    })
+    if (!res.ok) return []
+    const data: any = await res.json()
     const raw = Array.isArray(data) ? data : data?.results || []
     return raw.map((c: any) => ({ id: String(c.id), name: c.name || 'Uncategorized' }))
   } catch (error) {

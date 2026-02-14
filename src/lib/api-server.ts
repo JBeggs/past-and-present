@@ -54,7 +54,6 @@ class ServerApiClient {
     }
 
     const headers = await this.getHeaders(headerOverrides)
-    console.log(`DEBUG: Fetching ${url.toString()} with headers:`, JSON.stringify(headers))
 
     const response = await fetch(url.toString(), {
       method: 'GET',
