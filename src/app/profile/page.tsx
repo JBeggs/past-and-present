@@ -118,7 +118,7 @@ export default function ProfilePage() {
         registration_number: companyForm.registration_number || '',
         tax_number: companyForm.tax_number || '',
       })
-      setCompany(updated)
+      setCompany((updated as any)?.data ?? (updated as Record<string, any>))
       showSuccess('Business profile updated')
     } catch (error: any) {
       showError(error.message || 'Failed to update business profile')
