@@ -9,7 +9,7 @@ interface ArticlesPageProps {
 
 async function getCategories() {
   try {
-    const categoriesData: any = await serverNewsApi.categories.list()
+    const categoriesData: any = await serverNewsApi.categories.list({ for_articles: true })
     const raw = Array.isArray(categoriesData) ? categoriesData : categoriesData?.results || []
     return raw.map((cat: any) => ({
       id: String(cat.id),
@@ -95,6 +95,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
 
           {/* Category Pills */}
           <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-text-muted mr-1 self-center">Category:</span>
             <Link
               href="/articles"
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
