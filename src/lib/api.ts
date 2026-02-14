@@ -130,6 +130,10 @@ export class ApiClient {
           const data = await response.json()
           if (data.access) {
             this.setToken(data.access)
+            // Backend rotates refresh tokens; store new one if returned
+            if (data.refresh) {
+              this.setRefreshToken(data.refresh)
+            }
             return data.access
           }
         } else {
@@ -320,11 +324,9 @@ export class ApiClient {
       })
     }
 
-    const headers = this.getHeaders()
-
     const makeRequest = () => fetch(url.toString(), {
       method: 'GET',
-      headers,
+      headers: this.getHeaders(),
     })
 
     const response = await makeRequest()
@@ -332,11 +334,9 @@ export class ApiClient {
   }
 
   async post<T>(endpoint: string, data?: any, includeAuth: boolean = true): Promise<T> {
-    const headers = this.getHeaders(includeAuth)
-
     const makeRequest = () => fetch(`${this.baseURL}${endpoint}`, {
       method: 'POST',
-      headers,
+      headers: this.getHeaders(includeAuth),
       body: data ? JSON.stringify(data) : undefined,
     })
 
@@ -526,7 +526,7 @@ export const authApi = {
   },
 
   async refreshToken(refreshToken: string) {
-    const response = await apiClient.post<{ access: string }>(
+    const response = await apiClient.post<{ access: string; refresh?: string }>(
       '/auth/refresh/',
       { refresh: refreshToken },
       false
@@ -534,6 +534,10 @@ export const authApi = {
     
     if (response.access) {
       apiClient.setToken(response.access)
+      // Backend rotates refresh tokens; store new one if returned
+      if (response.refresh) {
+        apiClient.setRefreshToken(response.refresh)
+      }
     }
 
     return response
