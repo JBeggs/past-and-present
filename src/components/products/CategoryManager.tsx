@@ -25,7 +25,7 @@ export default function CategoryManager({ onClose }: CategoryManagerProps) {
     try {
       setLoading(true)
       const data = await ecommerceApi.categories.list()
-      setCategories(Array.isArray(data) ? data : (data as any).results || [])
+      setCategories(Array.isArray(data) ? data : (data as any)?.data || (data as any)?.results || [])
     } catch (error) {
       console.error('Error fetching categories:', error)
       showError('Failed to load categories')

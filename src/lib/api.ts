@@ -321,7 +321,6 @@ export class ApiClient {
     }
 
     const headers = this.getHeaders()
-    console.log(`DEBUG CLIENT: Fetching ${url.toString()} with headers:`, JSON.stringify(headers))
 
     const makeRequest = () => fetch(url.toString(), {
       method: 'GET',
@@ -334,7 +333,6 @@ export class ApiClient {
 
   async post<T>(endpoint: string, data?: any, includeAuth: boolean = true): Promise<T> {
     const headers = this.getHeaders(includeAuth)
-    console.log(`DEBUG CLIENT: POST ${this.baseURL}${endpoint} with headers:`, JSON.stringify(headers), 'data:', JSON.stringify(data))
 
     const makeRequest = () => fetch(`${this.baseURL}${endpoint}`, {
       method: 'POST',
@@ -566,6 +564,28 @@ export const newsApi = {
     update: (data: any) => apiClient.put('/news/profiles/me/', data),
     patch: (data: any) => apiClient.patch('/news/profiles/me/', data),
   },
+
+  businesses: {
+    list: (params?: { search?: string; industry?: string; city?: string; is_verified?: boolean; page?: number }) =>
+      apiClient.get('/news/businesses/', params),
+    get: (id: string) => apiClient.get(`/news/businesses/${id}/`),
+    myBusinesses: () => apiClient.get('/news/businesses/my_businesses/'),
+    create: (data: any) => apiClient.post('/news/businesses/', data),
+    update: (id: string, data: any) => apiClient.put(`/news/businesses/${id}/`, data),
+    patch: (id: string, data: any) => apiClient.patch(`/news/businesses/${id}/`, data),
+    delete: (id: string) => apiClient.delete(`/news/businesses/${id}/`),
+  },
+
+  // Combined businesses from all sources
+  allBusinesses: {
+    list: (params?: { search?: string; source?: string; industry?: string; city?: string; is_verified?: boolean; is_active?: boolean; page?: number }) =>
+      apiClient.get('/all-businesses/', params),
+    get: (id: string) => apiClient.get(`/all-businesses/${id}/`),
+    myBusinesses: () => apiClient.get('/all-businesses/my_businesses/'),
+    search: (params?: any) => apiClient.get('/all-businesses/search/', params),
+    stats: () => apiClient.get('/all-businesses/stats/'),
+    byLocation: () => apiClient.get('/all-businesses/by_location/'),
+  },
 }
 
 // Ecommerce API methods
@@ -611,6 +631,11 @@ export const ecommerceApi = {
     initiate: (data: any) => apiClient.post('/v1/orders/create-from-cart/', data),
     complete: (orderId: string, paymentData: any) =>
       apiClient.post(`/v1/orders/${orderId}/complete/`, paymentData),
+  },
+
+  companies: {
+    get: (id: string) => apiClient.get(`/v1/companies/${id}/`),
+    update: (id: string, data: any) => apiClient.patch(`/v1/companies/${id}/`, data),
   },
 
   // Yoco payment integration
