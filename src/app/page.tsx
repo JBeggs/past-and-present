@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { serverEcommerceApi, serverNewsApi } from '@/lib/api-server'
+export const dynamic = 'force-dynamic'
 import { Product, Article } from '@/lib/types'
 import { ArrowRight, Sparkles, Clock } from 'lucide-react'
 
@@ -10,7 +11,8 @@ async function getHomeData() {
       serverNewsApi.articles.list({ status: 'published' }),
     ])
 
-    const products = Array.isArray(productsData) ? productsData : (productsData as any)?.data || (productsData as any)?.results || []
+    const raw = Array.isArray(productsData) ? productsData : (productsData as any)?.data || (productsData as any)?.results || []
+    const products = raw.filter((p: Product) => p.status !== 'archived')
     const articles = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.data || (articlesData as any)?.results || []
 
     return {

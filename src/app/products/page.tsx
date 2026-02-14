@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { serverEcommerceApi } from '@/lib/api-server'
+export const dynamic = 'force-dynamic'
 import { Product } from '@/lib/types'
 import { Clock, Sparkles, Filter, Search } from 'lucide-react'
 import AdminActions from '@/components/products/AdminActions'
@@ -18,7 +19,8 @@ async function getProducts(params: { condition?: string; category?: string; sear
       page: params.page ? parseInt(params.page) : 1,
     })
 
-    let products = Array.isArray(productsData) ? productsData : (productsData as any)?.data || (productsData as any)?.results || []
+    let raw = Array.isArray(productsData) ? productsData : (productsData as any)?.data || (productsData as any)?.results || []
+    let products = raw.filter((p: Product) => p.status !== 'archived')
     
     // Filter by condition if specified
     if (params.condition === 'vintage') {
