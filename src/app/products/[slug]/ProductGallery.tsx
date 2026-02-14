@@ -34,11 +34,11 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
   return (
     <div className="space-y-4">
       {/* Main Image */}
-      <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm group">
+      <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm group flex items-center justify-center">
         <img
           src={activeImage}
           alt={product.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute top-4 left-4 flex flex-col gap-2">
           <span className={`tag ${isVintage ? 'tag-vintage' : 'tag-new'} shadow-md`}>
