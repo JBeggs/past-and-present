@@ -128,8 +128,7 @@ export const serverNewsApi = {
   },
 
   categories: {
-    list: (params?: { for_articles?: boolean }) =>
-      serverApiClient.get('/news/categories/', params?.for_articles ? { for_articles: '1' } : undefined),
+    list: () => serverApiClient.get('/news/categories/'),
     get: (id: string) => serverApiClient.get(`/news/categories/${id}/`),
   },
 

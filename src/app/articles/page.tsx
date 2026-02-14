@@ -7,32 +7,27 @@ interface ArticlesPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-async function getCategories() {
-  try {
-    const categoriesData: any = await serverNewsApi.categories.list({ for_articles: true })
-    const raw = Array.isArray(categoriesData) ? categoriesData : categoriesData?.results || []
-    return raw.map((cat: any) => ({
-      id: String(cat.id),
-      name: cat.name,
-      slug: cat.slug,
-      color: cat.color || '#2C5F2D',
-    }))
-  } catch (error) {
-    console.error('Error fetching categories:', error)
-    return []
-  }
-}
-
-async function getArticles(params: { category?: string; search?: string }) {
+async function getArticles(params: { search?: string; category?: string }) {
   try {
     const apiParams: Record<string, string> = { status: 'published' }
-    if (params.category) apiParams.category = params.category
     if (params.search?.trim()) apiParams.search = params.search.trim()
+    if (params.category) apiParams.category = params.category
 
     const articlesData = await serverNewsApi.articles.list(apiParams)
     return Array.isArray(articlesData) ? articlesData : (articlesData as any)?.results || []
   } catch (error) {
     console.error('Error fetching articles:', error)
+    return []
+  }
+}
+
+async function getCategories(): Promise<{ id: string; name: string }[]> {
+  try {
+    const data: any = await serverNewsApi.categories.list()
+    const raw = Array.isArray(data) ? data : data?.results || []
+    return raw.map((c: any) => ({ id: String(c.id), name: c.name || 'Uncategorized' }))
+  } catch (error) {
+    console.error('Error fetching categories:', error)
     return []
   }
 }
@@ -51,7 +46,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   const search = typeof params.search === 'string' ? params.search : undefined
 
   const [articles, categories] = await Promise.all([
-    getArticles({ category, search }),
+    getArticles({ search, category }),
     getCategories(),
   ])
 
@@ -106,7 +101,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
             >
               All
             </Link>
-            {categories.map((cat: { id: string; name: string; slug?: string; color?: string }) => (
+            {categories.map((cat: { id: string; name: string }) => (
               <Link
                 key={cat.id}
                 href={buildArticlesUrl({ category: cat.id, search: search || undefined })}
