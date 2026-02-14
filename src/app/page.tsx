@@ -87,9 +87,9 @@ export default async function HomePage() {
               {featuredProducts.map((product: any) => (
                 <Link key={product.id} href={`/products/${product.slug}`} className={`group relative flex flex-col ${product.is_vintage ? 'product-card-vintage' : 'product-card-modern'}`}>
                   <div className="relative overflow-hidden aspect-square">
-                    {product.featured_image?.file_url || product.image ? (
+                    {product.image ? (
                       <img
-                        src={product.featured_image?.file_url || product.image}
+                        src={product.image}
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
@@ -140,9 +140,9 @@ export default async function HomePage() {
               {vintageProducts.map((product: Product) => (
                 <Link key={product.id} href={`/products/${product.slug}`} className="product-card-vintage group">
         <div className="relative overflow-hidden">
-          {product.featured_image?.file_url || product.image ? (
+          {product.image ? (
             <img
-              src={product.featured_image?.file_url || product.image}
+              src={product.image}
               alt={product.name}
               className="product-image group-hover:scale-105 transition-transform duration-300"
             />
@@ -195,9 +195,9 @@ export default async function HomePage() {
               {newProducts.map((product: Product) => (
                 <Link key={product.id} href={`/products/${product.slug}`} className="product-card-modern group">
         <div className="relative overflow-hidden">
-          {product.featured_image?.file_url || product.image ? (
+          {product.image ? (
             <img
-              src={product.featured_image?.file_url || product.image}
+              src={product.image}
               alt={product.name}
               className="product-image group-hover:scale-105 transition-transform duration-300"
             />

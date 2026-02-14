@@ -420,6 +420,29 @@ export class ApiClient {
     const response = await makeRequest()
     return this.handleResponse<T>(response, makeRequest)
   }
+
+  /** Upload multiple files (e.g. for ecommerce product images). Uses files[] key. */
+  async uploadMultipleFiles<T>(endpoint: string, files: File[]): Promise<T> {
+    const makeRequest = () => {
+      const formData = new FormData()
+      files.forEach((file) => formData.append('files[]', file))
+
+      const headers: HeadersInit = {}
+      const token = this.getToken()
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const companyId = this.getCompanyId()
+      if (companyId) headers['X-Company-Id'] = companyId
+      headers['X-Company-Slug'] = DEFAULT_COMPANY_SLUG
+
+      return fetch(`${this.baseURL}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+    }
+    const response = await makeRequest()
+    return this.handleResponse<T>(response, makeRequest)
+  }
 }
 
 // Create singleton instance
@@ -601,6 +624,12 @@ export const ecommerceApi = {
     create: (data: any) => apiClient.post('/v1/products/', data),
     update: (id: string, data: any) => apiClient.put(`/v1/products/${id}/`, data),
     delete: (id: string) => apiClient.delete(`/v1/products/${id}/`),
+    /** Upload product images via ecommerce API (stores in ProductImage, not news Media) */
+    uploadImages: (files: File[]) =>
+      apiClient.uploadMultipleFiles<{ success: boolean; data: { url: string }[] }>(
+        '/v1/products/images/upload-multiple/',
+        files
+      ),
   },
 
   categories: {

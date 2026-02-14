@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ecommerceApi, newsApi } from '@/lib/api'
-import { Product, Category, Media, ProductImage } from '@/lib/types'
+import { ecommerceApi } from '@/lib/api'
+import { Product, Category } from '@/lib/types'
 import { X, Upload, Loader2, Save, Image as ImageIcon, Trash2, Plus, Info, Search, Package, Truck, Tag as TagIcon, AlertCircle } from 'lucide-react'
 import { useToast } from '@/contexts/ToastContext'
 
@@ -55,12 +55,17 @@ export default function ProductForm({ product, onClose, onSuccess, inline = fals
     tags: Array.isArray(product?.tags) ? product.tags.map(t => typeof t === 'string' ? t : t.name) : []
   })
 
-  const [featuredImage, setFeaturedImage] = useState<Media | null>(
-    product?.featured_image || null
+  // Ecommerce product images (URLs from /v1/products/images/upload-multiple/)
+  const getMainImageUrl = () => product?.image || null
+  const getExtraImageUrls = (): { url: string }[] => {
+    const imgs = product?.images
+    if (!imgs || !Array.isArray(imgs)) return []
+    return imgs.map((img: any) => ({ url: typeof img === 'string' ? img : (img?.url ?? '') })).filter((x: any) => x?.url)
+  }
+  const [featuredImage, setFeaturedImage] = useState<{ url: string } | null>(
+    getMainImageUrl() ? { url: getMainImageUrl()! } : null
   )
-  const [additionalImages, setAdditionalImages] = useState<Media[]>(
-    product?.images?.map((pi) => pi.media).filter((m): m is Media => !!m) || []
-  )
+  const [additionalImages, setAdditionalImages] = useState<{ url: string }[]>(getExtraImageUrls())
   const [uploadingImage, setUploadingImage] = useState(false)
   const [tagInput, setTagInput] = useState('')
 
@@ -120,25 +125,22 @@ export default function ProductForm({ product, onClose, onSuccess, inline = fals
 
     try {
       setUploadingImage(true)
-      const uploadedMedia: Media[] = []
-      
-      for (let i = 0; i < files.length; i++) {
-        const response: any = await newsApi.media.upload(files[i], { media_type: 'image' })
-        uploadedMedia.push(response)
+      const res = await ecommerceApi.products.uploadImages(Array.from(files))
+      const uploaded = (res?.data || []).filter((x: any) => x?.url).map((x: any) => ({ url: x.url }))
+      if (uploaded.length === 0) {
+        showError('No images were uploaded')
+        return
       }
 
-      if (isFeatured && uploadedMedia.length > 0) {
-        setFeaturedImage(uploadedMedia[0])
-        setFormData(prev => ({ ...prev, featured_image_id: uploadedMedia[0].id }))
-        // If more than one was uploaded, add the rest to additional
-        if (uploadedMedia.length > 1) {
-          setAdditionalImages(prev => [...prev, ...uploadedMedia.slice(1)])
+      if (isFeatured && uploaded.length > 0) {
+        setFeaturedImage(uploaded[0])
+        if (uploaded.length > 1) {
+          setAdditionalImages(prev => [...prev, ...uploaded.slice(1)])
         }
       } else {
-        setAdditionalImages(prev => [...prev, ...uploadedMedia])
+        setAdditionalImages(prev => [...prev, ...uploaded])
       }
-      
-      showSuccess(`${uploadedMedia.length} image(s) uploaded successfully`)
+      showSuccess(`${uploaded.length} image(s) uploaded successfully`)
     } catch (error) {
       console.error('Error uploading image:', error)
       showError('Failed to upload image(s)')
@@ -147,8 +149,8 @@ export default function ProductForm({ product, onClose, onSuccess, inline = fals
     }
   }
 
-  const removeAdditionalImage = (mediaId: string) => {
-    setAdditionalImages(prev => prev.filter(m => m.id !== mediaId))
+  const removeAdditionalImage = (url: string) => {
+    setAdditionalImages(prev => prev.filter(m => m.url !== url))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -158,41 +160,32 @@ export default function ProductForm({ product, onClose, onSuccess, inline = fals
     setLoading(true)
 
     try {
-      console.log('ProductForm: Submitting...', { formData, featuredImage, additionalImages })
-
       // Basic client-side validation for all required fields
       const newErrors: Record<string, string> = {}
       if (!formData.name) newErrors.name = 'Product name is required'
       if (!formData.price) newErrors.price = 'Price is required'
       if (!formData.category_id) newErrors.category_id = 'Category is required'
+      if (!featuredImage?.url) newErrors.image = 'At least one product image is required'
       
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors)
-        const msg = `Please fill in all required fields: ${Object.keys(newErrors).map(k => k.replace('_id', '').replace('name', 'Name')).join(', ')}`
+        const msg = `Please fill in all required fields: ${Object.keys(newErrors).map(k => k.replace('_id', '').replace('name', 'Name').replace('image', 'Image')).join(', ')}`
         setValidationError(msg)
         showError(msg)
         setLoading(false)
-        
-        // Switch to general tab if errors are there
-        if (newErrors.name || newErrors.price || newErrors.category_id) {
-          setActiveTab('general')
-        }
+        if (newErrors.image) setActiveTab('media')
+        else if (newErrors.name || newErrors.price || newErrors.category_id) setActiveTab('general')
         return
       }
 
       const payload = {
         ...formData,
-        // Map frontend field names to backend expected field names
-        featured_image: featuredImage?.id || null,
+        image: featuredImage!.url,
+        images: additionalImages.map(m => m.url),
         category: formData.category_id,
         stock_quantity: formData.quantity,
-        // Include additional images as a list of IDs
-        images: additionalImages.map(m => m.id)
       }
 
-      console.log('ProductForm: Payload prepared', payload)
-
-      // Remove fields not expected by the backend to avoid potential errors
       const { category_id, featured_image_id, quantity, ...backendPayload } = payload as any
 
       if (product) {
@@ -737,7 +730,7 @@ export default function ProductForm({ product, onClose, onSuccess, inline = fals
                   <div className="w-48 h-48 bg-white rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden shadow-inner relative group">
                     {featuredImage ? (
                       <>
-                        <img src={featuredImage.file_url} alt="Featured" className="w-full h-full object-cover" />
+                        <img src={featuredImage.url} alt="Featured" className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <button 
                             type="button"
@@ -797,13 +790,13 @@ export default function ProductForm({ product, onClose, onSuccess, inline = fals
                 </div>
                 
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {additionalImages.map((media) => (
-                    <div key={media.id} className="aspect-square bg-gray-50 rounded-lg border border-gray-200 overflow-hidden relative group shadow-sm">
-                      <img src={media.file_url} alt="Gallery" className="w-full h-full object-cover" />
+                  {additionalImages.map((img) => (
+                    <div key={img.url} className="aspect-square bg-gray-50 rounded-lg border border-gray-200 overflow-hidden relative group shadow-sm">
+                      <img src={img.url} alt="Gallery" className="w-full h-full object-cover" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <button
                           type="button"
-                          onClick={() => removeAdditionalImage(media.id)}
+                          onClick={() => removeAdditionalImage(img.url)}
                           className="bg-white p-1.5 rounded-full text-vintage-accent hover:scale-110 transition-transform"
                         >
                           <Trash2 className="w-4 h-4" />

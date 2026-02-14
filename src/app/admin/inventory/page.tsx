@@ -203,8 +203,8 @@ export default function InventoryPage() {
 
                 {/* Thumbnail - Compact on mobile */}
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 flex-shrink-0 shadow-inner">
-                  {product.featured_image?.file_url || product.image ? (
-                    <img src={product.featured_image?.file_url || product.image} alt="" className="w-full h-full object-cover" />
+                  {product.image ? (
+                    <img src={product.image} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-200">
                       <ImageIcon className="w-6 h-6 sm:w-8 sm:h-8" />

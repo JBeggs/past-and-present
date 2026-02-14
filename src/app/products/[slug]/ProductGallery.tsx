@@ -9,12 +9,11 @@ interface ProductGalleryProps {
 }
 
 export default function ProductGallery({ product }: ProductGalleryProps) {
+  // Ecommerce only: image + images (URLs). Never use news featured_image.
+  const toUrl = (img: any) => typeof img === 'string' ? img : (img?.url ?? '')
   const allImages = [
-    product.featured_image?.file_url || product.image,
-    ...(Array.isArray(product.images) ? product.images.map(img => {
-      if (typeof img === 'string') return img;
-      return img.media?.file_url || (img as any).url || (img as any).image || '';
-    }) : [])
+    product.image,
+    ...(Array.isArray(product.images) ? product.images.map(toUrl) : [])
   ].filter(Boolean) as string[]
 
   const [activeImage, setActiveImage] = useState(allImages[0] || '')

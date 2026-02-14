@@ -119,9 +119,9 @@ export default function CartPage() {
                         alt={item.product_name || 'Product'}
                         className="w-full h-full object-cover"
                       />
-                    ) : (item.product?.featured_image?.file_url || item.product?.image) ? (
+                    ) : item.product?.image ? (
                       <img
-                        src={item.product?.featured_image?.file_url || item.product?.image}
+                        src={item.product?.image}
                         alt={item.product_name || 'Product'}
                         className="w-full h-full object-cover"
                       />

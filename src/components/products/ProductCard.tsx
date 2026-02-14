@@ -45,9 +45,9 @@ export default function ProductCard({ product }: ProductCardProps) {
             href={`/products/${product.slug}`}
             className="absolute inset-0 z-0"
           >
-            {product.featured_image?.file_url || product.image ? (
-              <img
-                src={product.featured_image?.file_url || product.image}
+{product.image ? (
+                <img
+                src={product.image}
                 alt={product.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
