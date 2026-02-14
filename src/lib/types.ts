@@ -127,6 +127,7 @@ export interface Product {
   seo_description?: string
   seo_keywords?: string
   canonical_url?: string
+  source_url?: string
   created_at: string
   updated_at: string
   published_at?: string

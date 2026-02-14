@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Product } from '@/lib/types'
-import { Clock, Sparkles, Edit2, Trash2 } from 'lucide-react'
+import { Clock, Sparkles, Edit2, Trash2, ExternalLink } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useState } from 'react'
 import ProductForm from './ProductForm'
@@ -104,12 +104,28 @@ export default function ProductCard({ product }: ProductCardProps) {
           {product.description && (
             <p className="text-sm text-text-muted mt-1 line-clamp-2 min-h-[40px]">{product.description}</p>
           )}
-          <div className="mt-auto pt-3 flex items-center gap-2">
-            <span className={`price ${isVintage ? '' : 'text-modern-primary'}`}>
-              R{Number(product.price).toFixed(2)}
-            </span>
-            {product.compare_at_price && Number(product.compare_at_price) > Number(product.price) && (
-              <span className="price-original">R{Number(product.compare_at_price).toFixed(2)}</span>
+          <div className="mt-auto pt-3 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span className={`price ${isVintage ? '' : 'text-modern-primary'}`}>
+                R{Number(product.price).toFixed(2)}
+              </span>
+              {product.compare_at_price && Number(product.compare_at_price) > Number(product.price) && (
+                <span className="price-original">R{Number(product.compare_at_price).toFixed(2)}</span>
+              )}
+            </div>
+            {product.source_url && (
+              <a
+                href={product.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-vintage-primary transition-colors"
+              >
+                <ExternalLink className="w-3 h-3" />
+                {product.source_url.includes('temu.com') ? 'View on Temu' :
+                 product.source_url.includes('gumtree') ? 'View on Gumtree' :
+                 'View original'}
+              </a>
             )}
           </div>
           {product.quantity <= 5 && product.quantity > 0 && (
