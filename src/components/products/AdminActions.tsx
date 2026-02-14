@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { Plus, Settings, Edit2, Trash2, Package } from 'lucide-react'
+import { Plus, Settings, Edit2, Trash2, Package, ShoppingBag } from 'lucide-react'
 import ProductForm from './ProductForm'
 import CategoryManager from './CategoryManager'
 import Link from 'next/link'
@@ -30,6 +30,13 @@ export default function AdminActions() {
             >
               <Package className="w-4 h-4" />
               Inventory
+            </Link>
+            <Link
+              href="/admin/orders"
+              className="btn btn-secondary btn-sm flex items-center gap-2 whitespace-nowrap py-1.5 px-3"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              Orders
             </Link>
             <Link
               href="/admin/inventory/add"

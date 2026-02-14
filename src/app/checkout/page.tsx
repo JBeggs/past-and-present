@@ -7,12 +7,17 @@ import { ecommerceApi } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { Cart } from '@/lib/types'
-import { ArrowLeft, CreditCard, Truck, Shield, Lock, Phone } from 'lucide-react'
+import { ArrowLeft, CreditCard, Truck, Shield, Lock, Phone, MapPin } from 'lucide-react'
+import { PudoLocationSelector, type PudoLocation } from '@/components/checkout/PudoLocationSelector'
+
+type DeliveryMethod = 'standard' | 'express' | 'pudo' | 'collect'
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState<Cart | null>(null)
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('standard')
+  const [selectedPudoLocation, setSelectedPudoLocation] = useState<PudoLocation | null>(null)
   const { user, profile } = useAuth()
   const { showError, showSuccess } = useToast()
   const router = useRouter()
@@ -42,6 +47,18 @@ export default function CheckoutPage() {
     }
   }, [profile])
 
+  // Update cart shipping when delivery method or pudo selection changes (so order summary reflects correct total)
+  useEffect(() => {
+    if (!cart || loading || processing) return
+    const payload: { delivery_method: string; pudo_pickup_point?: PudoLocation } = { delivery_method: deliveryMethod }
+    if (deliveryMethod === 'pudo' && selectedPudoLocation) {
+      payload.pudo_pickup_point = selectedPudoLocation
+    }
+    ecommerceApi.cart.updateShipping(payload)
+      .then(() => fetchCart())
+      .catch(() => {})
+  }, [deliveryMethod, selectedPudoLocation])
+
   const fetchCart = async () => {
     try {
       const response = await ecommerceApi.cart.get() as any
@@ -69,42 +86,90 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (deliveryMethod === 'pudo' && !selectedPudoLocation) {
+      showError('Please select a Pudo pickup point')
+      return
+    }
+
     setProcessing(true)
 
     try {
-      // Create order from cart using the correct backend format
-      const order = await ecommerceApi.checkout.initiate({
-        customer: {
-          name: formData.customer_name,
-          email: formData.customer_email,
-          phone: formData.customer_phone,
-        },
-        shipping_address: {
+      // Update cart with delivery method so shipping is calculated correctly
+      const cartUpdatePayload: { delivery_method: string; pudo_pickup_point?: PudoLocation } = {
+        delivery_method: deliveryMethod,
+      }
+      if (deliveryMethod === 'pudo' && selectedPudoLocation) {
+        cartUpdatePayload.pudo_pickup_point = selectedPudoLocation
+      }
+      await ecommerceApi.cart.updateShipping(cartUpdatePayload)
+
+      // Build shipping address - use pudo address for pudo, placeholder for collect, form for standard/express
+      let shippingAddress: Record<string, string>
+      if (deliveryMethod === 'pudo' && selectedPudoLocation) {
+        shippingAddress = {
+          line1: selectedPudoLocation.address,
+          line2: '',
+          city: selectedPudoLocation.city,
+          state: selectedPudoLocation.province || '',
+          postal_code: selectedPudoLocation.postal_code || selectedPudoLocation.postalCode || '',
+          country: 'South Africa',
+        }
+      } else if (deliveryMethod === 'collect') {
+        shippingAddress = {
+          line1: 'In-store collection',
+          line2: '',
+          city: 'N/A',
+          state: '',
+          postal_code: '0000',
+          country: 'South Africa',
+        }
+      } else {
+        shippingAddress = {
           line1: formData.shipping_address_line1,
           line2: formData.shipping_address_line2,
           city: formData.shipping_city,
           state: formData.shipping_state,
           postal_code: formData.shipping_postal_code,
           country: formData.shipping_country,
+        }
+      }
+
+      const orderPayload: Record<string, unknown> = {
+        customer: {
+          name: formData.customer_name,
+          email: formData.customer_email,
+          phone: formData.customer_phone,
         },
-        delivery_method: 'standard', // Default delivery method
+        shipping_address: shippingAddress,
+        delivery_method: deliveryMethod,
         payment_method: 'yoco',
         notes: formData.customer_notes,
-      }) as any
+      }
+
+      if (deliveryMethod === 'pudo' && selectedPudoLocation) {
+        orderPayload.pudo_pickup_point = selectedPudoLocation
+      }
+
+      const orderResponse = await ecommerceApi.checkout.initiate(orderPayload) as any
+      const order = orderResponse?.data ?? orderResponse
 
       // R2000 Rule: If order is over 2000, don't go to payment
-      const total = cart?.total || cart?.subtotal || 0
+      const total = order?.total ?? cart?.total ?? cart?.subtotal ?? 0
       if (total > 2000) {
         showSuccess('Order Placed! A representative will contact you shortly.')
-        // Redirect to a success page with a message about the high-value order
-        // Use order_number if available, fallback to id
-        const orderNumber = order.order_number || order.id
+        const orderNumber = order?.order_number ?? order?.id
         router.push(`/checkout/success?orderId=${orderNumber}&highValue=true`)
         return
       }
 
       // Create Yoco checkout for orders <= 2000
-      const checkout = await ecommerceApi.payments.createCheckout(order.id) as any
+      const orderId = order?.id
+      if (!orderId) {
+        showError('Invalid order response')
+        return
+      }
+      const checkout = await ecommerceApi.payments.createCheckout(orderId) as any
 
       if (checkout.redirectUrl) {
         // Redirect to Yoco payment page
@@ -189,10 +254,99 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Shipping Address */}
+              {/* Delivery Method */}
               <div className="card p-6">
                 <h2 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
                   <Truck className="w-5 h-5" />
+                  Delivery Method
+                </h2>
+                <div className="space-y-3">
+                  <label className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                    deliveryMethod === 'standard' ? 'border-vintage-primary bg-vintage-primary/5' : 'border-gray-200 hover:border-vintage-primary/50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="deliveryMethod"
+                      value="standard"
+                      checked={deliveryMethod === 'standard'}
+                      onChange={() => setDeliveryMethod('standard')}
+                      className="mt-1"
+                    />
+                    <div>
+                      <span className="font-medium">Standard Shipping</span>
+                      <span className="ml-2 text-text-muted">R65 (free over R500)</span>
+                      <p className="text-sm text-text-muted mt-0.5">3-5 business days</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                    deliveryMethod === 'express' ? 'border-vintage-primary bg-vintage-primary/5' : 'border-gray-200 hover:border-vintage-primary/50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="deliveryMethod"
+                      value="express"
+                      checked={deliveryMethod === 'express'}
+                      onChange={() => setDeliveryMethod('express')}
+                      className="mt-1"
+                    />
+                    <div>
+                      <span className="font-medium">Express Shipping</span>
+                      <span className="ml-2 text-text-muted">R120</span>
+                      <p className="text-sm text-text-muted mt-0.5">1-2 business days</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                    deliveryMethod === 'pudo' ? 'border-vintage-primary bg-vintage-primary/5' : 'border-gray-200 hover:border-vintage-primary/50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="deliveryMethod"
+                      value="pudo"
+                      checked={deliveryMethod === 'pudo'}
+                      onChange={() => { setDeliveryMethod('pudo'); setSelectedPudoLocation(null) }}
+                      className="mt-1"
+                    />
+                    <div>
+                      <span className="font-medium">Pudo Pickup Point</span>
+                      <span className="ml-2 text-text-muted">R30</span>
+                      <p className="text-sm text-text-muted mt-0.5">Collect from nearest Pudo location</p>
+                    </div>
+                  </label>
+                  <label className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                    deliveryMethod === 'collect' ? 'border-vintage-primary bg-vintage-primary/5' : 'border-gray-200 hover:border-vintage-primary/50'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="deliveryMethod"
+                      value="collect"
+                      checked={deliveryMethod === 'collect'}
+                      onChange={() => setDeliveryMethod('collect')}
+                      className="mt-1"
+                    />
+                    <div>
+                      <span className="font-medium">Collect In-Store</span>
+                      <span className="ml-2 text-text-muted">Free</span>
+                      <p className="text-sm text-text-muted mt-0.5">Pick up from our store</p>
+                    </div>
+                  </label>
+                </div>
+
+                {deliveryMethod === 'pudo' && (
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <PudoLocationSelector
+                      selectedLocation={selectedPudoLocation}
+                      onSelect={setSelectedPudoLocation}
+                      disabled={processing}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Shipping Address - only for standard/express */}
+              {(deliveryMethod === 'standard' || deliveryMethod === 'express') && (
+              <div className="card p-6">
+                <h2 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+                  <MapPin className="w-5 h-5" />
                   Shipping Address
                 </h2>
                 <div className="space-y-4">
@@ -265,6 +419,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Order Notes */}
               <div className="card p-6">

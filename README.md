@@ -2,11 +2,46 @@
 
 A Next.js e-commerce site for vintage and modern treasures, built using components from the Riverside Herald project.
 
+## Overview
+
+Past and Present sells both vintage (second-hand) and new products, with a hybrid theme and content-driven marketing via articles. All data is managed through the shared Django CRM backend.
+
+## Feature Breakdown
+
+### E-commerce
+- **Products** (`/products`): Browse all products. Filter by condition (vintage/new), category, search. Product detail pages with gallery.
+- **Cart** (`/cart`): Shopping cart with quantity updates and removal.
+- **Checkout** (`/checkout`): Full checkout flow with Yoco payment. Delivery options: standard (R65/free over R500), express (R120), Pudo pickup (R30), collect in-store (free). Pudo location search when Pudo selected.
+- **Admin Inventory** (`/admin/inventory`): Product CRUD, category manager, **product export (CSV)**. Admin and business_owner roles only.
+- **Admin Orders** (`/admin/orders`): Order list with status filter, Create Shipment for paid orders (Courier Guy integration).
+
+### Articles & Content
+- **Articles** (`/articles`): Public article list with category filter and search. Categories fetched from backend. Article cards show image, category, excerpt, date, author.
+- **Article Detail** (`/articles/[slug]`): Full article view with featured image, HTML content, tags, author, published date.
+- **Home**: Featured products, vintage/new sections, latest articles. Content from Django CRM.
+
+### Auth & Profile
+- **Login** (`/login`), **Register** (`/register`): JWT auth via Django.
+- **Profile** (`/profile`): User profile, company info (for business owners).
+
+### Static Pages
+- About, Contact, FAQ, Terms, Privacy, Returns, Shipping
+
+## Articles Page
+
+The articles page (`/articles`) supports:
+
+- **Category filter**: Pills for "All" and each category from `/news/categories/`. Active category highlighted. URL: `?category=<id>`.
+- **Search**: Form submits to `?search=<query>`. Preserves category when searching.
+- **Empty state**: "No articles match your filters" when filtered; "Clear filters" link.
+
+Articles are fetched from `/news/articles/` with `status=published`, `category`, and `search` params.
+
 ## Features
 
 - **Hybrid Theme**: Vintage olive/cream colors for second-hand items, modern navy/gold for new products
 - **E-commerce**: Full shopping cart and checkout with Yoco payments
-- **Content Management**: Articles and content pages managed via Django CRM backend 
+- **Content Management**: Articles and content pages managed via Django CRM backend
 - **Authentication**: User registration and login
 - **Responsive Design**: Mobile-first approach with Tailwind CSS
 
@@ -77,6 +112,12 @@ past-and-present/
 - Background: Light Gray `#F1F1F2`
 - Accent: Gold `#D4AF37`
 
+## Product Data: SKU
+
+- **SKU** is an optional field on each product. Store owners enter it when creating/editing products in the Product Form.
+- SKU is stored in the database, shown in admin inventory and product detail pages, and included in CSV export.
+- **Yoco does not use SKU** — the payment integration sends only the order total to Yoco, not line items or SKUs. SKU is for internal record-keeping and order history (OrderItem.product_sku).
+
 ## Backend Requirements
 
 This site connects to the Django CRM backend. Ensure:
@@ -85,6 +126,29 @@ This site connects to the Django CRM backend. Ensure:
 2. Products are created with `is_vintage` flag for categorization
 3. Articles are created for content pages (home, about, etc.)
 4. Yoco integration is configured for payments
+5. Courier Guy credentials (optional) for Pudo locations and shipment creation
+
+## Routes
+
+### Public
+- `/` - Home (featured products, vintage/new, latest articles)
+- `/products` - Product listing (filter: condition, category, search)
+- `/products/[slug]` - Product detail
+- `/articles` - Article listing (filter: category, search)
+- `/articles/[slug]` - Article detail
+- `/about`, `/contact`, `/faq`, `/terms`, `/privacy`, `/returns`, `/shipping` - Static pages
+
+### Auth
+- `/login`, `/register` - Authentication
+
+### Protected (authenticated)
+- `/cart` - Shopping cart
+- `/checkout` - Checkout
+- `/profile` - User profile
+
+### Admin (admin or business_owner)
+- `/admin/inventory` - Product and category management, CSV export
+- `/admin/orders` - Order list, Create Shipment (Courier Guy)
 
 ## Scripts
 

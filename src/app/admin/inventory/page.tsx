@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ecommerceApi } from '@/lib/api'
 import { Product } from '@/lib/types'
-import { X, Edit2, Trash2, Loader2, Search, ExternalLink, Package, AlertCircle, Image as ImageIcon, ArrowLeft, Plus, Settings, Filter } from 'lucide-react'
+import { X, Edit2, Trash2, Loader2, Search, ExternalLink, Package, AlertCircle, Image as ImageIcon, ArrowLeft, Plus, Settings, Filter, ShoppingBag, Download } from 'lucide-react'
 import { useToast } from '@/contexts/ToastContext'
 import ProductForm from '@/components/products/ProductForm'
 import CategoryManager from '@/components/products/CategoryManager'
@@ -73,6 +73,31 @@ export default function InventoryPage() {
     return matchesSearch && matchesStatus
   })
 
+  const handleExportCsv = () => {
+    const cols = ['name', 'sku', 'price', 'stock_quantity', 'status', 'description', 'category', 'created_at']
+    const escape = (v: unknown) => {
+      if (v == null) return ''
+      const s = String(v)
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) return `"${s.replace(/"/g, '""')}"`
+      return s
+    }
+    const header = cols.join(',')
+    const rows = filteredProducts.map(p => cols.map(c => {
+      if (c === 'category') return escape((p.category as { name?: string })?.name ?? '')
+      const v = (p as unknown as Record<string, unknown>)[c]
+      return escape(v)
+    }).join(','))
+    const csv = [header, ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `products-export-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    showSuccess('Products exported')
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -111,6 +136,15 @@ export default function InventoryPage() {
             </div>
             
             <div className="flex items-center gap-3">
+              <button
+                onClick={handleExportCsv}
+                disabled={filteredProducts.length === 0}
+                className="btn btn-secondary btn-sm flex items-center gap-2"
+                title="Export products to CSV"
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </button>
               <button
                 onClick={() => setIsCategoryModalOpen(true)}
                 className="btn btn-secondary btn-sm flex items-center gap-2"

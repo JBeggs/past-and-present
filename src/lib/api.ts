@@ -644,12 +644,21 @@ export const ecommerceApi = {
     delete: (id: string) => apiClient.delete(`/v1/categories/${id}/`),
   },
 
+  pudo: {
+    locations: (params?: { search?: string; postalCode?: string; city?: string; province?: string }) =>
+      apiClient.get('/v1/pudo/locations/', params),
+  },
+
   orders: {
     list: (params?: { status?: string; page?: number }) =>
       apiClient.get('/v1/orders/', params),
     get: (id: string) => apiClient.get(`/v1/orders/${id}/`),
     create: (data: any) => apiClient.post('/v1/orders/', data),
     update: (id: string, data: any) => apiClient.patch(`/v1/orders/${id}/`, data),
+    createShipment: (orderId: string) =>
+      apiClient.post(`/v1/orders/${orderId}/create-shipment/`, {}),
+    trackShipment: (orderId: string) =>
+      apiClient.get(`/v1/orders/${orderId}/track-shipment/`),
   },
 
   cart: {
@@ -661,6 +670,8 @@ export const ecommerceApi = {
     removeItem: (itemId: string) =>
       apiClient.delete(`/v1/carts/items/${itemId}/`),
     clear: () => apiClient.delete('/v1/carts/clear/'),
+    updateShipping: (data: { delivery_method?: string; shipping_address?: Record<string, unknown>; pudo_pickup_point?: Record<string, unknown> | object }) =>
+      apiClient.put('/v1/carts/me/shipping/', data),
   },
 
   checkout: {

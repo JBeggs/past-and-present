@@ -50,6 +50,9 @@ async function generateMetadata(): Promise<Metadata> {
     return {
       title: `${siteName} | ${tagline}`,
       description,
+      icons: {
+        icon: '/favicon.png',
+      },
       openGraph: {
         title: `${siteName} | ${tagline}`,
         description,
@@ -60,6 +63,9 @@ async function generateMetadata(): Promise<Metadata> {
     return {
       title: 'Past and Present | Vintage & Modern Treasures',
       description: 'Discover unique vintage treasures and modern finds. Quality second-hand items and new products, all in one place.',
+      icons: {
+        icon: '/favicon.png',
+      },
     }
   }
 }

@@ -49,7 +49,8 @@ async function getHeaderData() {
 }
 
 export async function Header() {
-  const { siteName, tagline, menuItems } = await getHeaderData()
+  const { siteName, tagline, menuItems, logo } = await getHeaderData()
+  const logoUrl = logo || '/logo.png'
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -80,13 +81,13 @@ export async function Header() {
         <div className="flex items-center justify-between py-4">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/" className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-vintage-primary to-vintage-accent rounded-lg flex items-center justify-center shadow-md">
-                <span className="text-white font-playfair font-bold text-xl">
-                  P&P
-                </span>
-              </div>
-              <div>
+            <Link href="/" className="flex items-center gap-3">
+              <img
+                src={logoUrl}
+                alt={siteName}
+                className="h-12 w-auto object-contain"
+              />
+              <div className="hidden sm:block">
                 <h1 className="text-xl font-bold font-playfair text-text">{siteName}</h1>
                 <p className="text-sm text-text-muted italic">{tagline}</p>
               </div>
