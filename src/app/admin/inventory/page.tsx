@@ -41,8 +41,7 @@ export default function InventoryPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const response: any = await ecommerceApi.products.list()
-      console.log('🔍 RAW PRODUCT RESPONSE:', JSON.stringify(response, null, 2))
+      const response: any = await ecommerceApi.products.listForAdmin()
       const productData = response?.data || (Array.isArray(response) ? response : response?.results || [])
       setProducts(productData)
     } catch (error) {
