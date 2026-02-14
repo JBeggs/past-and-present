@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ShoppingCart, User, LogOut } from 'lucide-react'
+import { ShoppingCart, User, LogOut, Package } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCart } from '@/contexts/CartContext'
 
 export default function ClientHeader() {
-  const { user, signOut, loading: authLoading } = useAuth()
+  const { user, profile, signOut, loading: authLoading } = useAuth()
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'business_owner'
   const { itemCount, loading: cartLoading } = useCart()
   const [mounted, setMounted] = useState(false)
 
@@ -42,6 +43,16 @@ export default function ClientHeader() {
 
           {user ? (
         <div className="flex items-center space-x-3">
+          {isAdmin && (
+            <Link
+              href="/admin/orders"
+              className="p-2 text-text hover:text-vintage-primary transition-colors"
+              aria-label="View orders"
+              title="Orders"
+            >
+              <Package className="w-5 h-5" />
+            </Link>
+          )}
           <Link
             href="/profile"
             className="p-2 text-text hover:text-vintage-primary transition-colors"

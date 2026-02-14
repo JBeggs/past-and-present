@@ -60,7 +60,7 @@ export default async function AboutPage() {
                   </p>
                 </div>
 
-                <div className="card-modern p-6">
+                <div className="card p-6">
                   <div className="w-12 h-12 bg-modern-primary/10 rounded-lg flex items-center justify-center mb-4">
                     <Sparkles className="w-6 h-6 text-modern-primary" />
                   </div>

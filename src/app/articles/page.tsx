@@ -96,7 +96,6 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
 
           {/* Category Pills */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-text-muted mr-1 self-center">Category:</span>
             <Link
               href="/articles"
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
