@@ -287,6 +287,17 @@ export default function InventoryPage() {
 
                 {/* Actions - Compact on mobile */}
                 <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 sm:border-l sm:border-gray-100 sm:pl-3">
+                  {product.source_url && (
+                    <a
+                      href={product.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 text-text-muted hover:text-vintage-primary hover:bg-vintage-primary/5 rounded-lg transition-all"
+                      title={product.source_url.includes('temu.com') ? 'View on Temu' : product.source_url.includes('gumtree') ? 'View on Gumtree' : 'View source'}
+                    >
+                      <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </a>
+                  )}
                   <Link 
                     href={`/admin/inventory/edit/${product.id}`}
                     className="p-2 text-text-muted hover:text-vintage-primary hover:bg-vintage-primary/5 rounded-lg transition-all"

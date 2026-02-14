@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { serverEcommerceApi } from '@/lib/api-server'
 export const dynamic = 'force-dynamic'
 import { Product } from '@/lib/types'
-import { ArrowLeft, ShoppingCart, Truck, Shield, RotateCcw, Package, Tag, Info, Phone, FileText, ExternalLink } from 'lucide-react'
+import { ArrowLeft, ShoppingCart, Truck, Shield, RotateCcw, Package, Tag, Info, Phone, FileText } from 'lucide-react'
 import AddToCartButton from './AddToCartButton'
 import ProductGallery from './ProductGallery'
 
@@ -146,20 +146,6 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 </div>
 
                 <AddToCartButton product={product} />
-
-                {product.source_url && (
-                  <a
-                    href={product.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 text-sm text-text-muted hover:text-vintage-primary transition-colors"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    {product.source_url.includes('temu.com') ? 'View on Temu' :
-                     product.source_url.includes('gumtree') ? 'View on Gumtree' :
-                     'View original listing'}
-                  </a>
-                )}
                 
                 <p className="text-[10px] text-center text-text-muted uppercase tracking-widest font-bold">
                   Personalized Service for All Orders
