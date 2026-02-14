@@ -23,7 +23,7 @@ async function getArticles(params: { search?: string; category?: string }) {
 
 async function getCategories(): Promise<{ id: string; name: string }[]> {
   try {
-    const data: any = await serverNewsApi.categories.list()
+    const data: any = await serverNewsApi.categories.list({ for_articles: true })
     const raw = Array.isArray(data) ? data : data?.results || []
     return raw.map((c: any) => ({ id: String(c.id), name: c.name || 'Uncategorized' }))
   } catch (error) {

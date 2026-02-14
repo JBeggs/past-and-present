@@ -15,7 +15,7 @@ class ServerApiClient {
     this.baseURL = baseURL
   }
 
-  private async getHeaders(): Promise<HeadersInit> {
+  private async getHeaders(overrides?: Record<string, string>): Promise<HeadersInit> {
     const cookieStore = await cookies()
     const token = cookieStore.get('auth_token')?.value
     const companyId = cookieStore.get('company_id')?.value
@@ -36,10 +36,14 @@ class ServerApiClient {
       headers['X-Company-Id'] = companyId
     }
 
+    if (overrides) {
+      Object.assign(headers, overrides)
+    }
+
     return headers
   }
 
-  async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+  async get<T>(endpoint: string, params?: Record<string, any>, headerOverrides?: Record<string, string>): Promise<T> {
     const url = new URL(`${this.baseURL}${endpoint}`)
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -49,7 +53,7 @@ class ServerApiClient {
       })
     }
 
-    const headers = await this.getHeaders()
+    const headers = await this.getHeaders(headerOverrides)
     console.log(`DEBUG: Fetching ${url.toString()} with headers:`, JSON.stringify(headers))
 
     const response = await fetch(url.toString(), {
@@ -128,7 +132,12 @@ export const serverNewsApi = {
   },
 
   categories: {
-    list: () => serverApiClient.get('/news/categories/'),
+    list: (params?: { for_articles?: boolean }) =>
+      serverApiClient.get(
+        '/news/categories/',
+        undefined,
+        params?.for_articles ? { 'X-Company-Slug': 'riverside-herald' } : undefined
+      ),
     get: (id: string) => serverApiClient.get(`/news/categories/${id}/`),
   },
 
