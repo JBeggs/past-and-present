@@ -80,7 +80,10 @@ export default function InventoryPage() {
       if (updates.featured) params.set('featured', updates.featured)
       else params.delete('featured')
     }
-    if (updates.search !== undefined) params.set('search', updates.search)
+    if (updates.search !== undefined) {
+      if (updates.search) params.set('search', updates.search)
+      else params.delete('search')
+    }
     router.push(`/admin/inventory?${params.toString()}`)
   }, [router, searchParams])
 
@@ -268,6 +271,17 @@ export default function InventoryPage() {
                 <div className="flex gap-1 flex-wrap items-center">
                   <button
                     type="button"
+                    onClick={() => updateUrl({ status: 'all', featured: '', search: '', page: 1 })}
+                    className={`min-h-[44px] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 flex-shrink-0 ${
+                      statusFromUrl === 'all' && !featuredFromUrl && !searchFromUrl
+                        ? 'bg-vintage-primary text-white'
+                        : 'bg-white text-text-muted border border-gray-200 hover:border-vintage-primary/30'
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => updateUrl({ featured: featuredFromUrl === 'true' ? '' : 'true', page: 1 })}
                     className={`min-h-[44px] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 flex-shrink-0 ${
                       featuredFromUrl === 'true' 
@@ -340,6 +354,17 @@ export default function InventoryPage() {
               {selectedIds.size === products.length ? 'Deselect all' : 'Select all on this page'}
             </span>
           </div>
+          <PaginationNav
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            basePath="/admin/inventory"
+            searchParams={{
+              ...(statusFromUrl !== 'all' && { status: statusFromUrl }),
+              ...(featuredFromUrl && { featured: featuredFromUrl }),
+              ...(searchFromUrl && { search: searchFromUrl }),
+            }}
+          />
           <div className="grid grid-cols-1 gap-4">
             {products.map((product) => (
               <div 

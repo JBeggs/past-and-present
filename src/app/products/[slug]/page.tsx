@@ -65,15 +65,16 @@ export default async function ProductPage({ params }: ProductPageProps) {
       {/* Breadcrumb */}
       <div className="bg-white border-b border-gray-200 sticky top-[73px] z-30">
         <div className="container-wide py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/products" className="flex items-center text-text-muted hover:text-vintage-primary transition-colors font-medium">
+          <div className="flex items-center justify-between gap-4">
+            <Link href="/products" className="flex items-center text-text-muted hover:text-vintage-primary transition-colors font-medium flex-shrink-0">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Products
+              Back<span className="hidden md:inline"> to Products</span>
             </Link>
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-text-muted">
-              <span>{(product as any).category_name || product.category?.name || 'General'}</span>
-              <span className="opacity-30">/</span>
-              <span className="text-text">{product.name}</span>
+            <div className="flex flex-col items-end text-right min-w-0">
+              <span className="text-xs font-bold uppercase tracking-widest text-text-muted">
+                {(product as any).category_name || product.category?.name || 'General'}
+              </span>
+              <span className="text-sm font-medium text-text truncate max-w-full">{product.name}</span>
             </div>
           </div>
         </div>
