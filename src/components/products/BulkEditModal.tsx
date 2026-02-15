@@ -11,12 +11,15 @@ interface BulkEditModalProps {
 
 export default function BulkEditModal({ onClose, onSubmit, count }: BulkEditModalProps) {
   const [status, setStatus] = useState<string>('')
+  const [featured, setFeatured] = useState<string>('')
   const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const data: Record<string, unknown> = {}
     if (status) data.status = status
+    if (featured === 'true') data.featured = true
+    if (featured === 'false') data.featured = false
     if (Object.keys(data).length === 0) {
       onClose()
       return
@@ -29,6 +32,8 @@ export default function BulkEditModal({ onClose, onSubmit, count }: BulkEditModa
       setSubmitting(false)
     }
   }
+
+  const hasChanges = status || featured
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -57,6 +62,18 @@ export default function BulkEditModal({ onClose, onSubmit, count }: BulkEditModa
               <option value="draft">Draft</option>
             </select>
           </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-text mb-2">Featured</label>
+            <select
+              value={featured}
+              onChange={(e) => setFeatured(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-vintage-primary focus:border-vintage-primary"
+            >
+              <option value="">No change</option>
+              <option value="true">Yes – Show in Featured</option>
+              <option value="false">No – Remove from Featured</option>
+            </select>
+          </div>
           <div className="flex gap-2 justify-end">
             <button
               type="button"
@@ -67,7 +84,7 @@ export default function BulkEditModal({ onClose, onSubmit, count }: BulkEditModa
             </button>
             <button
               type="submit"
-              disabled={submitting || !status}
+              disabled={submitting || !hasChanges}
               className="px-4 py-2 btn btn-primary disabled:opacity-50"
             >
               {submitting ? 'Updating...' : 'Update'}

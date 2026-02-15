@@ -2,22 +2,23 @@ import Link from 'next/link'
 import { serverEcommerceApi } from '@/lib/api-server'
 export const dynamic = 'force-dynamic'
 import { Product } from '@/lib/types'
-import { Clock, Sparkles, Filter, Search } from 'lucide-react'
+import { Clock, Sparkles, Filter, Search, Star } from 'lucide-react'
 import AdminActions from '@/components/products/AdminActions'
 import ProductCard from '@/components/products/ProductCard'
 import PaginationNav from '@/components/ui/PaginationNav'
 
 interface ProductsPageProps {
-  searchParams: Promise<{ condition?: string; category?: string; search?: string; page?: string }>
+  searchParams: Promise<{ condition?: string; category?: string; search?: string; page?: string; featured?: string }>
 }
 
-async function getProducts(params: { condition?: string; category?: string; search?: string; page?: string }) {
+async function getProducts(params: { condition?: string; category?: string; search?: string; page?: string; featured?: string }) {
   try {
     const response = await serverEcommerceApi.products.list({
       is_active: true,
       category: params.category,
       search: params.search,
       condition: params.condition,
+      featured: params.featured === 'true' ? true : undefined,
       page: params.page ? parseInt(params.page) : 1,
       page_size: 24,
     })
