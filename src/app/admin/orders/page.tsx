@@ -11,7 +11,13 @@ import {
   Truck,
   Loader2,
   Filter,
+  Eye,
 } from 'lucide-react'
+
+interface OrderItem {
+  id: string
+  product_image?: string
+}
 
 interface Order {
   id: string
@@ -28,6 +34,7 @@ interface Order {
   customer_email?: string
   customer_first_name?: string
   customer_last_name?: string
+  items?: OrderItem[]
 }
 
 export default function AdminOrdersPage() {
@@ -95,6 +102,29 @@ export default function AdminOrdersPage() {
     express: 'Express',
     pudo: 'Pudo Pickup',
     collect: 'Collect In-Store',
+    'same-day': 'Same Day',
+  }
+
+  const getStatusBadge = (status: string) => {
+    const styles: Record<string, string> = {
+      delivered: 'bg-green-100 text-green-700',
+      cancelled: 'bg-red-100 text-red-700',
+      shipped: 'bg-blue-100 text-blue-700',
+      processing: 'bg-indigo-100 text-indigo-700',
+      paid: 'bg-vintage-primary/10 text-vintage-primary',
+      pending: 'bg-gray-100 text-gray-700',
+    }
+    return (
+      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
+        {status}
+      </span>
+    )
+  }
+
+  const getFirstItemImage = (order: Order) => {
+    const items = order.items || []
+    const first = items.find((i: OrderItem) => i.product_image)
+    return first?.product_image
   }
 
   if (authLoading || !isAuthorized) {
@@ -124,21 +154,43 @@ export default function AdminOrdersPage() {
 
           {/* Filters */}
           <div className="bg-gray-50 border-t border-gray-100 mt-4 -mx-4 px-4 py-3">
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
-              <Filter className="w-4 h-4 text-text-muted flex-shrink-0" />
-              {['all', 'pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setStatusFilter(status)}
-                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap ${
-                    statusFilter === status
-                      ? 'bg-vintage-primary text-white'
-                      : 'bg-white text-text-muted border border-gray-200 hover:border-vintage-primary/30'
-                  }`}
-                >
-                  {status}
-                </button>
-              ))}
+            <div className="flex flex-col md:flex-row items-center gap-4">
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto">
+                <Filter className="w-4 h-4 text-text-muted flex-shrink-0" />
+                <div className="flex gap-1 flex-wrap">
+                  {['all', 'pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setStatusFilter(status)}
+                      className={`min-h-[44px] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap flex-shrink-0 ${
+                        statusFilter === status
+                          ? 'bg-vintage-primary text-white'
+                          : 'bg-white text-text-muted border border-gray-200 hover:border-vintage-primary/30'
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="hidden lg:flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-text-muted border-l border-gray-200 pl-4">
+                <div className="flex flex-col items-center">
+                  <span className="text-text text-sm">{orders.length}</span>
+                  <span>Total</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-gray-600 text-sm">{orders.filter(o => o.status === 'pending').length}</span>
+                  <span>Pending</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-green-600 text-sm">{orders.filter(o => o.status === 'paid').length}</span>
+                  <span>Paid</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-blue-600 text-sm">{orders.filter(o => o.status === 'shipped').length}</span>
+                  <span>Shipped</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -152,57 +204,83 @@ export default function AdminOrdersPage() {
             <p className="font-bold text-text uppercase tracking-widest text-xs">Loading orders...</p>
           </div>
         ) : filteredOrders.length > 0 ? (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4">
             {filteredOrders.map((order) => (
               <div
                 key={order.id}
-                className="card p-6 hover:shadow-lg transition-shadow"
+                className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl hover:border-vintage-primary/30 hover:shadow-md transition-all group relative overflow-hidden"
               >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <p className="font-bold text-vintage-primary">#{order.order_number}</p>
-                    <p className="text-sm text-text-muted">
+                {/* Status indicator stripe */}
+                <div
+                  className={`absolute left-0 top-0 bottom-0 w-1 ${
+                    order.status === 'delivered' ? 'bg-green-500' :
+                    order.status === 'cancelled' ? 'bg-red-500' :
+                    order.status === 'shipped' ? 'bg-blue-500' :
+                    order.status === 'paid' ? 'bg-vintage-primary' :
+                    'bg-gray-400'
+                  }`}
+                />
+                {/* Thumbnail */}
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 flex-shrink-0 shadow-inner">
+                  {getFirstItemImage(order) ? (
+                    <img src={getFirstItemImage(order)} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-200">
+                      <Package className="w-6 h-6 sm:w-8 sm:h-8" />
+                    </div>
+                  )}
+                </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0 py-1">
+                  <div className="flex flex-col mb-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Link
+                        href={`/admin/orders/${order.id}`}
+                        className="font-bold text-sm sm:text-lg text-vintage-primary hover:underline truncate"
+                      >
+                        #{order.order_number}
+                      </Link>
+                      {getStatusBadge(order.status)}
+                    </div>
+                    <p className="text-sm text-text-muted truncate">
                       {order.customer_first_name} {order.customer_last_name} • {order.customer_email}
                     </p>
-                    <p className="text-xs text-text-muted">
-                      {new Date(order.created_at).toLocaleDateString()} •{' '}
-                      {deliveryMethodLabel[order.delivery_method] || order.delivery_method}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-xs text-text-muted">Total</p>
-                      <p className="font-bold text-text">R{Number(order.total).toFixed(2)}</p>
+                    <div className="flex items-center gap-3 text-[10px] sm:text-xs text-text-muted mt-1">
+                      <span>{new Date(order.created_at).toLocaleDateString()}</span>
+                      <span>{deliveryMethodLabel[order.delivery_method] || order.delivery_method}</span>
+                      {order.waybill_number && (
+                        <span className="font-mono">Waybill: {order.waybill_number}</span>
+                      )}
                     </div>
-                    <div
-                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
-                        order.status === 'delivered' ? 'bg-green-100 text-green-700' :
-                        order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                        order.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
-                        order.status === 'paid' ? 'bg-vintage-primary/10 text-vintage-primary' :
-                        'bg-gray-100 text-gray-700'
-                      }`}
+                  </div>
+                </div>
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row items-center gap-2 sm:border-l sm:border-gray-100 sm:pl-3">
+                  <div className="text-right sm:mr-2">
+                    <p className="text-[10px] font-bold uppercase text-text-muted">Total</p>
+                    <p className="font-bold text-text">R{Number(order.total).toFixed(2)}</p>
+                  </div>
+                  <Link
+                    href={`/admin/orders/${order.id}`}
+                    className="min-h-[44px] px-4 py-2 btn btn-secondary flex items-center justify-center gap-2"
+                  >
+                    <Eye className="w-4 h-4" />
+                    View
+                  </Link>
+                  {canCreateShipment(order) && (
+                    <button
+                      onClick={() => handleCreateShipment(order.id)}
+                      disabled={!!creatingShipment}
+                      className="min-h-[44px] px-4 py-2 btn btn-primary flex items-center justify-center gap-2"
                     >
-                      {order.status}
-                    </div>
-                    {order.waybill_number && (
-                      <p className="text-xs text-text-muted">Waybill: {order.waybill_number}</p>
-                    )}
-                    {canCreateShipment(order) && (
-                      <button
-                        onClick={() => handleCreateShipment(order.id)}
-                        disabled={!!creatingShipment}
-                        className="btn btn-primary btn-sm flex items-center gap-2"
-                      >
-                        {creatingShipment === order.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Truck className="w-4 h-4" />
-                        )}
-                        Create Shipment
-                      </button>
-                    )}
-                  </div>
+                      {creatingShipment === order.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Truck className="w-4 h-4" />
+                      )}
+                      Ship
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

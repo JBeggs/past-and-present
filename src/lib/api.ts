@@ -669,6 +669,12 @@ export const ecommerceApi = {
     get: (id: string) => apiClient.get(`/v1/orders/${id}/`),
     create: (data: any) => apiClient.post('/v1/orders/', data),
     update: (id: string, data: any) => apiClient.patch(`/v1/orders/${id}/`, data),
+    updateStatus: (id: string, data: { status: string; notes?: string }) =>
+      apiClient.put(`/v1/orders/${id}/status/`, data),
+    cancel: (id: string, data: { reason: string; refund?: boolean }) =>
+      apiClient.put(`/v1/orders/${id}/cancel/`, data),
+    cancelItem: (orderId: string, itemId: string) =>
+      apiClient.put(`/v1/orders/${orderId}/items/${itemId}/cancel/`, {}),
     createShipment: (orderId: string) =>
       apiClient.post(`/v1/orders/${orderId}/create-shipment/`, {}),
     trackShipment: (orderId: string) =>
