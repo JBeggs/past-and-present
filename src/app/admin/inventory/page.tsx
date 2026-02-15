@@ -42,8 +42,8 @@ export default function InventoryPage() {
         page: pageFromUrl,
       }
       if (statusFromUrl !== 'all') params.status = statusFromUrl
-      if (featuredFromUrl === 'true') params.featured = true
-      if (featuredFromUrl === 'false') params.featured = false
+      if (featuredFromUrl === 'true') params.featured = 'true'
+      if (featuredFromUrl === 'false') params.featured = 'false'
       if (searchFromUrl.trim()) params.search = searchFromUrl.trim()
       const response: any = await ecommerceApi.products.listForAdmin(params)
       const productData = response?.data || (Array.isArray(response) ? response : response?.results || [])
@@ -265,25 +265,11 @@ export default function InventoryPage() {
               
               <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
                 <Filter className="w-4 h-4 text-text-muted flex-shrink-0" />
-                <div className="flex gap-1 flex-wrap">
-                  {['all', 'active', 'draft'].map((status) => (
-                    <button
-                      key={status}
-                      type="button"
-                      onClick={() => updateUrl({ status, page: 1 })}
-                      className={`min-h-[44px] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
-                        statusFromUrl === status 
-                          ? 'bg-vintage-primary text-white' 
-                          : 'bg-white text-text-muted border border-gray-200 hover:border-vintage-primary/30'
-                      }`}
-                    >
-                      {status}
-                    </button>
-                  ))}
+                <div className="flex gap-1 flex-wrap items-center">
                   <button
                     type="button"
                     onClick={() => updateUrl({ featured: featuredFromUrl === 'true' ? '' : 'true', page: 1 })}
-                    className={`min-h-[44px] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
+                    className={`min-h-[44px] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 flex-shrink-0 ${
                       featuredFromUrl === 'true' 
                         ? 'bg-purple-600 text-white' 
                         : 'bg-white text-text-muted border border-gray-200 hover:border-purple-300'
@@ -292,6 +278,20 @@ export default function InventoryPage() {
                     <Star className="w-3.5 h-3.5" />
                     Featured
                   </button>
+                  {['all', 'active', 'draft'].map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => updateUrl({ status, page: 1 })}
+                      className={`min-h-[44px] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all flex-shrink-0 ${
+                        statusFromUrl === status 
+                          ? 'bg-vintage-primary text-white' 
+                          : 'bg-white text-text-muted border border-gray-200 hover:border-vintage-primary/30'
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
                 </div>
               </div>
 
