@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ecommerceApi } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
+import PaginationNav from '@/components/ui/PaginationNav'
 import {
   ArrowLeft,
   Package,
@@ -37,41 +39,85 @@ interface Order {
   items?: OrderItem[]
 }
 
+const PAGE_SIZE = 20
+
 export default function AdminOrdersPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const pageFromUrl = parseInt(searchParams.get('page') || '1', 10)
+  const statusFromUrl = searchParams.get('status') || 'all'
+
   const { profile, loading: authLoading } = useAuth()
   const [orders, setOrders] = useState<Order[]>([])
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 })
+  const [counts, setCounts] = useState({ total: 0, pending: 0, paid: 0, processing: 0, shipped: 0, delivered: 0, cancelled: 0 })
   const [loading, setLoading] = useState(true)
-  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [creatingShipment, setCreatingShipment] = useState<string | null>(null)
   const { showSuccess, showError } = useToast()
 
   const isAuthorized = profile?.role === 'admin' || profile?.role === 'business_owner'
 
+  const updateUrl = useCallback((updates: { page?: number; status?: string }) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (updates.page !== undefined) params.set('page', String(updates.page))
+    if (updates.status !== undefined) params.set('status', updates.status)
+    router.push(`/admin/orders?${params.toString()}`)
+  }, [router, searchParams])
+
   useEffect(() => {
     if (!authLoading && !isAuthorized) {
-      window.location.href = '/login'
+      router.push('/login')
     }
-  }, [isAuthorized, authLoading])
+  }, [isAuthorized, authLoading, router])
 
-  useEffect(() => {
-    if (isAuthorized) {
-      fetchOrders()
-    }
-  }, [isAuthorized])
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
+    if (!isAuthorized) return
     try {
       setLoading(true)
-      const response: any = await ecommerceApi.orders.list()
+      const params: Record<string, string | number> = {
+        page: pageFromUrl,
+        limit: PAGE_SIZE,
+      }
+      if (statusFromUrl !== 'all') params.status = statusFromUrl
+      const response: any = await ecommerceApi.orders.list(params)
       const orderData = response?.data || (Array.isArray(response) ? response : response?.results || [])
       setOrders(Array.isArray(orderData) ? orderData : [])
+
+      const pag = response?.pagination
+      if (pag) {
+        setPagination({
+          page: pag.page ?? 1,
+          totalPages: pag.totalPages ?? 1,
+          total: pag.total ?? orderData.length,
+        })
+      } else {
+        setPagination({ page: 1, totalPages: 1, total: orderData.length })
+      }
+
+      if (response?.counts) {
+        setCounts({
+          total: response.counts.total ?? 0,
+          pending: response.counts.pending ?? 0,
+          paid: response.counts.paid ?? 0,
+          processing: response.counts.processing ?? 0,
+          shipped: response.counts.shipped ?? 0,
+          delivered: response.counts.delivered ?? 0,
+          cancelled: response.counts.cancelled ?? 0,
+        })
+      }
     } catch (error) {
       console.error('Error fetching orders:', error)
       showError('Failed to load orders')
     } finally {
       setLoading(false)
     }
-  }
+  }, [isAuthorized, pageFromUrl, statusFromUrl, showError])
+
+  useEffect(() => {
+    if (isAuthorized) {
+      fetchOrders()
+    }
+  }, [isAuthorized, fetchOrders])
 
   const handleCreateShipment = async (orderId: string) => {
     setCreatingShipment(orderId)
@@ -86,11 +132,6 @@ export default function AdminOrdersPage() {
       setCreatingShipment(null)
     }
   }
-
-  const filteredOrders = orders.filter((o) => {
-    if (statusFilter === 'all') return true
-    return o.status === statusFilter
-  })
 
   const canCreateShipment = (order: Order) =>
     (order.status === 'paid' || order.status === 'processing') &&
@@ -161,9 +202,9 @@ export default function AdminOrdersPage() {
                   {['all', 'pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled'].map((status) => (
                     <button
                       key={status}
-                      onClick={() => setStatusFilter(status)}
+                      onClick={() => updateUrl({ status, page: 1 })}
                       className={`min-h-[44px] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap flex-shrink-0 ${
-                        statusFilter === status
+                        statusFromUrl === status
                           ? 'bg-vintage-primary text-white'
                           : 'bg-white text-text-muted border border-gray-200 hover:border-vintage-primary/30'
                       }`}
@@ -175,20 +216,24 @@ export default function AdminOrdersPage() {
               </div>
               <div className="hidden lg:flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-text-muted border-l border-gray-200 pl-4">
                 <div className="flex flex-col items-center">
-                  <span className="text-text text-sm">{orders.length}</span>
+                  <span className="text-text text-sm">{counts.total}</span>
                   <span>Total</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-gray-600 text-sm">{orders.filter(o => o.status === 'pending').length}</span>
+                  <span className="text-gray-600 text-sm">{counts.pending}</span>
                   <span>Pending</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-green-600 text-sm">{orders.filter(o => o.status === 'paid').length}</span>
+                  <span className="text-green-600 text-sm">{counts.paid}</span>
                   <span>Paid</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-blue-600 text-sm">{orders.filter(o => o.status === 'shipped').length}</span>
+                  <span className="text-blue-600 text-sm">{counts.shipped}</span>
                   <span>Shipped</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-red-600 text-sm">{counts.cancelled}</span>
+                  <span>Cancelled</span>
                 </div>
               </div>
             </div>
@@ -203,9 +248,10 @@ export default function AdminOrdersPage() {
             <Loader2 className="w-12 h-12 animate-spin text-vintage-primary mb-4" />
             <p className="font-bold text-text uppercase tracking-widest text-xs">Loading orders...</p>
           </div>
-        ) : filteredOrders.length > 0 ? (
+        ) : orders.length > 0 ? (
+          <>
           <div className="grid grid-cols-1 gap-4">
-            {filteredOrders.map((order) => (
+            {orders.map((order) => (
               <div
                 key={order.id}
                 className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl hover:border-vintage-primary/30 hover:shadow-md transition-all group relative overflow-hidden"
@@ -285,12 +331,22 @@ export default function AdminOrdersPage() {
               </div>
             ))}
           </div>
+          <PaginationNav
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            basePath="/admin/orders"
+            searchParams={{
+              ...(statusFromUrl !== 'all' && { status: statusFromUrl }),
+            }}
+          />
+          </>
         ) : (
           <div className="text-center py-16">
             <Package className="w-16 h-16 mx-auto mb-4 text-gray-300" />
             <h3 className="text-xl font-semibold text-text mb-2">No orders found</h3>
             <p className="text-text-muted mb-6">
-              {statusFilter === 'all' ? 'No orders yet.' : `No orders with status "${statusFilter}".`}
+              {statusFromUrl === 'all' ? 'No orders yet.' : `No orders with status "${statusFromUrl}".`}
             </p>
             <Link href="/admin/inventory" className="btn btn-primary">
               Back to Inventory

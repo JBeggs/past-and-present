@@ -664,7 +664,7 @@ export const ecommerceApi = {
   },
 
   orders: {
-    list: (params?: { status?: string; page?: number }) =>
+    list: (params?: { status?: string; page?: number; limit?: number }) =>
       apiClient.get('/v1/orders/', params),
     get: (id: string) => apiClient.get(`/v1/orders/${id}/`),
     create: (data: any) => apiClient.post('/v1/orders/', data),
