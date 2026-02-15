@@ -17,6 +17,7 @@ export default function InventoryPage() {
   const { profile, loading: authLoading } = useAuth()
   const searchParams = useSearchParams()
   const pageFromUrl = parseInt(searchParams.get('page') || '1', 10)
+  const limitFromUrl = searchParams.get('limit') || '20'
   const statusFromUrl = searchParams.get('status') || 'all'
   const featuredFromUrl = searchParams.get('featured') || ''
   const searchFromUrl = searchParams.get('search') || ''
@@ -40,6 +41,7 @@ export default function InventoryPage() {
       setLoading(true)
       const params: Record<string, string | number> = {
         page: pageFromUrl,
+        limit: limitFromUrl === 'all' ? 9999 : parseInt(limitFromUrl, 10) || 20,
       }
       if (statusFromUrl !== 'all') params.status = statusFromUrl
       if (featuredFromUrl === 'true') params.featured = 'true'
@@ -64,7 +66,7 @@ export default function InventoryPage() {
     } finally {
       setLoading(false)
     }
-  }, [isAuthorized, pageFromUrl, statusFromUrl, featuredFromUrl, searchFromUrl, showError])
+  }, [isAuthorized, pageFromUrl, limitFromUrl, statusFromUrl, featuredFromUrl, searchFromUrl, showError])
 
   useEffect(() => {
     if (!authLoading && !isAuthorized) {
@@ -72,9 +74,13 @@ export default function InventoryPage() {
     }
   }, [isAuthorized, authLoading, router])
 
-  const updateUrl = useCallback((updates: { page?: number; status?: string; featured?: string; search?: string }) => {
+  const updateUrl = useCallback((updates: { page?: number; limit?: string; status?: string; featured?: string; search?: string }) => {
     const params = new URLSearchParams(searchParams.toString())
     if (updates.page !== undefined) params.set('page', String(updates.page))
+    if (updates.limit !== undefined) {
+      if (updates.limit) params.set('limit', updates.limit)
+      else params.delete('limit')
+    }
     if (updates.status !== undefined) params.set('status', updates.status)
     if (updates.featured !== undefined) {
       if (updates.featured) params.set('featured', updates.featured)
@@ -271,17 +277,6 @@ export default function InventoryPage() {
                 <div className="flex gap-1 flex-wrap items-center">
                   <button
                     type="button"
-                    onClick={() => updateUrl({ status: 'all', featured: '', search: '', page: 1 })}
-                    className={`min-h-[44px] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 flex-shrink-0 ${
-                      statusFromUrl === 'all' && !featuredFromUrl && !searchFromUrl
-                        ? 'bg-vintage-primary text-white'
-                        : 'bg-white text-text-muted border border-gray-200 hover:border-vintage-primary/30'
-                    }`}
-                  >
-                    All
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => updateUrl({ featured: featuredFromUrl === 'true' ? '' : 'true', page: 1 })}
                     className={`min-h-[44px] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 flex-shrink-0 ${
                       featuredFromUrl === 'true' 
@@ -354,17 +349,29 @@ export default function InventoryPage() {
               {selectedIds.size === products.length ? 'Deselect all' : 'Select all on this page'}
             </span>
           </div>
-          <PaginationNav
-            page={pagination.page}
-            totalPages={pagination.totalPages}
-            total={pagination.total}
-            basePath="/admin/inventory"
-            searchParams={{
-              ...(statusFromUrl !== 'all' && { status: statusFromUrl }),
-              ...(featuredFromUrl && { featured: featuredFromUrl }),
-              ...(searchFromUrl && { search: searchFromUrl }),
-            }}
-          />
+          <div className="flex flex-wrap items-center gap-4 py-6">
+            {pagination.totalPages > 1 && (
+              <button
+                type="button"
+                onClick={() => updateUrl({ limit: 'all', page: 1 })}
+                className="min-h-[44px] px-4 py-2 rounded-lg border border-gray-200 bg-white text-text hover:bg-gray-50 hover:border-vintage-primary/30 transition-colors text-sm font-medium"
+              >
+                View All
+              </button>
+            )}
+            <PaginationNav
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              total={pagination.total}
+              basePath="/admin/inventory"
+              searchParams={{
+                ...(limitFromUrl !== '20' && { limit: limitFromUrl }),
+                ...(statusFromUrl !== 'all' && { status: statusFromUrl }),
+                ...(featuredFromUrl && { featured: featuredFromUrl }),
+                ...(searchFromUrl && { search: searchFromUrl }),
+              }}
+            />
+          </div>
           <div className="grid grid-cols-1 gap-4">
             {products.map((product) => (
               <div 
@@ -505,17 +512,29 @@ export default function InventoryPage() {
             </div>
           )}
 
-          <PaginationNav
-            page={pagination.page}
-            totalPages={pagination.totalPages}
-            total={pagination.total}
-            basePath="/admin/inventory"
-            searchParams={{
-              ...(statusFromUrl !== 'all' && { status: statusFromUrl }),
-              ...(featuredFromUrl && { featured: featuredFromUrl }),
-              ...(searchFromUrl && { search: searchFromUrl }),
-            }}
-          />
+          <div className="flex flex-wrap items-center gap-4 py-6">
+            {pagination.totalPages > 1 && (
+              <button
+                type="button"
+                onClick={() => updateUrl({ limit: 'all', page: 1 })}
+                className="min-h-[44px] px-4 py-2 rounded-lg border border-gray-200 bg-white text-text hover:bg-gray-50 hover:border-vintage-primary/30 transition-colors text-sm font-medium"
+              >
+                View All
+              </button>
+            )}
+            <PaginationNav
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              total={pagination.total}
+              basePath="/admin/inventory"
+              searchParams={{
+                ...(limitFromUrl !== '20' && { limit: limitFromUrl }),
+                ...(statusFromUrl !== 'all' && { status: statusFromUrl }),
+                ...(featuredFromUrl && { featured: featuredFromUrl }),
+                ...(searchFromUrl && { search: searchFromUrl }),
+              }}
+            />
+          </div>
           </>
         ) : (
           <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-3xl border border-dashed border-gray-200">
