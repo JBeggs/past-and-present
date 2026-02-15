@@ -4,30 +4,65 @@ export const dynamic = 'force-dynamic'
 import { Product, Article } from '@/lib/types'
 import { ArrowRight, Sparkles, Clock } from 'lucide-react'
 
+function shuffleArray<T>(arr: T[]): T[] {
+  const out = [...arr]
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]]
+  }
+  return out
+}
+
 async function getHomeData() {
   try {
-    const [productsData, articlesData] = await Promise.all([
-      serverEcommerceApi.products.list({ is_active: true }),
+    const [featuredRes, vintageRes, newRes, articlesData] = await Promise.all([
+      serverEcommerceApi.products.list({
+        is_active: true,
+        featured: true,
+        page_size: 100,
+      }),
+      serverEcommerceApi.products.list({
+        is_active: true,
+        exclude_featured: true,
+        tags: 'vintage',
+        page_size: 20,
+        ordering: 'random',
+      }),
+      serverEcommerceApi.products.list({
+        is_active: true,
+        exclude_featured: true,
+        page_size: 100,
+      }),
       serverNewsApi.articles.list({ status: 'published' }),
     ])
 
-    const raw = Array.isArray(productsData) ? productsData : (productsData as any)?.data || (productsData as any)?.results || []
-    const products = raw.filter((p: Product) => p.status !== 'archived')
+    const featuredRaw = Array.isArray(featuredRes) ? featuredRes : (featuredRes as any)?.data || (featuredRes as any)?.results || []
+    const vintageRaw = Array.isArray(vintageRes) ? vintageRes : (vintageRes as any)?.data || (vintageRes as any)?.results || []
+    const newRaw = Array.isArray(newRes) ? newRes : (newRes as any)?.data || (newRes as any)?.results || []
     const articles = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.data || (articlesData as any)?.results || []
 
-    return {
-      featuredProducts: products.filter((p: Product) => p.featured).map((p: Product) => ({
+    const featuredProducts = featuredRaw
+      .filter((p: Product) => p.status !== 'archived')
+      .map((p: Product) => ({
         ...p,
-        is_vintage: Array.isArray(p.tags) && p.tags.some(t => (typeof t === 'string' ? t : t.name) === 'vintage')
-      })).slice(0, 8),
-      vintageProducts: products.filter((p: Product) => {
-        const tags = Array.isArray(p.tags) ? p.tags.map(t => typeof t === 'string' ? t : t.name) : []
-        return tags.includes('vintage')
-      }).slice(0, 4),
-      newProducts: products.filter((p: Product) => {
-        const tags = Array.isArray(p.tags) ? p.tags.map(t => typeof t === 'string' ? t : t.name) : []
-        return !tags.includes('vintage')
-      }).slice(0, 4),
+        is_vintage: Array.isArray(p.tags) && p.tags.some((t: string | { name: string }) => (typeof t === 'string' ? t : t.name) === 'vintage'),
+      }))
+
+    const vintageProducts: Product[] = vintageRaw
+      .filter((p: Product) => p.status !== 'archived')
+      .slice(0, 20)
+
+    const newNonVintage: Product[] = newRaw.filter((p: Product) => {
+      if (p.status === 'archived') return false
+      const tags = Array.isArray(p.tags) ? p.tags.map((t: string | { name: string }) => typeof t === 'string' ? t : t.name) : []
+      return !tags.includes('vintage')
+    })
+    const newProducts: Product[] = shuffleArray(newNonVintage).slice(0, 20)
+
+    return {
+      featuredProducts,
+      vintageProducts,
+      newProducts,
       latestArticles: articles.slice(0, 3),
     }
   } catch (error) {

@@ -148,7 +148,18 @@ export const serverNewsApi = {
 // Server-side Ecommerce API
 export const serverEcommerceApi = {
   products: {
-    list: (params?: { category?: string; search?: string; page?: number; is_active?: boolean }) =>
+    list: (params?: {
+      category?: string
+      search?: string
+      page?: number
+      page_size?: number
+      is_active?: boolean
+      featured?: boolean
+      exclude_featured?: boolean
+      tags?: string
+      ordering?: string
+      condition?: string
+    }) =>
       serverApiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/products/`, params),
     get: (id: string) => serverApiClient.get(`/v1/products/${id}/`),
     getBySlug: (slug: string) => serverApiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/products/slug/${slug}/`),

@@ -618,11 +618,25 @@ export const newsApi = {
 // Ecommerce API methods
 export const ecommerceApi = {
   products: {
-    list: (params?: { category?: string; search?: string; page?: number; is_active?: boolean }) =>
+    list: (params?: {
+      category?: string
+      search?: string
+      page?: number
+      page_size?: number
+      is_active?: boolean
+      featured?: boolean
+      exclude_featured?: boolean
+      tags?: string
+      ordering?: string
+      condition?: string
+    }) =>
       apiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/products/`, params),
     /** List all products including drafts (for store admin). Uses authenticated /v1/products/ */
     listForAdmin: (params?: { status?: string; category?: string; search?: string; page?: number }) =>
       apiClient.get('/v1/products/', params),
+    /** Bulk operations: update, delete (archive), or archive */
+    bulk: (data: { operation: 'update' | 'delete' | 'archive'; ids: string[]; data?: Record<string, unknown> }) =>
+      apiClient.post('/v1/products/bulk/', data),
     get: (id: string) => apiClient.get(`/v1/products/${id}/`),
     getBySlug: (slug: string) => apiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/products/slug/${slug}/`),
     create: (data: any) => apiClient.post('/v1/products/', data),

@@ -1,30 +1,67 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ecommerceApi } from '@/lib/api'
 import { Product } from '@/lib/types'
-import { X, Edit2, Trash2, Loader2, Search, ExternalLink, Package, AlertCircle, Image as ImageIcon, ArrowLeft, Plus, Settings, Filter, ShoppingBag, Download } from 'lucide-react'
+import { Edit2, Trash2, Loader2, Search, ExternalLink, Image as ImageIcon, ArrowLeft, Plus, Settings, Filter, Download, CheckSquare, Square, AlertCircle } from 'lucide-react'
 import { useToast } from '@/contexts/ToastContext'
 import ProductForm from '@/components/products/ProductForm'
 import CategoryManager from '@/components/products/CategoryManager'
-import { useRouter } from 'next/navigation'
+import BulkEditModal from '@/components/products/BulkEditModal'
+import PaginationNav from '@/components/ui/PaginationNav'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function InventoryPage() {
   const { profile, loading: authLoading } = useAuth()
+  const searchParams = useSearchParams()
+  const pageFromUrl = parseInt(searchParams.get('page') || '1', 10)
+  const statusFromUrl = searchParams.get('status') || 'all'
+  const searchFromUrl = searchParams.get('search') || ''
+
   const [products, setProducts] = useState<Product[]>([])
+  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 })
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false)
   const { showSuccess, showError } = useToast()
   const router = useRouter()
 
-  // Authorization check
   const isAuthorized = profile?.role === 'admin' || profile?.role === 'business_owner'
+
+  const fetchProducts = useCallback(async () => {
+    if (!isAuthorized) return
+    try {
+      setLoading(true)
+      const params: Record<string, string | number> = {
+        page: pageFromUrl,
+      }
+      if (statusFromUrl !== 'all') params.status = statusFromUrl
+      if (searchFromUrl.trim()) params.search = searchFromUrl.trim()
+      const response: any = await ecommerceApi.products.listForAdmin(params)
+      const productData = response?.data || (Array.isArray(response) ? response : response?.results || [])
+      setProducts(productData)
+      const pag = response?.pagination
+      if (pag) {
+        setPagination({
+          page: pag.page ?? 1,
+          totalPages: pag.totalPages ?? 1,
+          total: pag.total ?? productData.length,
+        })
+      } else {
+        setPagination({ page: 1, totalPages: 1, total: productData.length })
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error)
+      showError('Failed to load products')
+    } finally {
+      setLoading(false)
+    }
+  }, [isAuthorized, pageFromUrl, statusFromUrl, searchFromUrl, showError])
 
   useEffect(() => {
     if (!authLoading && !isAuthorized) {
@@ -32,23 +69,66 @@ export default function InventoryPage() {
     }
   }, [isAuthorized, authLoading, router])
 
+  const updateUrl = useCallback((updates: { page?: number; status?: string; search?: string }) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (updates.page !== undefined) params.set('page', String(updates.page))
+    if (updates.status !== undefined) params.set('status', updates.status)
+    if (updates.search !== undefined) params.set('search', updates.search)
+    router.push(`/admin/inventory?${params.toString()}`)
+  }, [router, searchParams])
+
   useEffect(() => {
     if (isAuthorized) {
       fetchProducts()
     }
-  }, [isAuthorized])
+  }, [isAuthorized, fetchProducts])
 
-  const fetchProducts = async () => {
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === products.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(products.map(p => p.id)))
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return
+    if (!confirm(`Archive ${selectedIds.size} product(s)? This will remove them from the store.`)) return
     try {
-      setLoading(true)
-      const response: any = await ecommerceApi.products.listForAdmin()
-      const productData = response?.data || (Array.isArray(response) ? response : response?.results || [])
-      setProducts(productData)
+      await ecommerceApi.products.bulk({ operation: 'delete', ids: [...selectedIds] })
+      showSuccess(`${selectedIds.size} product(s) archived`)
+      setSelectedIds(new Set())
+      fetchProducts()
     } catch (error) {
-      console.error('Error fetching products:', error)
-      showError('Failed to load products')
-    } finally {
-      setLoading(false)
+      console.error('Error bulk deleting:', error)
+      showError('Failed to archive products')
+    }
+  }
+
+  const handleBulkEdit = () => {
+    setIsBulkEditOpen(true)
+  }
+
+  const handleBulkEditSubmit = async (data: Record<string, unknown>) => {
+    if (selectedIds.size === 0) return
+    try {
+      await ecommerceApi.products.bulk({ operation: 'update', ids: [...selectedIds], data })
+      showSuccess(`${selectedIds.size} product(s) updated`)
+      setSelectedIds(new Set())
+      setIsBulkEditOpen(false)
+      fetchProducts()
+    } catch (error) {
+      console.error('Error bulk updating:', error)
+      showError('Failed to update products')
     }
   }
 
@@ -65,14 +145,6 @@ export default function InventoryPage() {
     }
   }
 
-  const filteredProducts = products.filter(p => {
-    if (p.status === 'archived') return false
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         p.sku?.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || p.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
-
   const handleExportCsv = () => {
     const cols = ['name', 'sku', 'price', 'stock_quantity', 'status', 'description', 'category', 'created_at']
     const escape = (v: unknown) => {
@@ -82,7 +154,7 @@ export default function InventoryPage() {
       return s
     }
     const header = cols.join(',')
-    const rows = filteredProducts.map(p => cols.map(c => {
+    const rows = products.map(p => cols.map(c => {
       if (c === 'category') return escape((p.category as { name?: string })?.name ?? '')
       const v = (p as unknown as Record<string, unknown>)[c]
       return escape(v)
@@ -138,7 +210,7 @@ export default function InventoryPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={handleExportCsv}
-                disabled={filteredProducts.length === 0}
+                disabled={products.length === 0}
                 className="btn btn-secondary btn-sm flex items-center gap-2"
                 title="Export products to CSV"
               >
@@ -167,16 +239,22 @@ export default function InventoryPage() {
         <div className="bg-gray-50 border-t border-gray-100">
           <div className="container-wide py-3">
             <div className="flex flex-col md:flex-row items-center gap-4">
-              <div className="relative flex-1 w-full">
+              <form
+                className="relative flex-1 w-full"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  updateUrl({ search: (e.target as HTMLFormElement).search?.value || '', page: 1 })
+                }}
+              >
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
                 <input
+                  name="search"
                   type="text"
                   placeholder="Search by name or SKU..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  defaultValue={searchFromUrl}
                   className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg focus:ring-4 focus:ring-vintage-primary/10 outline-none transition-all text-sm"
                 />
-              </div>
+              </form>
               
               <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
                 <Filter className="w-4 h-4 text-text-muted flex-shrink-0" />
@@ -184,9 +262,10 @@ export default function InventoryPage() {
                   {['all', 'active', 'draft'].map((status) => (
                     <button
                       key={status}
-                      onClick={() => setStatusFilter(status)}
-                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
-                        statusFilter === status 
+                      type="button"
+                      onClick={() => updateUrl({ status, page: 1 })}
+                      className={`min-h-[44px] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all ${
+                        statusFromUrl === status 
                           ? 'bg-vintage-primary text-white' 
                           : 'bg-white text-text-muted border border-gray-200 hover:border-vintage-primary/30'
                       }`}
@@ -199,7 +278,7 @@ export default function InventoryPage() {
 
               <div className="hidden lg:flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-text-muted border-l border-gray-200 pl-4">
                 <div className="flex flex-col items-center">
-                  <span className="text-text text-sm">{products.filter(p => p.status !== 'archived').length}</span>
+                  <span className="text-text text-sm">{pagination.total}</span>
                   <span>Total</span>
                 </div>
                 <div className="flex flex-col items-center">
@@ -223,13 +302,44 @@ export default function InventoryPage() {
             <Loader2 className="w-12 h-12 animate-spin text-vintage-primary mb-4" />
             <p className="font-bold text-text uppercase tracking-widest text-xs">Syncing Inventory...</p>
           </div>
-        ) : filteredProducts.length > 0 ? (
+        ) : products.length > 0 ? (
+          <>
+          <div className="flex items-center gap-3 mb-4 px-3 py-2 bg-white border border-gray-100 rounded-xl">
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0 text-vintage-primary hover:bg-vintage-primary/5 rounded-lg transition-colors"
+              aria-label={selectedIds.size === products.length ? 'Deselect all' : 'Select all'}
+            >
+              {selectedIds.size === products.length ? (
+                <CheckSquare className="w-6 h-6" />
+              ) : (
+                <Square className="w-6 h-6 text-gray-300" />
+              )}
+            </button>
+            <span className="text-sm text-text-muted font-medium">
+              {selectedIds.size === products.length ? 'Deselect all' : 'Select all on this page'}
+            </span>
+          </div>
           <div className="grid grid-cols-1 gap-4">
-            {filteredProducts.map((product) => (
+            {products.map((product) => (
               <div 
                 key={product.id} 
                 className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl hover:border-vintage-primary/30 hover:shadow-md transition-all group relative overflow-hidden"
               >
+                {/* Checkbox - min 44px touch target */}
+                <button
+                  type="button"
+                  onClick={() => toggleSelect(product.id)}
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0 text-vintage-primary hover:bg-vintage-primary/5 rounded-lg transition-colors"
+                  aria-label={selectedIds.has(product.id) ? 'Deselect' : 'Select'}
+                >
+                  {selectedIds.has(product.id) ? (
+                    <CheckSquare className="w-6 h-6" />
+                  ) : (
+                    <Square className="w-6 h-6 text-gray-300" />
+                  )}
+                </button>
                 {/* Status indicator line */}
                 <div className={`absolute left-0 top-0 bottom-0 w-1 ${
                   product.status === 'active' ? 'bg-green-500' : 
@@ -324,6 +434,44 @@ export default function InventoryPage() {
               </div>
             ))}
           </div>
+
+          {selectedIds.size > 0 && (
+            <div className="sticky bottom-4 left-0 right-0 z-20 mt-6 p-4 bg-white border border-vintage-primary/30 rounded-xl shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+              <span className="font-bold text-text">
+                {selectedIds.size} selected
+              </span>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleBulkEdit}
+                  className="min-h-[44px] flex-1 sm:flex-none px-4 py-2 btn btn-secondary flex items-center justify-center gap-2"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  className="min-h-[44px] flex-1 sm:flex-none px-4 py-2 btn btn-accent flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </div>
+            </div>
+          )}
+
+          <PaginationNav
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            total={pagination.total}
+            basePath="/admin/inventory"
+            searchParams={{
+              ...(statusFromUrl !== 'all' && { status: statusFromUrl }),
+              ...(searchFromUrl && { search: searchFromUrl }),
+            }}
+          />
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center py-32 text-center bg-white rounded-3xl border border-dashed border-gray-200">
             <div className="p-6 bg-gray-50 rounded-full mb-6 text-gray-300 shadow-inner">
@@ -331,13 +479,13 @@ export default function InventoryPage() {
             </div>
             <h3 className="text-xl font-bold text-text">No products found</h3>
             <p className="text-text-muted max-w-xs mx-auto mt-2">
-              {searchQuery || statusFilter !== 'all' 
+              {searchFromUrl || statusFromUrl !== 'all' 
                 ? "We couldn't find any products matching your current filters." 
                 : "You haven't added any products to your inventory yet."}
             </p>
-            {(searchQuery || statusFilter !== 'all') && (
+            {(searchFromUrl || statusFromUrl !== 'all') && (
               <button 
-                onClick={() => {setSearchQuery(''); setStatusFilter('all')}}
+                onClick={() => updateUrl({ search: '', status: 'all', page: 1 })}
                 className="mt-6 text-vintage-primary font-bold hover:underline"
               >
                 Clear all filters
@@ -363,6 +511,13 @@ export default function InventoryPage() {
       )}
       {isCategoryModalOpen && (
         <CategoryManager onClose={() => setIsCategoryModalOpen(false)} />
+      )}
+      {isBulkEditOpen && (
+        <BulkEditModal
+          count={selectedIds.size}
+          onClose={() => setIsBulkEditOpen(false)}
+          onSubmit={handleBulkEditSubmit}
+        />
       )}
     </div>
   )

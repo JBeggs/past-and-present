@@ -5,6 +5,7 @@ import { Product } from '@/lib/types'
 import { Clock, Sparkles, Filter, Search } from 'lucide-react'
 import AdminActions from '@/components/products/AdminActions'
 import ProductCard from '@/components/products/ProductCard'
+import PaginationNav from '@/components/ui/PaginationNav'
 
 interface ProductsPageProps {
   searchParams: Promise<{ condition?: string; category?: string; search?: string; page?: string }>
@@ -12,41 +13,45 @@ interface ProductsPageProps {
 
 async function getProducts(params: { condition?: string; category?: string; search?: string; page?: string }) {
   try {
-    const productsData = await serverEcommerceApi.products.list({
+    const response = await serverEcommerceApi.products.list({
       is_active: true,
       category: params.category,
       search: params.search,
+      condition: params.condition,
       page: params.page ? parseInt(params.page) : 1,
+      page_size: 24,
     })
 
-    let raw = Array.isArray(productsData) ? productsData : (productsData as any)?.data || (productsData as any)?.results || []
-    let products = raw.filter((p: Product) => p.status !== 'archived')
-    
-    // Filter by condition if specified
-    if (params.condition === 'vintage') {
-      products = products.filter((p: Product) => {
-        const tags = Array.isArray(p.tags) ? p.tags.map(t => typeof t === 'string' ? t : t.name) : []
-        return tags.includes('vintage')
-      })
-    } else if (params.condition === 'new') {
-      products = products.filter((p: Product) => {
-        const tags = Array.isArray(p.tags) ? p.tags.map(t => typeof t === 'string' ? t : t.name) : []
-        return !tags.includes('vintage')
-      })
-    }
+    const raw = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.results || []
+    const products = raw.filter((p: Product) => p.status !== 'archived')
+    const pagination = (response as any)?.pagination
 
-    return products
+    return {
+      products,
+      pagination: pagination
+        ? {
+            page: pagination.page ?? 1,
+            totalPages: pagination.totalPages ?? 1,
+            total: pagination.total ?? products.length,
+          }
+        : { page: 1, totalPages: 1, total: products.length },
+    }
   } catch (error) {
     console.error('Error fetching products:', error)
-    return []
+    return { products: [], pagination: { page: 1, totalPages: 1, total: 0 } }
   }
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const params = await searchParams
-  const products = await getProducts(params)
+  const { products, pagination } = await getProducts(params)
   const isVintage = params.condition === 'vintage'
   const isNew = params.condition === 'new'
+
+  const searchParamsForNav: Record<string, string> = {}
+  if (params.condition) searchParamsForNav.condition = params.condition
+  if (params.category) searchParamsForNav.category = params.category
+  if (params.search) searchParamsForNav.search = params.search
 
   return (
     <div className="min-h-screen bg-vintage-background">
@@ -113,11 +118,20 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       <section className="py-12">
         <div className="container-wide">
           {products.length > 0 ? (
-            <div className="product-grid">
-              {products.map((product: Product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            <>
+              <div className="product-grid">
+                {products.map((product: Product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+              <PaginationNav
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                total={pagination.total}
+                basePath="/products"
+                searchParams={searchParamsForNav}
+              />
+            </>
           ) : (
             <div className="text-center py-16">
               <Search className="w-16 h-16 mx-auto mb-4 text-text-muted opacity-30" />
