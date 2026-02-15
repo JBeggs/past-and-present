@@ -632,7 +632,7 @@ export const ecommerceApi = {
     }) =>
       apiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/products/`, params),
     /** List all products including drafts (for store admin). Uses authenticated /v1/products/ */
-    listForAdmin: (params?: { status?: string; category?: string; search?: string; page?: number }) =>
+    listForAdmin: (params?: { status?: string; category?: string; search?: string; page?: number; featured?: boolean }) =>
       apiClient.get('/v1/products/', params),
     /** Bulk operations: update, delete (archive), or archive */
     bulk: (data: { operation: 'update' | 'delete' | 'archive'; ids: string[]; data?: Record<string, unknown> }) =>

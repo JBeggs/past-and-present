@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ecommerceApi } from '@/lib/api'
 import { Product } from '@/lib/types'
-import { Edit2, Trash2, Loader2, Search, ExternalLink, Image as ImageIcon, ArrowLeft, Plus, Settings, Filter, Download, CheckSquare, Square, AlertCircle } from 'lucide-react'
+import { Edit2, Trash2, Loader2, Search, ExternalLink, Image as ImageIcon, ArrowLeft, Plus, Settings, Filter, Download, CheckSquare, Square, AlertCircle, Star } from 'lucide-react'
 import { useToast } from '@/contexts/ToastContext'
 import ProductForm from '@/components/products/ProductForm'
 import CategoryManager from '@/components/products/CategoryManager'
@@ -18,6 +18,7 @@ export default function InventoryPage() {
   const searchParams = useSearchParams()
   const pageFromUrl = parseInt(searchParams.get('page') || '1', 10)
   const statusFromUrl = searchParams.get('status') || 'all'
+  const featuredFromUrl = searchParams.get('featured') || ''
   const searchFromUrl = searchParams.get('search') || ''
 
   const [products, setProducts] = useState<Product[]>([])
@@ -41,6 +42,8 @@ export default function InventoryPage() {
         page: pageFromUrl,
       }
       if (statusFromUrl !== 'all') params.status = statusFromUrl
+      if (featuredFromUrl === 'true') params.featured = true
+      if (featuredFromUrl === 'false') params.featured = false
       if (searchFromUrl.trim()) params.search = searchFromUrl.trim()
       const response: any = await ecommerceApi.products.listForAdmin(params)
       const productData = response?.data || (Array.isArray(response) ? response : response?.results || [])
@@ -61,7 +64,7 @@ export default function InventoryPage() {
     } finally {
       setLoading(false)
     }
-  }, [isAuthorized, pageFromUrl, statusFromUrl, searchFromUrl, showError])
+  }, [isAuthorized, pageFromUrl, statusFromUrl, featuredFromUrl, searchFromUrl, showError])
 
   useEffect(() => {
     if (!authLoading && !isAuthorized) {
@@ -69,10 +72,14 @@ export default function InventoryPage() {
     }
   }, [isAuthorized, authLoading, router])
 
-  const updateUrl = useCallback((updates: { page?: number; status?: string; search?: string }) => {
+  const updateUrl = useCallback((updates: { page?: number; status?: string; featured?: string; search?: string }) => {
     const params = new URLSearchParams(searchParams.toString())
     if (updates.page !== undefined) params.set('page', String(updates.page))
     if (updates.status !== undefined) params.set('status', updates.status)
+    if (updates.featured !== undefined) {
+      if (updates.featured) params.set('featured', updates.featured)
+      else params.delete('featured')
+    }
     if (updates.search !== undefined) params.set('search', updates.search)
     router.push(`/admin/inventory?${params.toString()}`)
   }, [router, searchParams])
@@ -258,7 +265,7 @@ export default function InventoryPage() {
               
               <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0">
                 <Filter className="w-4 h-4 text-text-muted flex-shrink-0" />
-                <div className="flex gap-1">
+                <div className="flex gap-1 flex-wrap">
                   {['all', 'active', 'draft'].map((status) => (
                     <button
                       key={status}
@@ -273,6 +280,18 @@ export default function InventoryPage() {
                       {status}
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    onClick={() => updateUrl({ featured: featuredFromUrl === 'true' ? '' : 'true', page: 1 })}
+                    className={`min-h-[44px] px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
+                      featuredFromUrl === 'true' 
+                        ? 'bg-purple-600 text-white' 
+                        : 'bg-white text-text-muted border border-gray-200 hover:border-purple-300'
+                    }`}
+                  >
+                    <Star className="w-3.5 h-3.5" />
+                    Featured
+                  </button>
                 </div>
               </div>
 
@@ -468,6 +487,7 @@ export default function InventoryPage() {
             basePath="/admin/inventory"
             searchParams={{
               ...(statusFromUrl !== 'all' && { status: statusFromUrl }),
+              ...(featuredFromUrl && { featured: featuredFromUrl }),
               ...(searchFromUrl && { search: searchFromUrl }),
             }}
           />
@@ -479,13 +499,13 @@ export default function InventoryPage() {
             </div>
             <h3 className="text-xl font-bold text-text">No products found</h3>
             <p className="text-text-muted max-w-xs mx-auto mt-2">
-              {searchFromUrl || statusFromUrl !== 'all' 
+              {searchFromUrl || statusFromUrl !== 'all' || featuredFromUrl 
                 ? "We couldn't find any products matching your current filters." 
                 : "You haven't added any products to your inventory yet."}
             </p>
-            {(searchFromUrl || statusFromUrl !== 'all') && (
+            {(searchFromUrl || statusFromUrl !== 'all' || featuredFromUrl) && (
               <button 
-                onClick={() => updateUrl({ search: '', status: 'all', page: 1 })}
+                onClick={() => updateUrl({ search: '', status: 'all', featured: '', page: 1 })}
                 className="mt-6 text-vintage-primary font-bold hover:underline"
               >
                 Clear all filters
