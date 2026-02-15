@@ -49,10 +49,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const isVintage = params.condition === 'vintage'
   const isNew = params.condition === 'new'
 
+  const isFeatured = params.featured === 'true'
+
   const searchParamsForNav: Record<string, string> = {}
   if (params.condition) searchParamsForNav.condition = params.condition
   if (params.category) searchParamsForNav.category = params.category
   if (params.search) searchParamsForNav.search = params.search
+  if (params.featured) searchParamsForNav.featured = params.featured
 
   return (
     <div className="min-h-screen bg-vintage-background">
@@ -60,56 +63,97 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       <AdminActions />
 
       {/* Page Header */}
-      <section className={`py-12 ${isVintage ? 'bg-vintage-primary' : isNew ? 'bg-modern-primary' : 'bg-gradient-to-r from-vintage-primary to-modern-primary'} text-white`}>
+      <section className={`py-12 ${isVintage ? 'bg-vintage-primary' : isNew ? 'bg-modern-primary' : isFeatured ? 'bg-purple-600' : 'bg-gradient-to-r from-vintage-primary to-modern-primary'} text-white`}>
         <div className="container-wide">
           <h1 className="text-3xl md:text-4xl font-bold font-playfair mb-2">
-            {isVintage ? 'Vintage Treasures' : isNew ? 'New Arrivals' : 'All Products'}
+            {isVintage ? 'Vintage Treasures' : isNew ? 'New Arrivals' : isFeatured ? 'Featured Products' : 'All Products'}
           </h1>
           <p className="text-lg opacity-90">
             {isVintage 
               ? 'Unique second-hand finds with character and history'
               : isNew 
                 ? 'Fresh finds and modern essentials'
-                : 'Browse our complete collection of vintage and new items'}
+                : isFeatured
+                  ? 'Hand-picked favorites and standout items'
+                  : 'Browse our complete collection of vintage and new items'}
           </p>
         </div>
       </section>
 
-      {/* Filters */}
+      {/* Search & Filters */}
       <section className="py-6 bg-white border-b border-gray-200">
         <div className="container-wide">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-text-muted" />
-              <span className="font-medium">Filter:</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/products"
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  !params.condition ? 'bg-vintage-primary text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
-                }`}
-              >
-                All
-              </Link>
-              <Link
-                href="/products?condition=vintage"
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  isVintage ? 'bg-vintage-primary text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
-                }`}
-              >
-                <Clock className="w-4 h-4 inline mr-1" />
-                Vintage
-              </Link>
-              <Link
-                href="/products?condition=new"
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  isNew ? 'bg-modern-primary text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
-                }`}
-              >
-                <Sparkles className="w-4 h-4 inline mr-1" />
-                New
-              </Link>
+          <div className="flex flex-col gap-4">
+            {/* Search */}
+            <form
+              method="get"
+              action="/products"
+              className="relative max-w-md"
+            >
+              {params.condition && <input type="hidden" name="condition" value={params.condition} />}
+              {params.category && <input type="hidden" name="category" value={params.category} />}
+              {params.featured && <input type="hidden" name="featured" value={params.featured} />}
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
+              <input
+                type="search"
+                name="search"
+                placeholder="Search by name or SKU..."
+                defaultValue={params.search}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-vintage-primary focus:border-vintage-primary text-text"
+              />
+            </form>
+
+            {/* Filter buttons */}
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Filter className="w-5 h-5 text-text-muted" />
+                <span className="font-medium">Filter:</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={(() => {
+                    const q: Record<string, string> = {}
+                    if (params.search) q.search = params.search
+                    if (params.featured) q.featured = params.featured
+                    return Object.keys(q).length ? `/products?${new URLSearchParams(q).toString()}` : '/products'
+                  })()}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
+                    !params.condition ? 'bg-vintage-primary text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
+                  }`}
+                >
+                  All
+                </Link>
+                <Link
+                  href={`/products?${new URLSearchParams({ condition: 'vintage', ...(params.search && { search: params.search }), ...(params.featured && { featured: params.featured }) }).toString()}`}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
+                    isVintage ? 'bg-vintage-primary text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
+                  }`}
+                >
+                  <Clock className="w-4 h-4" />
+                  Vintage
+                </Link>
+                <Link
+                  href={`/products?${new URLSearchParams({ condition: 'new', ...(params.search && { search: params.search }), ...(params.featured && { featured: params.featured }) }).toString()}`}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
+                    isNew ? 'bg-modern-primary text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
+                  }`}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  New
+                </Link>
+                <Link
+                  href={params.featured === 'true'
+                    ? `/products?${new URLSearchParams({ ...(params.condition && { condition: params.condition }), ...(params.search && { search: params.search }) }).toString()}`
+                    : `/products?${new URLSearchParams({ featured: 'true', ...(params.condition && { condition: params.condition }), ...(params.search && { search: params.search }) }).toString()}`
+                  }
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
+                    isFeatured ? 'bg-purple-600 text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
+                  }`}
+                >
+                  <Star className="w-4 h-4" />
+                  Featured
+                </Link>
+              </div>
             </div>
           </div>
         </div>
