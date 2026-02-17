@@ -66,6 +66,8 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
               <img
                 src={img}
                 alt={`${product.name} thumbnail ${index + 1}`}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover"
               />
             </button>

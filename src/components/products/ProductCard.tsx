@@ -44,11 +44,14 @@ export default function ProductCard({ product }: ProductCardProps) {
           <Link
             href={`/products/${product.slug}`}
             className="absolute inset-0 z-0"
+            prefetch={false}
           >
 {product.image ? (
                 <img
                 src={product.image}
                 alt={product.name}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
             ) : (
@@ -81,6 +84,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 href={`/admin/inventory/edit/${product.id}`}
                 className="bg-white p-2 rounded-full text-vintage-primary hover:bg-vintage-primary hover:text-white transition-all shadow-lg"
                 title="Edit Product"
+                prefetch={false}
               >
                 <Edit2 className="w-5 h-5" />
               </Link>
@@ -96,7 +100,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         </div>
         
         <div className="p-4 flex-1 flex flex-col">
-          <Link href={`/products/${product.slug}`} className="group/title">
+          <Link href={`/products/${product.slug}`} className="group/title" prefetch={false}>
             <h3 className={`font-semibold text-text group-hover/title:${isVintage ? 'text-vintage-primary' : 'text-modern-primary'} transition-colors line-clamp-1`}>
               {product.name}
             </h3>

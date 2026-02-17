@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { Inter, Playfair_Display } from 'next/font/google'
-import { Suspense } from 'react'
 import './globals.css'
 import { serverNewsApi } from '@/lib/api-server'
 import { AuthProvider } from '@/contexts/AuthContext'
@@ -24,8 +23,8 @@ const playfair = Playfair_Display({
   display: 'swap'
 })
 
-// Get dynamic metadata from database
-async function generateMetadata(): Promise<Metadata> {
+// Get dynamic metadata from database - exported so Next.js calls it (avoids blocking layout)
+export async function generateMetadata(): Promise<Metadata> {
   try {
     const settings = await serverNewsApi.siteSettings.list() as any
     const settingsArray = Array.isArray(settings) ? settings : (settings?.results || [])
@@ -70,8 +69,6 @@ async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-export const metadata = await generateMetadata()
-
 export default function RootLayout({
   children,
 }: {
@@ -88,15 +85,11 @@ export default function RootLayout({
           <AuthProvider>
             <CartProvider>
               <div className="min-h-screen flex flex-col">
-                <Suspense fallback={<div className="h-20 bg-white border-b border-gray-200" />}>
-                  <Header />
-                </Suspense>
+                <Header />
                 <main className="flex-1">
                   {children}
                 </main>
-                <Suspense fallback={<div className="h-64 bg-vintage-primary" />}>
-                  <Footer />
-                </Suspense>
+                <Footer />
               </div>
             </CartProvider>
           </AuthProvider>

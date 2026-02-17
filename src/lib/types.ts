@@ -138,6 +138,7 @@ export interface Product {
    stock_quantity: number | null
    in_stock: boolean
    image?: string // Flattened image URL for public API
+  is_expired?: boolean // Admin: true when product is active but older than product_expiry_days
  }
 
 export interface ProductImage {

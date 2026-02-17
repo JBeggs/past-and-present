@@ -66,7 +66,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       <div className="bg-white border-b border-gray-200 sticky top-[73px] z-30">
         <div className="container-wide py-4">
           <div className="flex items-center justify-between gap-4">
-            <Link href="/products" className="flex items-center text-text-muted hover:text-vintage-primary transition-colors font-medium flex-shrink-0">
+            <Link href="/products" className="flex items-center text-text-muted hover:text-vintage-primary transition-colors font-medium flex-shrink-0" prefetch={false}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back<span className="hidden md:inline"> to Products</span>
             </Link>

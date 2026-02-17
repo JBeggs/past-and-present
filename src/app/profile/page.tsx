@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { ecommerceApi, newsApi } from '@/lib/api'
 import { Order, Profile } from '@/lib/types'
 import { useToast } from '@/contexts/ToastContext'
-import { Package, User, Mail, Calendar, MapPin, ChevronRight, Loader2, Save, Building2 } from 'lucide-react'
+import { Package, User, Mail, Calendar, MapPin, ChevronRight, Loader2, Save, Building2, Clock, Settings } from 'lucide-react'
 import Link from 'next/link'
 
 export default function ProfilePage() {
@@ -27,8 +27,12 @@ export default function ProfilePage() {
     legal_name: '',
     registration_number: '',
     tax_number: '',
+    business_hours: {} as Record<string, string>,
   })
   const [updatingCompany, setUpdatingCompany] = useState(false)
+  const [siteSettings, setSiteSettings] = useState<Record<string, { id: string; value: string; type: string }>>({})
+  const [siteSettingsValues, setSiteSettingsValues] = useState<Record<string, string>>({})
+  const [updatingSiteSettings, setUpdatingSiteSettings] = useState(false)
   const { showSuccess, showError } = useToast()
 
   const [formData, setFormData] = useState({
@@ -40,15 +44,35 @@ export default function ProfilePage() {
   const [uploadingLogo, setUploadingLogo] = useState(false)
 
   useEffect(() => {
-    if (profile) {
+    if (user) {
+      // Customers have no profile; fall back to user data
+      const fullName = profile?.full_name || (user?.first_name && user?.last_name
+        ? `${user.first_name} ${user.last_name}`.trim()
+        : user?.first_name || user?.last_name || '')
       setFormData({
-        full_name: profile.full_name || '',
-        bio: profile.bio || '',
-        avatar_url: profile.avatar_url || '',
+        full_name: fullName,
+        bio: profile?.bio || '',
+        avatar_url: profile?.avatar_url || '',
       })
       fetchOrders()
     }
-  }, [profile])
+  }, [profile, user])
+
+  useEffect(() => {
+    if (companyId) {
+      newsApi.siteSettings.list().then((data: any) => {
+        const arr = Array.isArray(data) ? data : (data?.results || [])
+        const byKey: Record<string, { id: string; value: string; type: string }> = {}
+        const vals: Record<string, string> = {}
+        arr.forEach((s: any) => {
+          byKey[s.key] = { id: s.id, value: s.value ?? '', type: s.type || 'string' }
+          vals[s.key] = s.value ?? ''
+        })
+        setSiteSettings(byKey)
+        setSiteSettingsValues(vals)
+      }).catch(() => {})
+    }
+  }, [companyId])
 
   useEffect(() => {
     if (companyId) {
@@ -67,6 +91,21 @@ export default function ProfilePage() {
           legal_name: c?.legal_name || '',
           registration_number: c?.registration_number || '',
           tax_number: c?.tax_number || '',
+          business_hours: (() => {
+            const h = c?.business_hours
+            if (!h || typeof h !== 'object') return {}
+            const out: Record<string, string> = {}
+            for (const [day, val] of Object.entries(h)) {
+              if (typeof val === 'string') out[day] = val
+              else if (val && typeof val === 'object' && !Array.isArray(val)) {
+                const o = val as { open?: string; close?: string; closed?: boolean }
+                if (o.closed) out[day] = 'Closed'
+                else if (o.open && o.close) out[day] = `${o.open} - ${o.close}`
+                else out[day] = ''
+              } else out[day] = ''
+            }
+            return out
+          })(),
         })
       }).catch(() => {})
     }
@@ -87,6 +126,7 @@ export default function ProfilePage() {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!profile) return // Customers have no News Profile; patch would 404
     setUpdating(true)
     try {
       await newsApi.profile.patch({ full_name: formData.full_name, bio: formData.bio, avatar_url: formData.avatar_url })
@@ -117,6 +157,17 @@ export default function ProfilePage() {
         legal_name: companyForm.legal_name || '',
         registration_number: companyForm.registration_number || '',
         tax_number: companyForm.tax_number || '',
+        business_hours: (() => {
+          const parsed: Record<string, any> = {}
+          for (const [day, timeString] of Object.entries(companyForm.business_hours || {})) {
+            if (!timeString || timeString.toLowerCase() === 'closed') parsed[day] = { closed: true }
+            else if (timeString.includes(' - ')) {
+              const [open, close] = timeString.split(' - ')
+              parsed[day] = { open: open.trim(), close: close.trim() }
+            } else parsed[day] = timeString
+          }
+          return parsed
+        })(),
       })
       setCompany((updated as any)?.data ?? (updated as Record<string, any>))
       showSuccess('Business profile updated')
@@ -128,6 +179,7 @@ export default function ProfilePage() {
   }
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!profile) return // Customers have no News Profile; patch would 404
     const file = e.target.files?.[0]
     if (!file || !file.type.startsWith('image/')) {
       showError('Please select an image file')
@@ -214,7 +266,7 @@ export default function ProfilePage() {
                     {(formData.avatar_url || profile?.avatar_url) ? (
                       <img src={formData.avatar_url || profile?.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
-                      profile?.full_name?.charAt(0) || user.email.charAt(0).toUpperCase()
+                      (formData.full_name || profile?.full_name || user.email).charAt(0).toUpperCase()
                     )}
                   </div>
                   {uploadingAvatar && (
@@ -222,12 +274,12 @@ export default function ProfilePage() {
                       <Loader2 className="w-6 h-6 animate-spin text-white" />
                     </div>
                   )}
-                  <input type="file" accept="image/*" className="sr-only" onChange={handleAvatarUpload} disabled={uploadingAvatar} />
+                  <input type="file" accept="image/*" className="sr-only" onChange={handleAvatarUpload} disabled={uploadingAvatar || !profile} />
                 </label>
                 <div>
-                  <h1 className="text-xl font-bold text-text">{profile?.full_name || 'User'}</h1>
+                  <h1 className="text-xl font-bold text-text">{formData.full_name || profile?.full_name || user.email?.split('@')[0] || 'User'}</h1>
                   <p className="text-sm text-text-muted">{user.email}</p>
-                  <p className="text-xs text-text-muted mt-1">Click photo to upload</p>
+                  <p className="text-xs text-text-muted mt-1">{profile ? 'Click photo to upload' : 'Profile photo is for publishers only'}</p>
                 </div>
               </div>
 
@@ -253,8 +305,9 @@ export default function ProfilePage() {
                 </div>
                 <button
                   type="submit"
-                  disabled={updating}
+                  disabled={updating || !profile}
                   className="btn btn-primary w-full flex items-center justify-center gap-2"
+                  title={!profile ? 'Profile updates are for publishers only' : undefined}
                 >
                   {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Save Changes
@@ -268,7 +321,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex items-center gap-3 text-sm text-text-light">
                   <Calendar className="w-4 h-4" />
-                  <span>Joined {new Date(profile?.created_at || '').toLocaleDateString()}</span>
+                  <span>Joined {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : '—'}</span>
                 </div>
               </div>
 
@@ -395,6 +448,27 @@ export default function ProfilePage() {
                           />
                         </div>
                       </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold uppercase tracking-widest text-text-muted flex items-center gap-1"><Clock className="w-3 h-3" />Business Hours</label>
+                        <p className="text-xs text-text-muted mb-2">e.g. 9am - 5pm or Closed</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => (
+                            <div key={day} className="flex items-center gap-2">
+                              <span className="text-xs font-medium text-text-muted w-24 capitalize">{day}</span>
+                              <input
+                                type="text"
+                                value={companyForm.business_hours?.[day] || ''}
+                                onChange={(e) => setCompanyForm({
+                                  ...companyForm,
+                                  business_hours: { ...companyForm.business_hours, [day]: e.target.value },
+                                })}
+                                className="form-input flex-1"
+                                placeholder="9am - 5pm"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                       <button
                         type="submit"
                         disabled={updatingCompany}
@@ -402,6 +476,68 @@ export default function ProfilePage() {
                       >
                         {updatingCompany ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                         Save Business Profile
+                      </button>
+                    </form>
+                  </div>
+
+                  <div className="mt-8 pt-6 border-t border-gray-100">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      Site Settings
+                    </h3>
+                    <p className="text-xs text-text-muted mb-4">Social links shown in footer. Contact info comes from Business Profile above.</p>
+                    <form onSubmit={async (e) => {
+                      e.preventDefault()
+                      setUpdatingSiteSettings(true)
+                      try {
+                        const keys = ['social_facebook', 'social_twitter', 'social_instagram']
+                        for (const key of keys) {
+                          const val = siteSettingsValues[key] ?? ''
+                          const existing = siteSettings[key]
+                          if (existing) {
+                            if (existing.value !== val) {
+                              await newsApi.siteSettings.update(existing.id, { key, value: val, type: 'string', is_public: true })
+                            }
+                          } else if (val) {
+                            await newsApi.siteSettings.create({ key, value: val, type: 'string', is_public: true })
+                          }
+                        }
+                        const data: any = await newsApi.siteSettings.list()
+                        const arr = Array.isArray(data) ? data : (data?.results || [])
+                        const byKey: Record<string, { id: string; value: string; type: string }> = {}
+                        const vals: Record<string, string> = {}
+                        arr.forEach((s: any) => {
+                          byKey[s.key] = { id: s.id, value: s.value ?? '', type: s.type || 'string' }
+                          vals[s.key] = s.value ?? ''
+                        })
+                        setSiteSettings(byKey)
+                        setSiteSettingsValues(vals)
+                        showSuccess('Site settings updated')
+                      } catch (err: any) {
+                        showError(err?.message || 'Failed to update site settings')
+                      } finally {
+                        setUpdatingSiteSettings(false)
+                      }
+                    }} className="space-y-4">
+                      {[
+                        { key: 'social_facebook', label: 'Facebook URL' },
+                        { key: 'social_twitter', label: 'Twitter/X URL' },
+                        { key: 'social_instagram', label: 'Instagram URL' },
+                      ].map(({ key, label }) => (
+                        <div key={key} className="space-y-1">
+                          <label className="text-xs font-bold uppercase tracking-widest text-text-muted">{label}</label>
+                          <input
+                            type="url"
+                            value={siteSettingsValues[key] ?? ''}
+                            onChange={(e) => setSiteSettingsValues((v) => ({ ...v, [key]: e.target.value }))}
+                            className="form-input"
+                            placeholder={`https://${key.replace('social_', '')}.com/...`}
+                          />
+                        </div>
+                      ))}
+                      <button type="submit" disabled={updatingSiteSettings} className="btn btn-secondary w-full flex items-center justify-center gap-2">
+                        {updatingSiteSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        Save Site Settings
                       </button>
                     </form>
                   </div>

@@ -37,15 +37,19 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     fetchCart()
-    // Pre-fill form with user data
-    if (profile) {
+    // Pre-fill form with user or profile data (customers have no profile, use user)
+    const name = profile?.full_name || (user?.first_name && user?.last_name
+      ? `${user.first_name} ${user.last_name}`.trim()
+      : user?.first_name || user?.last_name || user?.email?.split('@')[0] || '')
+    const email = profile?.email || user?.email || ''
+    if (name || email) {
       setFormData(prev => ({
         ...prev,
-        customer_name: profile.full_name || '',
-        customer_email: profile.email || '',
+        customer_name: name,
+        customer_email: email,
       }))
     }
-  }, [profile])
+  }, [profile, user])
 
   // Update cart shipping when delivery method or pudo selection changes (so order summary reflects correct total)
   useEffect(() => {

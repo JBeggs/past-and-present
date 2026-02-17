@@ -122,12 +122,14 @@ export default async function HomePage() {
             
             <div className="product-grid">
               {featuredProducts.map((product: any) => (
-                <Link key={product.id} href={`/products/${product.slug}`} className={`group relative flex flex-col ${product.is_vintage ? 'product-card-vintage' : 'product-card-modern'}`}>
+                <Link key={product.id} href={`/products/${product.slug}`} className={`group relative flex flex-col ${product.is_vintage ? 'product-card-vintage' : 'product-card-modern'}`} prefetch={false}>
                   <div className="relative overflow-hidden aspect-square">
                     {product.image ? (
                       <img
                         src={product.image}
                         alt={product.name}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
@@ -175,12 +177,14 @@ export default async function HomePage() {
           {vintageProducts.length > 0 ? (
             <div className="product-grid">
               {vintageProducts.map((product: Product) => (
-                <Link key={product.id} href={`/products/${product.slug}`} className="product-card-vintage group">
+                <Link key={product.id} href={`/products/${product.slug}`} className="product-card-vintage group" prefetch={false}>
         <div className="relative overflow-hidden">
           {product.image ? (
             <img
               src={product.image}
               alt={product.name}
+              loading="lazy"
+              decoding="async"
               className="product-image group-hover:scale-105 transition-transform duration-300"
             />
           ) : (
@@ -230,12 +234,14 @@ export default async function HomePage() {
           {newProducts.length > 0 ? (
             <div className="product-grid">
               {newProducts.map((product: Product) => (
-                <Link key={product.id} href={`/products/${product.slug}`} className="product-card-modern group">
+                <Link key={product.id} href={`/products/${product.slug}`} className="product-card-modern group" prefetch={false}>
         <div className="relative overflow-hidden">
           {product.image ? (
             <img
               src={product.image}
               alt={product.name}
+              loading="lazy"
+              decoding="async"
               className="product-image group-hover:scale-105 transition-transform duration-300"
             />
           ) : (

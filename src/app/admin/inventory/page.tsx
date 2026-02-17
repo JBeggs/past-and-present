@@ -24,6 +24,7 @@ export default function InventoryPage() {
 
   const [products, setProducts] = useState<Product[]>([])
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 })
+  const [counts, setCounts] = useState<{ total: number; active: number; draft: number; expired: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
@@ -59,6 +60,11 @@ export default function InventoryPage() {
         })
       } else {
         setPagination({ page: 1, totalPages: 1, total: productData.length })
+      }
+      if (response?.counts) {
+        setCounts(response.counts)
+      } else {
+        setCounts(null)
       }
     } catch (error) {
       console.error('Error fetching products:', error)
@@ -287,7 +293,7 @@ export default function InventoryPage() {
                     <Star className="w-3.5 h-3.5" />
                     Featured
                   </button>
-                  {['all', 'active', 'draft'].map((status) => (
+                  {['all', 'active', 'draft', ...(counts && 'expired' in counts ? ['expired'] : [])].map((status) => (
                     <button
                       key={status}
                       type="button"
@@ -306,17 +312,23 @@ export default function InventoryPage() {
 
               <div className="hidden lg:flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-text-muted border-l border-gray-200 pl-4">
                 <div className="flex flex-col items-center">
-                  <span className="text-text text-sm">{pagination.total}</span>
+                  <span className="text-text text-sm">{counts?.total ?? pagination.total}</span>
                   <span>Total</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-green-600 text-sm">{products.filter(p => p.status === 'active').length}</span>
+                  <span className="text-green-600 text-sm">{counts?.active ?? products.filter(p => p.status === 'active' && !p.is_expired).length}</span>
                   <span>Active</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="text-yellow-600 text-sm">{products.filter(p => p.status === 'draft').length}</span>
+                  <span className="text-yellow-600 text-sm">{counts?.draft ?? products.filter(p => p.status === 'draft').length}</span>
                   <span>Drafts</span>
                 </div>
+                {counts && 'expired' in counts && (
+                  <div className="flex flex-col items-center">
+                    <span className="text-amber-600 text-sm">{counts.expired}</span>
+                    <span>Expired</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -376,7 +388,11 @@ export default function InventoryPage() {
             {products.map((product) => (
               <div 
                 key={product.id} 
-                className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl hover:border-vintage-primary/30 hover:shadow-md transition-all group relative overflow-hidden"
+                className={`flex items-center gap-3 p-3 rounded-xl transition-all group relative overflow-hidden ${
+                  product.is_expired
+                    ? 'bg-amber-50/50 border-l-4 border-l-amber-400 border border-amber-100 hover:border-amber-200'
+                    : 'bg-white border border-gray-100 hover:border-vintage-primary/30 hover:shadow-md'
+                }`}
               >
                 {/* Checkbox - min 44px touch target */}
                 <button

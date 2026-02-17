@@ -480,6 +480,8 @@ export const authApi = {
     password_confirm?: string
     role?: string
   }) {
+    // Customer registration only - do NOT pass company_name. That would trigger
+    // BusinessRegistration and create News Profile + new company.
     const requestData: any = {
       email: data.email,
       password: data.password,
@@ -584,6 +586,9 @@ export const newsApi = {
   siteSettings: {
     list: () => apiClient.get('/news/site-settings/'),
     get: (key: string) => apiClient.get(`/news/site-settings/?key=${key}`),
+    create: (data: any) => apiClient.post('/news/site-settings/', data),
+    update: (id: string, data: any) => apiClient.put(`/news/site-settings/${id}/`, data),
+    delete: (id: string) => apiClient.delete(`/news/site-settings/${id}/`),
   },
 
   profile: {
