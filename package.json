@@ -6,7 +6,8 @@
     "dev": "next dev --port 3001",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "git:merge-main": "node scripts/merge_to_main.js","git:commit-push":"node scripts/commit_push.js","git:new-branch":"node scripts/new_branch.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.6",
