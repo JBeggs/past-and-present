@@ -27,6 +27,7 @@ function getGitEnv() {
   if (passphrase) {
     const askpass = path.join(SCRIPT_DIR, 'ssh_askpass.js');
     if (fs.existsSync(askpass)) {
+      try { fs.chmodSync(askpass, 0o755); } catch (_) {}
       env.SSH_ASKPASS = askpass;
       env.SSH_ASKPASS_REQUIRE = 'force';
     }
