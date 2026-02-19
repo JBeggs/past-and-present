@@ -7,3 +7,7 @@ NEXT_PUBLIC_COMPANY_SLUG=past-and-present
 
 # Optional: Override for local development
 # NEXT_PUBLIC_API_URL=http://localhost:8000/api
+
+# Optional: SSH key passphrase for git scripts (new_branch, commit_push, merge_to_main)
+# Add this to avoid interactive passphrase prompts when pushing/pulling over SSH
+# SSH_KEY_PASSPHRASE=your_passphrase

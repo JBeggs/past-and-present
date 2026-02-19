@@ -21,11 +21,15 @@ function loadEnv() {
   } catch (_) {}
 }
 
+function hasPassphrase() {
+  return Boolean((process.env.SSH_KEY_PASSPHRASE || '').trim());
+}
+
 function getGitEnv() {
   const env = { ...process.env };
   const passphrase = (process.env.SSH_KEY_PASSPHRASE || '').trim();
   if (passphrase) {
-    const askpass = path.join(SCRIPT_DIR, 'ssh_askpass.js');
+    const askpass = path.resolve(SCRIPT_DIR, 'ssh_askpass.js');
     if (fs.existsSync(askpass)) {
       try { fs.chmodSync(askpass, 0o755); } catch (_) {}
       env.SSH_ASKPASS = askpass;
@@ -100,7 +104,7 @@ async function main() {
   const pushResult = spawnSync('git', ['push'], {
     cwd: PROJECT_ROOT,
     env: getGitEnv(),
-    stdio: 'inherit',
+    stdio: hasPassphrase() ? ['ignore', 'inherit', 'inherit'] : 'inherit',
   });
   if (pushResult.status !== 0) {
     process.exit(1);
