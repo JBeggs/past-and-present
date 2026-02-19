@@ -59,7 +59,7 @@ export async function generateMetadata(): Promise<Metadata> {
         type: 'website',
       },
     }
-  } catch (error) {
+  } catch (_error) {
     return {
       title: 'Past and Present | Vintage & Modern Treasures',
       description: 'Discover unique vintage treasures and modern finds. Quality second-hand items and new products, all in one place.',

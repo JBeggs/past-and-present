@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
-import { Mail, Lock, User, ArrowRight } from 'lucide-react'
+import { Lock, User, ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -28,7 +28,7 @@ export default function LoginPage() {
         showSuccess('Welcome back!')
         router.push('/')
       }
-    } catch (err) {
+    } catch (_err) {
       showError('An unexpected error occurred')
     } finally {
       setIsLoading(false)

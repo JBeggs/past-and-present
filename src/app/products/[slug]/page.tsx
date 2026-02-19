@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { serverEcommerceApi } from '@/lib/api-server'
 export const dynamic = 'force-dynamic'
 import { Product } from '@/lib/types'
-import { ArrowLeft, ShoppingCart, Truck, Shield, RotateCcw, Package, Tag, Info, Phone, FileText } from 'lucide-react'
+import { ArrowLeft, Shield, Info, Phone, FileText } from 'lucide-react'
 import AddToCartButton from './AddToCartButton'
 import ProductGallery from './ProductGallery'
 

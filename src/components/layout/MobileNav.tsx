@@ -1,17 +1,10 @@
 'use client'
 
-import { useState, useSyncExternalStore } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { Menu, X, ShoppingCart, User } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-
-function useMounted() {
-  return useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  )
-}
+import { useMounted } from '@/hooks/useMounted'
 
 interface MobileNavProps {
   menuItems: { title: string; href: string }[]

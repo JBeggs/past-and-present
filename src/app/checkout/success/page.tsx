@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle, Phone, FileText, ArrowRight, ShoppingBag } from 'lucide-react'
+import { CheckCircle, Phone, FileText, ShoppingBag } from 'lucide-react'
 import { Suspense } from 'react'
 
 function SuccessContent() {

@@ -1,20 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ShoppingCart, User, LogOut, Package } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCart } from '@/contexts/CartContext'
+import { useMounted } from '@/hooks/useMounted'
 
 export default function ClientHeader() {
   const { user, profile, signOut, loading: authLoading } = useAuth()
   const isAdmin = profile?.role === 'admin' || profile?.role === 'business_owner'
-  const { itemCount, loading: cartLoading } = useCart()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const { itemCount } = useCart()
+  const mounted = useMounted()
 
   if (!mounted || authLoading) {
     return (

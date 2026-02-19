@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ecommerceApi, newsApi } from '@/lib/api'
-import { Order, Profile } from '@/lib/types'
+import { Order } from '@/lib/types'
 import { useToast } from '@/contexts/ToastContext'
 import { Package, User, Mail, Calendar, MapPin, ChevronRight, Loader2, Save, Building2, Clock, Settings } from 'lucide-react'
 import Link from 'next/link'

@@ -41,7 +41,7 @@ export default function RegisterPage() {
         showSuccess('Account created successfully!')
         router.push('/')
       }
-    } catch (err) {
+    } catch (_err) {
       showError('An unexpected error occurred')
     } finally {
       setIsLoading(false)
