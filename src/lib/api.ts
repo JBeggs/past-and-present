@@ -3,7 +3,11 @@
  * Adapted from Riverside Herald for Past and Present
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://3pillars.pythonanywhere.com/api'
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === 'development'
+    ? 'http://localhost:8000/api'
+    : 'https://3pillars.pythonanywhere.com/api')
 const DEFAULT_COMPANY_SLUG = process.env.NEXT_PUBLIC_COMPANY_SLUG || 'past-and-present'
 
 export interface ApiError {
@@ -100,7 +104,7 @@ export class ApiClient {
     if (typeof window !== 'undefined') {
       try {
         return localStorage.getItem('refresh_token') || this.getCookie('refresh_token')
-      } catch (e) {
+      } catch {
         return this.getCookie('refresh_token')
       }
     }
@@ -164,7 +168,7 @@ export class ApiClient {
     if (typeof window !== 'undefined') {
       try {
         return localStorage.getItem('auth_token') || this.getCookie('auth_token')
-      } catch (e) {
+      } catch {
         return this.getCookie('auth_token')
       }
     }
@@ -187,8 +191,8 @@ export class ApiClient {
           localStorage.removeItem('company_id')
           document.cookie = `company_id=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT${isSecure ? '; Secure' : ''}`
         }
-      } catch (e) {
-        console.warn('Storage is not accessible for setting company id:', e)
+      } catch {
+        console.warn('Storage is not accessible for setting company id')
       }
     }
   }
@@ -198,7 +202,7 @@ export class ApiClient {
     if (typeof window !== 'undefined') {
       try {
         return localStorage.getItem('company_id') || this.getCookie('company_id')
-      } catch (e) {
+      } catch {
         return this.getCookie('company_id')
       }
     }
@@ -519,6 +523,9 @@ export const authApi = {
 
     if (response.tokens?.access) {
       apiClient.setToken(response.tokens.access)
+      if (response.tokens?.refresh) {
+        apiClient.setRefreshToken(response.tokens.refresh)
+      }
       if (response.company?.id) {
         apiClient.setCompanyId(response.company.id)
       }

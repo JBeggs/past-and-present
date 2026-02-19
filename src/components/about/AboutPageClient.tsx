@@ -97,6 +97,7 @@ export default function AboutPageClient({ sections, children }: AboutPageClientP
       <nav
         className="sticky top-[73px] z-40 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm"
         aria-label="Page sections"
+        data-cy="about-nav"
       >
         <div className="container-wide">
           <div className="flex gap-1 overflow-x-auto py-3 no-scrollbar scroll-smooth">

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
-import { Mail, Lock, User, ArrowRight } from 'lucide-react'
+import { Lock, User, ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -28,7 +28,7 @@ export default function LoginPage() {
         showSuccess('Welcome back!')
         router.push('/')
       }
-    } catch (err) {
+    } catch {
       showError('An unexpected error occurred')
     } finally {
       setIsLoading(false)
@@ -63,6 +63,7 @@ export default function LoginPage() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  data-cy="login-username"
                   className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-md hover:border-vintage-primary/50 transition-all focus:bg-white focus:ring-4 focus:ring-vintage-primary/10 focus:outline-none focus:border-transparent relative z-10"
                   placeholder="Enter your username"
                   required
@@ -88,6 +89,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  data-cy="login-password"
                   className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-md hover:border-vintage-primary/50 transition-all focus:bg-white focus:ring-4 focus:ring-vintage-primary/10 focus:outline-none focus:border-transparent relative z-10"
                   placeholder="••••••••"
                   required
@@ -110,6 +112,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
+              data-cy="login-submit"
               className="btn btn-primary w-full py-4 text-base font-bold shadow-lg shadow-vintage-primary/20 hover:shadow-vintage-primary/30 active:scale-[0.98] transition-all disabled:opacity-70 disabled:scale-100"
             >
               {isLoading ? (
@@ -131,7 +134,7 @@ export default function LoginPage() {
 
           <div className="mt-10 pt-8 border-t border-gray-100 text-center">
             <p className="text-text-muted">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link href="/register" className="text-vintage-primary hover:text-vintage-primary-dark font-bold transition-colors underline underline-offset-4">
                 Create one
               </Link>

@@ -9,11 +9,12 @@ import { useCart } from '@/contexts/CartContext'
 export default function ClientHeader() {
   const { user, profile, signOut, loading: authLoading } = useAuth()
   const isAdmin = profile?.role === 'admin' || profile?.role === 'business_owner'
-  const { itemCount, loading: cartLoading } = useCart()
+  const { itemCount } = useCart()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    const id = setTimeout(() => setMounted(true), 0)
+    return () => clearTimeout(id)
   }, [])
 
   if (!mounted || authLoading) {

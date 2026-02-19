@@ -186,7 +186,7 @@ export default function ProductForm({ product, onClose, onSuccess, inline = fals
         stock_quantity: formData.quantity,
       }
 
-      const { category_id, featured_image_id, quantity, ...backendPayload } = payload as any
+      const { category_id: _cat, featured_image_id: _img, quantity: _qty, ...backendPayload } = payload as Record<string, unknown>
 
       if (product) {
         console.log('ProductForm: Updating product', product.id)
@@ -294,7 +294,7 @@ export default function ProductForm({ product, onClose, onSuccess, inline = fals
                     onChange={(e) => {
                       setFormData({ ...formData, name: e.target.value })
                       if (errors.name) setErrors(prev => {
-                        const { name, ...rest } = prev
+                        const { name: _n, ...rest } = prev
                         return rest
                       })
                     }}
@@ -317,7 +317,7 @@ export default function ProductForm({ product, onClose, onSuccess, inline = fals
                       setFormData({ ...formData, category_id: e.target.value })
                       setValidationError(null)
                       if (errors.category_id) setErrors(prev => {
-                        const { category_id, ...rest } = prev
+                        const { category_id: _c, ...rest } = prev
                         return rest
                       })
                     }}
@@ -375,7 +375,7 @@ export default function ProductForm({ product, onClose, onSuccess, inline = fals
                       const val = e.target.value === '' ? 0 : parseFloat(e.target.value)
                       setFormData({ ...formData, price: isNaN(val) ? 0 : val })
                       if (errors.price) setErrors(prev => {
-                        const { price, ...rest } = prev
+                        const { price: _p, ...rest } = prev
                         return rest
                       })
                     }}

@@ -56,7 +56,7 @@ export default function PrivacyPage() {
             <h2 className="text-2xl font-bold font-playfair text-text mt-8">Data Security</h2>
             <p className="text-text-light">
               We implement appropriate security measures to protect your personal information. 
-              All payment transactions are encrypted and processed through Yoco's secure platform.
+              All payment transactions are encrypted and processed through Yoco&apos;s secure platform.
             </p>
 
             <h2 className="text-2xl font-bold font-playfair text-text mt-8">Your Rights</h2>

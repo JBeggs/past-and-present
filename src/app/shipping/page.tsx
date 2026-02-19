@@ -1,4 +1,4 @@
-import { Truck, Clock, MapPin, Package } from 'lucide-react'
+import { Truck, Clock } from 'lucide-react'
 
 export default function ShippingPage() {
   return (
@@ -63,8 +63,8 @@ export default function ShippingPage() {
 
             <h2 className="text-2xl font-bold font-playfair text-text mt-8">Tracking Your Order</h2>
             <p className="text-text-light">
-              Once your order ships, you'll receive an email with your tracking number. 
-              You can track your package directly through our courier partner's website.
+              Once your order ships, you&apos;ll receive an email with your tracking number. 
+              You can track your package directly through our courier partner&apos;s website.
             </p>
 
             <h2 className="text-2xl font-bold font-playfair text-text mt-8">Packaging</h2>

@@ -82,7 +82,7 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-vintage-primary to-vintage-primary-dark text-white py-20">
+      <section className="bg-gradient-to-br from-vintage-primary to-vintage-primary-dark text-white py-20" data-cy="home-hero">
         <div className="container-wide">
           <div className="max-w-3xl">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-playfair mb-6">
@@ -108,7 +108,7 @@ export default async function HomePage() {
 
       {/* Featured Section */}
       {featuredProducts.length > 0 && (
-        <section className="py-16 bg-white">
+        <section className="py-16 bg-white" data-cy="home-featured">
           <div className="container-wide">
             <div className="section-header">
               <div>
@@ -277,7 +277,7 @@ export default async function HomePage() {
 
       {/* Articles Section */}
       {latestArticles.length > 0 && (
-        <section className="py-16 bg-white">
+        <section className="py-16 bg-white" data-cy="home-articles">
           <div className="container-wide">
             <div className="section-header">
               <div>

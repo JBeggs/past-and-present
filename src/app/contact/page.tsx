@@ -53,7 +53,7 @@ export default async function ContactPage() {
       <section className="py-12 bg-vintage-primary text-white">
         <div className="container-wide">
           <h1 className="text-3xl md:text-4xl font-bold font-playfair mb-2">Contact Us</h1>
-          <p className="text-lg text-green-100">We'd love to hear from you</p>
+          <p className="text-lg text-green-100">We&apos;d love to hear from you</p>
         </div>
       </section>
       <section className="py-12">

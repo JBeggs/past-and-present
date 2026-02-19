@@ -30,7 +30,7 @@ export default function ReturnsPage() {
               </div>
             </div>
             <p className="text-text-light">
-              We want you to love your purchase. If you're not completely satisfied, 
+              We want you to love your purchase. If you&apos;re not completely satisfied, 
               you can return most items within 14 days of delivery for a full refund 
               or exchange.
             </p>
@@ -46,7 +46,7 @@ export default function ReturnsPage() {
               <ul className="text-sm text-text-light space-y-2">
                 <li>Items in original condition</li>
                 <li>Unworn/unused items with tags</li>
-                <li>Items that don't match description</li>
+                <li>Items that don&apos;t match description</li>
                 <li>Damaged items (report within 48 hours)</li>
                 <li>Vintage items not as described</li>
               </ul>
@@ -61,7 +61,7 @@ export default function ReturnsPage() {
                 <li>Items worn or used</li>
                 <li>Items without original tags</li>
                 <li>Items damaged by customer</li>
-                <li>Sale items marked "Final Sale"</li>
+                <li>Sale items marked &quot;Final Sale&quot;</li>
                 <li>Items returned after 14 days</li>
               </ul>
             </div>
@@ -77,7 +77,7 @@ export default function ReturnsPage() {
                 with your order number and reason for return.
               </li>
               <li>
-                <strong>Get Approval:</strong> We'll review your request and send you 
+                <strong>Get Approval:</strong> We&apos;ll review your request and send you 
                 a return authorization within 24 hours.
               </li>
               <li>
@@ -86,7 +86,7 @@ export default function ReturnsPage() {
               </li>
               <li>
                 <strong>Receive Refund:</strong> Once we receive and inspect the item, 
-                we'll process your refund within 5-7 business days.
+                we&apos;ll process your refund within 5-7 business days.
               </li>
             </ol>
 
@@ -99,7 +99,7 @@ export default function ReturnsPage() {
             <h2 className="text-2xl font-bold font-playfair text-text mt-8">Exchanges</h2>
             <p className="text-text-light">
               Want a different size or color? Contact us to arrange an exchange. 
-              We'll hold the new item for you while you return the original.
+              We&apos;ll hold the new item for you while you return the original.
             </p>
           </div>
 

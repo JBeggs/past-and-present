@@ -48,7 +48,7 @@ export default async function AboutPage() {
   return (
     <div className="min-h-screen bg-vintage-background">
       {/* Hero */}
-      <section className="py-16 md:py-20 bg-gradient-to-br from-vintage-primary to-vintage-primary-dark text-white">
+      <section className="py-16 md:py-20 bg-gradient-to-br from-vintage-primary to-vintage-primary-dark text-white" data-cy="about-hero">
         <div className="container-wide">
           <div className="max-w-3xl">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-playfair mb-6">
@@ -280,7 +280,7 @@ export default async function AboutPage() {
       )}
 
       {/* CTA Section */}
-      <section className="py-16 bg-modern-primary text-white">
+      <section className="py-16 bg-modern-primary text-white" data-cy="about-cta">
         <div className="container-wide text-center">
           <h2 className="text-3xl font-bold font-playfair mb-4">
             Ready to Explore?

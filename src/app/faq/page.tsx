@@ -74,7 +74,7 @@ export default function FAQPage() {
               Still have questions?
             </h2>
             <p className="text-text-muted mb-4">
-              We're here to help! Reach out to our friendly team.
+              We&apos;re here to help! Reach out to our friendly team.
             </p>
             <a href="/contact" className="btn btn-primary">
               Contact Us

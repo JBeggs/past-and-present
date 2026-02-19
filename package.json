@@ -6,7 +6,16 @@
     "dev": "next dev --port 3001",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "node scripts/check-e2e-backend.js && cypress run",
+    "test:e2e:open": "cypress open",
+    "test:e2e:skip-check": "cypress run",
+    "git:new-branch": "node scripts/new_branch.js",
+    "git:commit-push": "node scripts/commit_push.js",
+    "git:merge-main": "node scripts/merge_to_main.js"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.6",
@@ -26,14 +35,22 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/typography": "^0.5.16",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.1.4",
+    "@vitest/coverage-v8": "^4.0.18",
     "autoprefixer": "^10.4.21",
+    "cypress": "^15.10.0",
     "eslint": "^9",
     "eslint-config-next": "^16.0.7",
+    "jsdom": "^28.1.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "^4.0.18",
+    "dotenv": "^17.2.1"
   }
 }

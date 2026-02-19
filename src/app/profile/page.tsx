@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ecommerceApi, newsApi } from '@/lib/api'
-import { Order, Profile } from '@/lib/types'
+import { Order } from '@/lib/types'
 import { useToast } from '@/contexts/ToastContext'
 import { Package, User, Mail, Calendar, MapPin, ChevronRight, Loader2, Save, Building2, Clock, Settings } from 'lucide-react'
 import Link from 'next/link'
@@ -254,7 +254,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-vintage-background py-12">
+    <div className="min-h-screen bg-vintage-background py-12" data-cy="profile-content">
       <div className="container-wide">
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Sidebar: Profile Info */}
@@ -590,7 +590,7 @@ export default function ProfilePage() {
                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-200">
                     <Package className="w-8 h-8" />
                   </div>
-                  <p className="text-text-muted">You haven't placed any orders yet.</p>
+                  <p className="text-text-muted">You haven&apos;t placed any orders yet.</p>
                   <Link href="/products" className="btn btn-secondary btn-sm">
                     Start Shopping
                   </Link>

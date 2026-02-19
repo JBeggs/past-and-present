@@ -23,7 +23,11 @@ async function getArticles(params: { search?: string; category?: string }) {
 
 async function getCategories(): Promise<{ id: string; name: string }[]> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://3pillars.pythonanywhere.com/api'
+    const baseUrl =
+      process.env.NEXT_PUBLIC_API_URL ||
+      (process.env.NODE_ENV === 'development'
+        ? 'http://localhost:8000/api'
+        : 'https://3pillars.pythonanywhere.com/api')
     const res = await fetch(`${baseUrl}/news/categories/`, {
       headers: { 'X-Company-Slug': 'riverside-herald', 'Content-Type': 'application/json' },
       cache: 'no-store',
@@ -127,7 +131,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
       <section className="py-12">
         <div className="container-wide">
           {articles.length > 0 ? (
-            <div className="article-grid">
+            <div className="article-grid" data-cy="articles-list">
               {articles.map((article: Article) => (
                 <Link key={article.id} href={`/articles/${article.slug}`} className="card group overflow-hidden">
                   {article.featured_media?.file_url ? (

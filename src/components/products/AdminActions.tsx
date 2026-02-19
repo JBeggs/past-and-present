@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { Plus, Settings, Edit2, Trash2, Package, ShoppingBag } from 'lucide-react'
+import { Plus, Settings, Package, ShoppingBag } from 'lucide-react'
 import ProductForm from './ProductForm'
 import CategoryManager from './CategoryManager'
 import Link from 'next/link'

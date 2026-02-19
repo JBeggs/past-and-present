@@ -108,7 +108,7 @@ export default function ContactForm({ contact, businessHours }: ContactFormProps
       <div className="lg:col-span-2">
         <div className="card p-8">
           <h2 className="text-xl font-semibold font-playfair text-text mb-6">Send us a Message</h2>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6" data-cy="contact-form">
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="name" className="form-label">Name</label>
@@ -159,6 +159,7 @@ export default function ContactForm({ contact, businessHours }: ContactFormProps
               type="submit"
               disabled={loading}
               className="btn btn-primary py-3 px-8"
+              data-cy="contact-submit"
             >
               {loading ? 'Sending...' : 'Send Message'}
               {!loading && <Send className="w-4 h-4 ml-2" />}

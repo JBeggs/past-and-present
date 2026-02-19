@@ -25,8 +25,8 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   const handleAddToCart = async () => {
     // alert('AddToCartButton: handleAddToCart clicked')
     console.log('AddToCartButton: handleAddToCart clicked', { productId: product.id, quantity, user: !!user })
-    const stockQuantity = product.stock_quantity ?? product.quantity ?? 0
-    if (stockQuantity === 0) {
+    const sq = product.stock_quantity ?? product.quantity ?? null
+    if (!product.in_stock || (sq != null && sq <= 0)) {
       console.warn('AddToCartButton: Product out of stock')
       return
     }
@@ -54,9 +54,10 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     }
   }
 
-  const stockQuantity = product.stock_quantity ?? product.quantity ?? 0
-  const isOutOfStock = stockQuantity === 0
-  const maxQuantity = Math.min(stockQuantity || 10, 10)
+  // Backend: null stock_quantity = unlimited when in_stock; 0 = out of stock
+  const stockQuantity = product.stock_quantity ?? product.quantity ?? null
+  const isOutOfStock = product.in_stock === false || (stockQuantity != null && stockQuantity <= 0)
+  const maxQuantity = stockQuantity != null && stockQuantity > 0 ? Math.min(stockQuantity, 10) : 10
 
   return (
     <div className="space-y-4">
@@ -87,6 +88,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
         <button
           onClick={handleAddToCart}
           disabled={loading || isOutOfStock || !user}
+          data-cy={`add-to-cart-${product.slug || product.id}`}
           className={`w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 transition-colors ${
             !user
               ? 'bg-gray-200 text-text-muted cursor-not-allowed'

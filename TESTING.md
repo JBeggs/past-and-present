@@ -30,6 +30,19 @@ npm run dev
 
 ---
 
+## Unit Tests (Vitest)
+
+```bash
+cd past-and-present
+npm run test           # Run unit tests
+npm run test:coverage  # Run with coverage report
+```
+
+Coverage reports:
+- **Text**: Printed to terminal
+- **HTML**: `coverage/index.html` (open in browser)
+- **LCOV**: `coverage/lcov.info` (for CI tools)
+
 ## Integration Testing
 
 ### Recommended Tools
@@ -64,11 +77,42 @@ npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom
 - Django running at `http://localhost:8000`
 - Past and Present company with products
 
+### Seed Django Test Data
+
+**Required for cart and checkout E2E tests.** From the `django-crm` directory, run:
+
+```bash
+cd django-crm
+python manage.py seed_demo_data   # Base users first
+python manage.py seed_past_and_present_e2e
+```
+
+This creates:
+- **Past and Present company** (slug: `past-and-present`) if not exists
+- **Test user**: `testuser` / `testpass` (for login E2E tests)
+- **Sample products** (vintage and modern items) if none exist
+
+### Run E2E Tests
+
+1. Start Django: `python manage.py runserver 8000`
+2. Start Next.js: `cd past-and-present && npm run dev` (port 3001)
+3. Run Cypress:
+   ```bash
+   cd past-and-present
+   npm run test:e2e
+   ```
+   Or open Cypress UI: `npm run test:e2e:open`
+
+### E2E Environment Variables
+
+- `CYPRESS_TEST_USER` (default: testuser)
+- `CYPRESS_TEST_PASSWORD` (default: testpass)
+
 ### Critical Flows to Test
 
 - Auth: login, logout, register
 - Products list and detail
-- Cart and checkout
+- Cart and checkout (requires login)
 - Profile (orders, business profile, site settings)
 - Contact page (data from API)
 

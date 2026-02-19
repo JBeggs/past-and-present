@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle, Phone, FileText, ArrowRight, ShoppingBag } from 'lucide-react'
+import { CheckCircle, Phone, FileText, ShoppingBag } from 'lucide-react'
 import { Suspense } from 'react'
 
 function SuccessContent() {
@@ -13,7 +13,7 @@ function SuccessContent() {
   return (
     <div className="min-h-screen bg-vintage-background py-20">
       <div className="container-narrow">
-        <div className="card p-8 md:p-12 text-center space-y-8 animate-in fade-in zoom-in duration-500">
+        <div className="card p-8 md:p-12 text-center space-y-8 animate-in fade-in zoom-in duration-500" data-cy="checkout-success-content">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle className="w-12 h-12 text-green-600" />
           </div>
@@ -48,14 +48,14 @@ function SuccessContent() {
                 <div>
                   <h3 className="font-bold text-text">No payment required yet</h3>
                   <p className="text-sm text-text-light leading-relaxed">
-                    Your items have been reserved. No money will be deposited until the necessary paperwork is completed and you've spoken with our team.
+                    Your items have been reserved. No money will be deposited until the necessary paperwork is completed and you&apos;ve spoken with our team.
                   </p>
                 </div>
               </div>
             </div>
           ) : (
             <p className="text-text-light max-w-md mx-auto">
-              Thank you for your purchase! We've received your order and are getting it ready for shipment. You'll receive a confirmation email shortly.
+              Thank you for your purchase! We&apos;ve received your order and are getting it ready for shipment. You&apos;ll receive a confirmation email shortly.
             </p>
           )}
 

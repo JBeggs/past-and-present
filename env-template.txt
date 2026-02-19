@@ -2,8 +2,7 @@
 # Copy this file to .env.local and fill in the values
 
 # API Configuration
-NEXT_PUBLIC_API_URL=https://3pillars.pythonanywhere.com/api
+# Local dev (npm run dev): defaults to http://localhost:8000/api automatically
+# Production: set NEXT_PUBLIC_API_URL to your deployed API
+# NEXT_PUBLIC_API_URL=https://3pillars.pythonanywhere.com/api
 NEXT_PUBLIC_COMPANY_SLUG=past-and-present
-
-# Optional: Override for local development
-# NEXT_PUBLIC_API_URL=http://localhost:8000/api

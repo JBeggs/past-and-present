@@ -171,8 +171,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         </div>
       </section>
 
-      {/* Products Grid */}
-      <section className="py-12">
+      {/* Products Grid - data-cy always present so E2E can assert; empty state has no product links */}
+      <section className="py-12" data-cy="products-grid">
         <div className="container-wide">
           {products.length > 0 ? (
             <>

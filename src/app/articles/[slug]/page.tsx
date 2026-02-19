@@ -59,7 +59,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           )}
 
           {/* Title */}
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-playfair text-text mb-4">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-playfair text-text mb-4" data-cy="article-title">
             {article.title}
           </h1>
 
@@ -97,6 +97,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           {/* Content */}
           <div 
             className="article-content"
+            data-cy="article-content"
             dangerouslySetInnerHTML={{ __html: article.content }}
           />
 

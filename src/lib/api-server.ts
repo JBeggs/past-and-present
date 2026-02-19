@@ -5,7 +5,11 @@
 
 import { cookies } from 'next/headers'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://3pillars.pythonanywhere.com/api'
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.NODE_ENV === 'development'
+    ? 'http://localhost:8000/api'
+    : 'https://3pillars.pythonanywhere.com/api')
 const DEFAULT_COMPANY_SLUG = process.env.NEXT_PUBLIC_COMPANY_SLUG || 'past-and-present'
 
 class ServerApiClient {
@@ -97,6 +101,25 @@ class ServerApiClient {
           return [] as unknown as T
         }
         return null as unknown as T
+      }
+      // For 500 on public endpoints, log details and return empty so the app can render
+      if (response.status >= 500) {
+        const body = await response.text()
+        const preview = body.length > 500 ? body.slice(0, 500) + '...' : body
+        console.error(
+          `API ${response.status} at ${url.toString()}`,
+          '\nResponse body (check Django logs for full traceback):',
+          preview
+        )
+        const isPublicEndpoint =
+          endpoint.includes('/news/') ||
+          endpoint.includes('/v1/public/')
+        if (isPublicEndpoint) {
+          if (endpoint.endsWith('/') || endpoint.includes('?')) {
+            return [] as unknown as T
+          }
+          return null as unknown as T
+        }
       }
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
