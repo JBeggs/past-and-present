@@ -644,8 +644,8 @@ export const ecommerceApi = {
       apiClient.post('/v1/products/bulk/', data),
     get: (id: string) => apiClient.get(`/v1/products/${id}/`),
     getBySlug: (slug: string) => apiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/products/slug/${slug}/`),
-    create: (data: any) => apiClient.post('/v1/products/', data),
-    update: (id: string, data: any) => apiClient.put(`/v1/products/${id}/`, data),
+    create: (data: Record<string, unknown>) => apiClient.post('/v1/products/', data),
+    update: (id: string, data: Record<string, unknown>) => apiClient.put(`/v1/products/${id}/`, data),
     delete: (id: string) => apiClient.delete(`/v1/products/${id}/`),
     /** Upload product images via ecommerce API (stores in ProductImage, not news Media) */
     uploadImages: (files: File[]) =>
@@ -658,8 +658,8 @@ export const ecommerceApi = {
   categories: {
     list: () => apiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/categories/`),
     get: (id: string) => apiClient.get(`/v1/categories/${id}/`),
-    create: (data: any) => apiClient.post('/v1/categories/', data),
-    update: (id: string, data: any) => apiClient.put(`/v1/categories/${id}/`, data),
+    create: (data: Record<string, unknown>) => apiClient.post('/v1/categories/', data),
+    update: (id: string, data: Record<string, unknown>) => apiClient.put(`/v1/categories/${id}/`, data),
     delete: (id: string) => apiClient.delete(`/v1/categories/${id}/`),
   },
 
@@ -672,8 +672,8 @@ export const ecommerceApi = {
     list: (params?: { status?: string; page?: number; limit?: number }) =>
       apiClient.get('/v1/orders/', params),
     get: (id: string) => apiClient.get(`/v1/orders/${id}/`),
-    create: (data: any) => apiClient.post('/v1/orders/', data),
-    update: (id: string, data: any) => apiClient.patch(`/v1/orders/${id}/`, data),
+    create: (data: Record<string, unknown>) => apiClient.post('/v1/orders/', data),
+    update: (id: string, data: Record<string, unknown>) => apiClient.patch(`/v1/orders/${id}/`, data),
     updateStatus: (id: string, data: { status: string; notes?: string }) =>
       apiClient.put(`/v1/orders/${id}/status/`, data),
     cancel: (id: string, data: { reason: string; refund?: boolean }) =>
@@ -700,14 +700,14 @@ export const ecommerceApi = {
   },
 
   checkout: {
-    initiate: (data: any) => apiClient.post('/v1/orders/create-from-cart/', data),
-    complete: (orderId: string, paymentData: any) =>
+    initiate: (data: Record<string, unknown>) => apiClient.post('/v1/orders/create-from-cart/', data),
+    complete: (orderId: string, paymentData: Record<string, unknown>) =>
       apiClient.post(`/v1/orders/${orderId}/complete/`, paymentData),
   },
 
   companies: {
     get: (id: string) => apiClient.get(`/v1/companies/${id}/`),
-    update: (id: string, data: any) => apiClient.patch(`/v1/companies/${id}/`, data),
+    update: (id: string, data: Record<string, unknown>) => apiClient.patch(`/v1/companies/${id}/`, data),
   },
 
   // Yoco payment integration
