@@ -21,6 +21,7 @@ async function getFooterData() {
       { title: 'Products', href: '/products' },
       { title: 'Articles', href: '/articles' },
       { title: 'About', href: '/about' },
+      { title: 'Testing', href: '/testing' },
     ]
 
     return {
@@ -57,6 +58,7 @@ async function getFooterData() {
         { title: 'Products', href: '/products' },
         { title: 'Articles', href: '/articles' },
         { title: 'About', href: '/about' },
+        { title: 'Testing', href: '/testing' },
       ]
     }
   }

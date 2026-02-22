@@ -10,8 +10,15 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
     env: {
+      NODE_ENV: 'development',
       NEXT_PUBLIC_API_URL: 'http://localhost:8000/api',
       NEXT_PUBLIC_COMPANY_SLUG: 'past-and-present',
+    },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'text-summary', 'html', 'lcov', 'json-summary'],
+      include: ['src/lib/**/*.ts', 'src/contexts/**/*.tsx', 'src/components/**/*.tsx'],
+      exclude: ['**/*.test.*', 'src/test/**', '**/*.d.ts'],
     },
   },
   resolve: {

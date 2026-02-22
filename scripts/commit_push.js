@@ -18,7 +18,7 @@ function loadEnv() {
     const env = path.join(PROJECT_ROOT, '.env');
     if (fs.existsSync(envLocal)) dotenv.config({ path: envLocal });
     if (fs.existsSync(env)) dotenv.config({ path: env });
-  } catch (_) {}
+  } catch { /* dotenv optional */ }
 }
 
 function hasPassphrase() {
@@ -31,7 +31,7 @@ function getGitEnv() {
   if (passphrase) {
     const askpass = path.resolve(SCRIPT_DIR, 'ssh_askpass.js');
     if (fs.existsSync(askpass)) {
-      try { fs.chmodSync(askpass, 0o755); } catch (_) {}
+      try { fs.chmodSync(askpass, 0o755); } catch { /* ignore */ }
       env.SSH_ASKPASS = askpass;
       env.SSH_ASKPASS_REQUIRE = 'force';
     }

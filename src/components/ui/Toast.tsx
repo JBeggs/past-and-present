@@ -53,6 +53,7 @@ export default function ToastComponent({ toast, onClose }: ToastProps) {
 
   return (
     <div
+      data-cy={`toast-${toast.type}`}
       className={`
         ${colors[toast.type]}
         border-4 rounded-2xl shadow-2xl p-6 w-full

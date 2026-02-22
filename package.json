@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "NODE_ENV=development vitest run",
+    "test:watch": "NODE_ENV=development vitest",
+    "test:coverage": "NODE_ENV=development vitest run --coverage",
+    "test:coverage:public": "NODE_ENV=development vitest run --coverage && node scripts/copy-coverage.js",
     "git:merge-main": "node scripts/merge_to_main.js",
     "git:commit-push": "node scripts/commit_push.js",
     "git:new-branch": "node scripts/new_branch.js"
@@ -32,6 +35,7 @@
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@vitest/coverage-v8": "^4.0.18",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

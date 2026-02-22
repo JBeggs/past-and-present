@@ -100,7 +100,7 @@ export class ApiClient {
     if (typeof window !== 'undefined') {
       try {
         return localStorage.getItem('refresh_token') || this.getCookie('refresh_token')
-      } catch (e) {
+      } catch {
         return this.getCookie('refresh_token')
       }
     }
@@ -164,7 +164,7 @@ export class ApiClient {
     if (typeof window !== 'undefined') {
       try {
         return localStorage.getItem('auth_token') || this.getCookie('auth_token')
-      } catch (e) {
+      } catch {
         return this.getCookie('auth_token')
       }
     }
@@ -198,7 +198,7 @@ export class ApiClient {
     if (typeof window !== 'undefined') {
       try {
         return localStorage.getItem('company_id') || this.getCookie('company_id')
-      } catch (e) {
+      } catch {
         return this.getCookie('company_id')
       }
     }

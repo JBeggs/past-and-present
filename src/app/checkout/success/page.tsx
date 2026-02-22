@@ -48,14 +48,14 @@ function SuccessContent() {
                 <div>
                   <h3 className="font-bold text-text">No payment required yet</h3>
                   <p className="text-sm text-text-light leading-relaxed">
-                    Your items have been reserved. No money will be deposited until the necessary paperwork is completed and you've spoken with our team.
+                    Your items have been reserved. No money will be deposited until the necessary paperwork is completed and you&apos;ve spoken with our team.
                   </p>
                 </div>
               </div>
             </div>
           ) : (
             <p className="text-text-light max-w-md mx-auto">
-              Thank you for your purchase! We've received your order and are getting it ready for shipment. You'll receive a confirmation email shortly.
+              Thank you for your purchase! We&apos;ve received your order and are getting it ready for shipment. You&apos;ll receive a confirmation email shortly.
             </p>
           )}
 

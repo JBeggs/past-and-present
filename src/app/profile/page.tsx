@@ -590,7 +590,7 @@ export default function ProfilePage() {
                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-200">
                     <Package className="w-8 h-8" />
                   </div>
-                  <p className="text-text-muted">You haven't placed any orders yet.</p>
+                  <p className="text-text-muted">You haven&apos;t placed any orders yet.</p>
                   <Link href="/products" className="btn btn-secondary btn-sm">
                     Start Shopping
                   </Link>
