@@ -24,6 +24,11 @@ export default function ProfilePage() {
     address_postal_code: '',
     address_country: 'ZA',
     description: '',
+    seo_title: '',
+    seo_description: '',
+    seo_keywords: '',
+    google_analytics_id: '',
+    facebook_pixel_id: '',
     legal_name: '',
     registration_number: '',
     tax_number: '',
@@ -79,7 +84,7 @@ export default function ProfilePage() {
       ecommerceApi.companies.get(companyId).then((c: any) => {
         setCompany(c)
         setCompanyForm({
-          logo: c?.logo || '',
+          logo: c?.logo?.file_url || c?.logo_url || '',
           phone: c?.phone || '',
           website: c?.website || '',
           address_street: c?.address_street || '',
@@ -88,6 +93,11 @@ export default function ProfilePage() {
           address_postal_code: c?.address_postal_code || '',
           address_country: c?.address_country || 'ZA',
           description: c?.description || '',
+          seo_title: c?.seo_title || '',
+          seo_description: c?.seo_description || '',
+          seo_keywords: c?.seo_keywords || '',
+          google_analytics_id: c?.google_analytics_id || '',
+          facebook_pixel_id: c?.facebook_pixel_id || '',
           legal_name: c?.legal_name || '',
           registration_number: c?.registration_number || '',
           tax_number: c?.tax_number || '',
@@ -145,7 +155,6 @@ export default function ProfilePage() {
     setUpdatingCompany(true)
     try {
       const updated = await ecommerceApi.companies.update(companyId, {
-        logo: companyForm.logo || null,
         phone: companyForm.phone || '',
         website: companyForm.website || '',
         address_street: companyForm.address_street || '',
@@ -154,6 +163,11 @@ export default function ProfilePage() {
         address_postal_code: companyForm.address_postal_code || '',
         address_country: companyForm.address_country || 'ZA',
         description: companyForm.description || '',
+        seo_title: companyForm.seo_title || undefined,
+        seo_description: companyForm.seo_description || undefined,
+        seo_keywords: companyForm.seo_keywords || undefined,
+        google_analytics_id: companyForm.google_analytics_id || undefined,
+        facebook_pixel_id: companyForm.facebook_pixel_id || undefined,
         legal_name: companyForm.legal_name || '',
         registration_number: companyForm.registration_number || '',
         tax_number: companyForm.tax_number || '',
@@ -214,10 +228,11 @@ export default function ProfilePage() {
     try {
       const uploaded: any = await newsApi.media.upload(file, { media_type: 'image' })
       const url = uploaded?.file_url
-      if (url) {
-        setCompanyForm((f) => ({ ...f, logo: url }))
-        await ecommerceApi.companies.update(companyId, { logo: url })
-        setCompany((c) => (c ? { ...c, logo: url } : null))
+      const id = uploaded?.id
+      if (id) {
+        await ecommerceApi.companies.update(companyId, { logo_id: id })
+        setCompanyForm((f) => ({ ...f, logo: url || '' }))
+        setCompany((c) => (c ? { ...c, logo: url ? { id, file_url: url } : null, logo_url: url || '' } : null))
         showSuccess('Logo updated')
       }
     } catch (error: any) {
@@ -467,6 +482,61 @@ export default function ProfilePage() {
                               />
                             </div>
                           ))}
+                        </div>
+                      </div>
+                      <div className="space-y-4 pt-4 border-t border-gray-100">
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-text-muted">SEO</h4>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold uppercase tracking-widest text-text-muted">SEO Title</label>
+                          <input
+                            type="text"
+                            value={companyForm.seo_title}
+                            onChange={(e) => setCompanyForm({ ...companyForm, seo_title: e.target.value })}
+                            className="form-input"
+                            placeholder="Page title for search engines"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold uppercase tracking-widest text-text-muted">SEO Description</label>
+                          <textarea
+                            value={companyForm.seo_description}
+                            onChange={(e) => setCompanyForm({ ...companyForm, seo_description: e.target.value })}
+                            className="form-input min-h-[60px] resize-none"
+                            placeholder="Meta description for search results"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold uppercase tracking-widest text-text-muted">SEO Keywords</label>
+                          <input
+                            type="text"
+                            value={companyForm.seo_keywords}
+                            onChange={(e) => setCompanyForm({ ...companyForm, seo_keywords: e.target.value })}
+                            className="form-input"
+                            placeholder="keyword1, keyword2, keyword3"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-4 pt-4 border-t border-gray-100">
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-text-muted">Analytics</h4>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Google Analytics ID</label>
+                          <input
+                            type="text"
+                            value={companyForm.google_analytics_id}
+                            onChange={(e) => setCompanyForm({ ...companyForm, google_analytics_id: e.target.value })}
+                            className="form-input"
+                            placeholder="G-XXXXXXXXXX"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Facebook Pixel ID</label>
+                          <input
+                            type="text"
+                            value={companyForm.facebook_pixel_id}
+                            onChange={(e) => setCompanyForm({ ...companyForm, facebook_pixel_id: e.target.value })}
+                            className="form-input"
+                            placeholder="Facebook Pixel ID"
+                          />
                         </div>
                       </div>
                       <button

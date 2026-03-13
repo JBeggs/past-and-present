@@ -189,8 +189,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       return { error: null }
     } catch (error: any) {
-      console.error('Login error:', error)
-      const errorMessage = error.response?.data?.error || error.message || 'Login failed. Please check your credentials.'
+      const errDetail = error?.details?.error
+      const errorMessage =
+        error?.message ||
+        (typeof errDetail === 'string' ? errDetail : null) ||
+        error?.response?.data?.error ||
+        'Login failed. Please check your credentials.'
+      console.error('Login error:', {
+        message: errorMessage,
+        status: error?.status,
+        url: error?.url,
+        cause: error?.cause,
+      })
       return { error: errorMessage }
     } finally {
       setLoading(false)

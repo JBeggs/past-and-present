@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { serverEcommerceApi, serverNewsApi } from '@/lib/api-server'
 export const dynamic = 'force-dynamic'
 import { Product, Article } from '@/lib/types'
-import { ArrowRight, Sparkles, Clock } from 'lucide-react'
+import { ArrowRight, Sparkles, Clock, Rocket } from 'lucide-react'
 
 function shuffleArray<T>(arr: T[]): T[] {
   const out = [...arr]
@@ -15,7 +15,7 @@ function shuffleArray<T>(arr: T[]): T[] {
 
 async function getHomeData() {
   try {
-    const [featuredRes, vintageRes, newRes, articlesData] = await Promise.all([
+    const [featuredRes, vintageRes, newRes, articlesData, futureArticlesData] = await Promise.all([
       serverEcommerceApi.products.list({
         is_active: true,
         featured: true,
@@ -34,12 +34,14 @@ async function getHomeData() {
         page_size: 100,
       }),
       serverNewsApi.articles.list({ status: 'published' }),
+      serverNewsApi.articles.list({ status: 'published', category__slug: 'future' }),
     ])
 
     const featuredRaw = Array.isArray(featuredRes) ? featuredRes : (featuredRes as any)?.data || (featuredRes as any)?.results || []
     const vintageRaw = Array.isArray(vintageRes) ? vintageRes : (vintageRes as any)?.data || (vintageRes as any)?.results || []
     const newRaw = Array.isArray(newRes) ? newRes : (newRes as any)?.data || (newRes as any)?.results || []
     const articles = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.data || (articlesData as any)?.results || []
+    const futureArticles = Array.isArray(futureArticlesData) ? futureArticlesData : (futureArticlesData as any)?.data || (futureArticlesData as any)?.results || []
 
     const featuredProducts = featuredRaw
       .filter((p: Product) => p.status !== 'archived')
@@ -64,6 +66,7 @@ async function getHomeData() {
       vintageProducts,
       newProducts,
       latestArticles: articles.slice(0, 3),
+      futureArticles: futureArticles.slice(0, 3),
     }
   } catch (error) {
     console.error('Error fetching home data:', error)
@@ -72,12 +75,13 @@ async function getHomeData() {
       vintageProducts: [],
       newProducts: [],
       latestArticles: [],
+      futureArticles: [],
     }
   }
 }
 
 export default async function HomePage() {
-  const { featuredProducts, vintageProducts, newProducts, latestArticles } = await getHomeData()
+  const { featuredProducts, vintageProducts, newProducts, latestArticles, futureArticles } = await getHomeData()
 
   return (
     <div className="min-h-screen">
@@ -100,6 +104,10 @@ export default async function HomePage() {
               <Link href="/products?condition=new" className="btn bg-white text-vintage-primary hover:bg-gray-100">
                 <Sparkles className="w-5 h-5 mr-2" />
                 Shop New
+              </Link>
+              <Link href="/future" className="btn bg-amber-500/90 text-white hover:bg-amber-600">
+                <Rocket className="w-5 h-5 mr-2" />
+                Future Plans
               </Link>
             </div>
           </div>
@@ -274,6 +282,48 @@ export default async function HomePage() {
           )}
         </div>
       </section>
+
+      {/* Future Plans Section */}
+      {futureArticles.length > 0 && (
+        <section className="py-16 bg-amber-50/50">
+          <div className="container-wide">
+            <div className="section-header-modern">
+              <div>
+                <h2 className="section-title">Future Plans</h2>
+                <p className="text-text-muted mt-1">IoT development, projects to build, camera setups, home garden monitoring</p>
+              </div>
+              <Link href="/future" className="btn btn-modern">
+                View All <ArrowRight className="w-4 h-4 ml-2" />
+              </Link>
+            </div>
+            
+            <div className="article-grid">
+              {futureArticles.map((article: Article) => (
+                <Link key={article.id} href={`/articles/${article.slug}`} className="card group">
+                  {article.featured_media?.file_url && (
+                    <img
+                      src={article.featured_media.file_url}
+                      alt={article.title}
+                      className="w-full h-48 object-cover rounded-t-lg"
+                    />
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-semibold text-text group-hover:text-modern-primary transition-colors">
+                      {article.title}
+                    </h3>
+                    {article.excerpt && (
+                      <p className="text-sm text-text-muted mt-2 line-clamp-2">{article.excerpt}</p>
+                    )}
+                    <div className="mt-3 text-sm text-text-muted">
+                      {article.published_at && new Date(article.published_at).toLocaleDateString()}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Articles Section */}
       {latestArticles.length > 0 && (

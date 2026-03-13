@@ -55,11 +55,27 @@ class ServerApiClient {
 
     const headers = await this.getHeaders(headerOverrides)
 
-    const response = await fetch(url.toString(), {
-      method: 'GET',
-      headers,
-      cache: 'no-store', // Disable caching for authenticated requests
-    })
+    let response: Response
+    try {
+      response = await fetch(url.toString(), {
+        method: 'GET',
+        headers,
+        cache: 'no-store', // Disable caching for authenticated requests
+      })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      const cause = err instanceof Error ? err.cause : undefined
+      console.error(`[api-server] fetch failed: ${url.toString()}`, { message: msg, cause })
+      // Public endpoints: return empty so pages render; others re-throw
+      const isPublicEndpoint =
+        endpoint.includes('/v1/public/') ||
+        endpoint.includes('/v1/categories/') ||
+        endpoint.includes('/news/')
+      if (isPublicEndpoint) {
+        return (endpoint.endsWith('/') || endpoint.includes('?')) ? ([] as unknown as T) : (null as unknown as T)
+      }
+      throw err
+    }
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -124,7 +140,7 @@ const serverApiClient = new ServerApiClient()
 // Server-side News API
 export const serverNewsApi = {
   articles: {
-    list: (params?: { status?: string; category?: string; search?: string; page?: number }) =>
+    list: (params?: { status?: string; category?: string; search?: string; page?: number } & Record<string, string | number | undefined>) =>
       serverApiClient.get('/news/articles/', params),
     get: (id: string) => serverApiClient.get(`/news/articles/${id}/`),
     getBySlug: (slug: string) => serverApiClient.get(`/news/articles/?slug=${slug}`),
