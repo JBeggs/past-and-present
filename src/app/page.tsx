@@ -154,14 +154,14 @@ export default async function HomePage() {
             <div className="product-grid">
               {featuredProducts.map((product: any) => (
                 <Link key={product.id} href={`/products/${product.slug}`} className={`group relative flex flex-col ${product.is_vintage ? 'product-card-vintage' : 'product-card-modern'}`} prefetch={false}>
-                  <div className="relative overflow-hidden aspect-square">
+                  <div className="relative overflow-hidden aspect-square bg-gray-50">
                     {product.image ? (
                       <img
                         src={product.image}
                         alt={product.name}
                         loading="lazy"
                         decoding="async"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
                       <div className="w-full h-full bg-gray-100 flex items-center justify-center">
@@ -255,17 +255,17 @@ export default async function HomePage() {
             <div className="product-grid">
               {vintageProducts.map((product: Product) => (
                 <Link key={product.id} href={`/products/${product.slug}`} className="product-card-vintage group" prefetch={false}>
-        <div className="relative overflow-hidden">
+        <div className="relative overflow-hidden aspect-square bg-vintage-background">
           {product.image ? (
             <img
               src={product.image}
               alt={product.name}
               loading="lazy"
               decoding="async"
-              className="product-image group-hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
             />
           ) : (
-            <div className="product-image bg-vintage-primary/10 flex items-center justify-center">
+            <div className="w-full h-full bg-vintage-primary/10 flex items-center justify-center">
               <Clock className="w-12 h-12 text-vintage-primary/30" />
             </div>
           )}
@@ -312,17 +312,17 @@ export default async function HomePage() {
             <div className="product-grid">
               {newProducts.map((product: Product) => (
                 <Link key={product.id} href={`/products/${product.slug}`} className="product-card-modern group" prefetch={false}>
-        <div className="relative overflow-hidden">
+        <div className="relative overflow-hidden aspect-square bg-modern-background">
           {product.image ? (
             <img
               src={product.image}
               alt={product.name}
               loading="lazy"
               decoding="async"
-              className="product-image group-hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
             />
           ) : (
-            <div className="product-image bg-modern-primary/10 flex items-center justify-center">
+            <div className="w-full h-full bg-modern-primary/10 flex items-center justify-center">
               <Sparkles className="w-12 h-12 text-modern-primary/30" />
             </div>
           )}

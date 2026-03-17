@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Menu, X, User, Truck } from 'lucide-react'
+import { Menu, X, User, Truck, ShoppingCart } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMounted } from '@/hooks/useMounted'
 import { useCartSafe } from '@/contexts/CartContext'
@@ -12,19 +12,31 @@ interface MobileNavProps {
   logoUrl?: string
 }
 
+type TruckCoords = { startX: number; startY: number; endX: number; endY: number }
+
 export function MobileNav({ menuItems, logoUrl = '/logo.png' }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [countBump, setCountBump] = useState(false)
   const [showTruck, setShowTruck] = useState(false)
+  const [truckCoords, setTruckCoords] = useState<TruckCoords | null>(null)
   const { user } = useAuth()
   const { itemCount } = useCartSafe()
   const mounted = useMounted()
 
   useEffect(() => {
-    const handler = () => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ startX?: number; startY?: number }>)?.detail
+      const startX = detail?.startX ?? window.innerWidth * 0.2
+      const startY = detail?.startY ?? window.innerHeight * 0.5
+      const cartEl = document.querySelector('[data-cart-icon]')
+      const endRect = cartEl?.getBoundingClientRect()
+      const endX = endRect ? endRect.left + endRect.width / 2 : window.innerWidth - 48
+      const endY = endRect ? endRect.top + endRect.height / 2 : 48
+      setTruckCoords({ startX, startY, endX, endY })
       setShowTruck(true)
       const t = setTimeout(() => {
         setShowTruck(false)
+        setTruckCoords(null)
         setCountBump(true)
         const t2 = setTimeout(() => setCountBump(false), 600)
         return () => clearTimeout(t2)
@@ -37,11 +49,19 @@ export function MobileNav({ menuItems, logoUrl = '/logo.png' }: MobileNavProps) 
 
   return (
     <div className="md:hidden">
-      {showTruck && (
-        <div className="fixed inset-0 pointer-events-none z-[9999] flex items-center justify-end pr-16 pt-20">
-          <div className="truck-fly-animation">
-            <Truck className="w-12 h-12 text-vintage-primary" strokeWidth={2} />
-          </div>
+      {showTruck && truckCoords && (
+        <div
+          className="truck-fly-animation fixed pointer-events-none z-[9999]"
+          style={
+            {
+              '--truck-start-x': `${truckCoords.startX}px`,
+              '--truck-start-y': `${truckCoords.startY}px`,
+              '--truck-end-x': `${truckCoords.endX}px`,
+              '--truck-end-y': `${truckCoords.endY}px`,
+            } as React.CSSProperties
+          }
+        >
+          <Truck className="w-12 h-12 text-vintage-primary" strokeWidth={2} />
         </div>
       )}
       <div className="flex items-center gap-2">
@@ -52,13 +72,7 @@ export function MobileNav({ menuItems, logoUrl = '/logo.png' }: MobileNavProps) 
         className="relative p-2 text-text hover:text-vintage-primary transition-colors"
         aria-label={`Cart, ${itemCount} items`}
       >
-        {logoUrl ? (
-          <span className="relative block w-8 h-8">
-            <img src={logoUrl} alt="" className="w-full h-full object-contain" aria-hidden />
-          </span>
-        ) : (
-          <Truck className="w-8 h-8" aria-hidden />
-        )}
+        <ShoppingCart className="w-8 h-8" aria-hidden />
         {itemCount > 0 && (
           <span
             className={`absolute -top-0.5 -right-0.5 bg-vintage-accent text-white text-xs font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full shadow-sm transition-transform duration-300 ${

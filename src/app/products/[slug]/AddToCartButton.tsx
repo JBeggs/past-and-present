@@ -55,7 +55,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   )
   const gumtreeDuplicate = isGumtree && cartAlreadyHasThisProduct
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     if (isExpired) {
       showError('This timed product has expired')
       return
@@ -75,7 +75,10 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
       await addItemToCart(product, quantity)
       showSuccess(`${product.name} added to cart!`)
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('cart-item-added'))
+        const rect = (e.target as HTMLElement).closest('button')?.getBoundingClientRect()
+        const startX = rect ? rect.left + rect.width / 2 : undefined
+        const startY = rect ? rect.top + rect.height / 2 : undefined
+        window.dispatchEvent(new CustomEvent('cart-item-added', { detail: { startX, startY } }))
       }
       router.refresh()
     } catch (error: any) {

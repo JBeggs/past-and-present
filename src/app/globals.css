@@ -318,23 +318,33 @@ input:-webkit-autofill:active {
   }
 }
 
-/* Truck fly animation (add to cart) */
+/* Truck fly animation (add to cart): from button to cart icon */
 @keyframes truck-fly {
   0% {
-    transform: translateX(-100vw) scale(0.8);
+    left: var(--truck-start-x);
+    top: var(--truck-start-y);
+    transform: translate(-50%, -50%) scale(0.8);
     opacity: 0.6;
   }
   70% {
-    transform: translateX(-20px) scale(1.1);
+    left: var(--truck-end-x);
+    top: var(--truck-end-y);
+    transform: translate(-50%, -50%) scale(1.1);
     opacity: 1;
   }
   100% {
-    transform: translateX(0) scale(1.2);
+    left: var(--truck-end-x);
+    top: var(--truck-end-y);
+    transform: translate(-50%, -50%) scale(1.2);
     opacity: 0;
   }
 }
 
 .truck-fly-animation {
+  position: fixed;
+  left: var(--truck-start-x);
+  top: var(--truck-start-y);
+  transform: translate(-50%, -50%);
   animation: truck-fly 1.2s ease-out forwards;
 }
 
