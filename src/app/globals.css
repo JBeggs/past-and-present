@@ -308,6 +308,53 @@ input:-webkit-autofill:active {
   @apply text-xs font-medium uppercase tracking-wide text-[#6b5344];
 }
 
+/* Cart mobile: prevent overflow */
+@media (max-width: 640px) {
+  .cart-header-card {
+    @apply flex-col items-stretch;
+  }
+  [data-cy="cart-content"] {
+    @apply overflow-x-hidden;
+  }
+}
+
+/* Truck fly animation (add to cart) */
+@keyframes truck-fly {
+  0% {
+    transform: translateX(-100vw) scale(0.8);
+    opacity: 0.6;
+  }
+  70% {
+    transform: translateX(-20px) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0) scale(1.2);
+    opacity: 0;
+  }
+}
+
+.truck-fly-animation {
+  animation: truck-fly 1.2s ease-out forwards;
+}
+
+/* Cart count bump when item added */
+@keyframes cart-bump {
+  0%, 100% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.5);
+  }
+  60% {
+    transform: scale(1.2);
+  }
+}
+
+.animate-cart-bump {
+  animation: cart-bump 0.5s ease-out;
+}
+
 .supplier-breakdown {
   @apply rounded-lg bg-vintage-background/40 p-3 text-xs text-text-muted;
 }

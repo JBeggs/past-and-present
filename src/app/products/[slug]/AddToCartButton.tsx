@@ -47,9 +47,21 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
   const isExpired = countdown === 'Expired'
   const quantityLabel = useMemo(() => (isBundle ? 'Bundle quantity' : 'Quantity'), [isBundle])
 
+  const supplierSlug = (product as { supplier_slug?: string; supplierSlug?: string }).supplier_slug
+    ?? (product as { supplierSlug?: string }).supplierSlug ?? ''
+  const isGumtree = String(supplierSlug).trim().toLowerCase() === 'gumtree'
+  const cartAlreadyHasThisProduct = (cart?.items ?? []).some(
+    (i) => String(i.product_id ?? i.id) === String(product.id)
+  )
+  const gumtreeDuplicate = isGumtree && cartAlreadyHasThisProduct
+
   const handleAddToCart = async () => {
     if (isExpired) {
       showError('This timed product has expired')
+      return
+    }
+    if (gumtreeDuplicate) {
+      showError('This Gumtree product is already in your cart. Update quantity in the cart.')
       return
     }
     const cartAlreadyHasBundle = cart?.items?.some((i) => i.is_bundle) ?? false
@@ -62,6 +74,9 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     try {
       await addItemToCart(product, quantity)
       showSuccess(`${product.name} added to cart!`)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cart-item-added'))
+      }
       router.refresh()
     } catch (error: any) {
       console.error('AddToCartButton: addItem failed', error)
@@ -130,9 +145,9 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
         <button
           onClick={handleAddToCart}
           data-cy="add-to-cart"
-          disabled={loading || isExpired || outOfStock}
+          disabled={loading || isExpired || outOfStock || gumtreeDuplicate}
           className={`w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 transition-colors ${
-            isExpired || outOfStock
+            isExpired || outOfStock || gumtreeDuplicate
               ? 'bg-gray-200 text-text-muted cursor-not-allowed'
               : (Array.isArray(product.tags) && product.tags.some((t: any) => (typeof t === 'string' ? t : t.name) === 'vintage'))
               ? 'bg-vintage-primary text-white hover:bg-vintage-primary-dark'
@@ -140,7 +155,7 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
           } shadow-lg shadow-vintage-primary/10`}
         >
           <ShoppingCart className="w-5 h-5" />
-          {loading ? 'Adding...' : isExpired ? 'Expired' : outOfStock ? 'Out of Stock' : (user ? 'Add to Cart' : 'Add to Cart (Guest)')}
+          {loading ? 'Adding...' : isExpired ? 'Expired' : outOfStock ? 'Out of Stock' : gumtreeDuplicate ? 'Already in cart' : (user ? 'Add to Cart' : 'Add to Cart (Guest)')}
         </button>
       </div>
     </div>

@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ShoppingCart, User, LogOut, Package } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -7,6 +8,7 @@ import { useCartSafe } from '@/contexts/CartContext'
 import { useMounted } from '@/hooks/useMounted'
 
 export default function ClientHeader() {
+  const [countBump, setCountBump] = useState(false)
   let user: any = null
   let profile: any = null
   let signOut: (() => Promise<void>) | (() => void) = () => {}
@@ -23,6 +25,16 @@ export default function ClientHeader() {
   const isAdmin = profile?.role === 'admin' || profile?.role === 'business_owner'
   const { itemCount } = useCartSafe()
   const mounted = useMounted()
+
+  useEffect(() => {
+    const handler = () => {
+      setCountBump(true)
+      const t = setTimeout(() => setCountBump(false), 600)
+      return () => clearTimeout(t)
+    }
+    window.addEventListener('cart-item-added', handler)
+    return () => window.removeEventListener('cart-item-added', handler)
+  }, [])
 
   if (!mounted || authLoading) {
     return (
@@ -42,7 +54,7 @@ export default function ClientHeader() {
       >
         <ShoppingCart className="w-5 h-5" />
         {itemCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-vintage-accent text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full shadow-sm group-hover:scale-110 transition-transform">
+          <span className={`absolute -top-1 -right-1 bg-vintage-accent text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full shadow-sm group-hover:scale-110 transition-transform ${countBump ? 'animate-cart-bump' : ''}`}>
             {itemCount}
           </span>
         )}

@@ -112,11 +112,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [user])
 
   const addItemToCart = useCallback(async (product: Product, quantity: number) => {
+    const supplierSlug = String((product as any).supplier_slug ?? (product as any).supplierSlug ?? '').trim().toLowerCase()
+    const isGumtree = supplierSlug === 'gumtree'
+
     if (user) {
+      const existing = cart?.items ?? []
+      const alreadyHas = existing.some((i: any) => String(i.product_id ?? i.id) === String(product.id))
+      if (isGumtree && alreadyHas) {
+        throw new Error('This Gumtree product is already in your cart. Update quantity in the cart.')
+      }
       await ecommerceApi.cart.addItem(product.id, quantity)
       await refreshCart()
       return
     }
+
     const local = readLocalCart()
     const isBundle = Boolean((product as any).is_bundle) || (Array.isArray((product as any).bundle_product_ids) && (product as any).bundle_product_ids!.length > 0)
     if (isBundle && local.items.some((i) => i.is_bundle)) {
@@ -125,6 +134,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const nowIso = new Date().toISOString()
     const idx = local.items.findIndex((item) => item.product_id === product.id)
     if (idx >= 0) {
+      if (isGumtree) {
+        throw new Error('This Gumtree product is already in your cart. Update quantity in the cart.')
+      }
       local.items[idx] = {
         ...local.items[idx],
         quantity: local.items[idx].quantity + quantity,
@@ -157,7 +169,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
     writeLocalCart({ items: local.items, createdAt: Date.now() })
     setCart(toCartFromLocal({ items: local.items, createdAt: Date.now() }))
-  }, [refreshCart, user])
+  }, [cart?.items, refreshCart, user])
 
   const updateItemQuantity = useCallback(async (productId: string, quantity: number) => {
     if (quantity < 1) return

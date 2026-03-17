@@ -427,8 +427,8 @@ export default function CartPage() {
                       : null
 
                     return (
-                      <div key={productId} className="card flex gap-4 p-4" data-cy="cart-item">
-                        <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                      <div key={productId} className="card flex flex-col sm:flex-row gap-4 p-4 min-w-0 overflow-hidden" data-cy="cart-item">
+                        <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100 self-start sm:self-auto">
                           {isBundle && (
                             <span className="absolute left-2 top-2 z-10 rounded-full bg-blue-600 px-2 py-1 text-xs font-semibold text-white">
                               <span className="inline-flex items-center gap-1"><Package className="h-3 w-3" />Bundle</span>
@@ -442,10 +442,10 @@ export default function CartPage() {
                           <ItemImage item={item} />
                         </div>
 
-                        <div className="flex-1">
-                          <div className="flex justify-between gap-4">
-                            <div>
-                              <h3 className="font-semibold text-text">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-4">
+                            <div className="min-w-0">
+                              <h3 className="font-semibold text-text break-words line-clamp-2">
                                 {item.product_name || item.product?.name || 'Product'}
                               </h3>
                               <p className="mt-1 text-sm text-text-muted">
@@ -475,8 +475,10 @@ export default function CartPage() {
                             </button>
                           </div>
 
-                          <div className="mt-3 flex items-center justify-between">
-                            <div className="quantity-control">
+                          <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex items-center gap-3 sm:gap-0">
+                              <span className="sm:hidden text-xs font-medium uppercase tracking-wide text-[#6b5344] w-16">Quantity</span>
+                              <div className="quantity-control">
                               <button
                                 onClick={() => updateQuantity(productId, item.quantity - 1)}
                                 disabled={updating === productId || item.quantity <= minQty}
@@ -495,12 +497,16 @@ export default function CartPage() {
                                 </button>
                               )}
                             </div>
+                            </div>
 
-                            <div className="text-right">
-                              <p className="item-total-label">Item Total</p>
+                            <div className="flex items-center gap-3 sm:gap-0 sm:text-right">
+                              <span className="sm:hidden text-xs font-medium uppercase tracking-wide text-[#6b5344]">Item Total</span>
+                              <div>
+                              <p className="hidden sm:block item-total-label">Item Total</p>
                               <p className="font-bold text-vintage-primary">
                                 R{Number(item.price * item.quantity).toFixed(2)}
                               </p>
+                              </div>
                             </div>
                           </div>
 

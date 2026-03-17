@@ -60,8 +60,8 @@ export async function Header() {
       {/* Top Bar - Minimal utility strip */}
       <div className="bg-vintage-primary text-white/95">
         <div className="container-wide">
-          <div className="flex items-center justify-between py-1.5 text-xs md:text-sm">
-            <span className="font-playfair italic tracking-wide">
+          <div className="flex items-center justify-between py-1 sm:py-1.5 text-[10px] sm:text-xs md:text-sm">
+            <span className="font-playfair italic tracking-wide truncate max-w-[60%] sm:max-w-none">
               {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </span>
             <div className="flex items-center gap-6">
@@ -75,15 +75,15 @@ export async function Header() {
       {/* Main Header - Typography-led brand (logo from settings only; else wordmark) */}
       <div className="container-wide">
         <div className="flex items-center justify-between py-4 md:py-5">
-          <Link href="/" className="flex items-center gap-4 group">
+          <Link href="/" className="flex items-center gap-2 md:gap-4 group">
             {useLogoImage && (
-              <img src={logoUrl} alt="" className="h-9 w-auto object-contain opacity-90 group-hover:opacity-100 transition-opacity" aria-hidden />
+              <img src={logoUrl} alt="" className="h-7 md:h-9 w-auto object-contain opacity-90 group-hover:opacity-100 transition-opacity" aria-hidden />
             )}
-            <div className="flex flex-col">
-              <span className="text-xl md:text-2xl font-playfair font-semibold text-text tracking-tight">
+            <div className="flex flex-col min-w-0">
+              <span className="text-base sm:text-lg md:text-2xl font-playfair font-semibold text-text tracking-tight truncate">
                 {siteName}
               </span>
-              <span className="text-[11px] md:text-xs text-text-muted tracking-[0.2em] uppercase font-medium">
+              <span className="text-[10px] sm:text-[11px] md:text-xs text-text-muted tracking-[0.2em] uppercase font-medium truncate">
                 {tagline}
               </span>
             </div>
@@ -103,7 +103,7 @@ export async function Header() {
             </div>
           </div>
 
-          <MobileNav menuItems={menuItems} />
+          <MobileNav menuItems={menuItems} logoUrl={logoUrl} />
         </div>
       </div>
     </header>

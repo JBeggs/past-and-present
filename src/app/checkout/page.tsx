@@ -493,8 +493,8 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen bg-vintage-background py-12" data-cy="checkout-content">
-      <div className="container-wide">
+    <div className="min-h-screen bg-vintage-background py-12 overflow-x-hidden" data-cy="checkout-content">
+      <div className="container-wide min-w-0">
         {/* Back Link */}
         <Link href="/cart" className="flex items-center text-text-muted hover:text-vintage-primary transition-colors mb-8">
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -503,14 +503,14 @@ export default function CheckoutPage() {
 
         <h1 className="text-3xl font-bold font-playfair text-text mb-8">Checkout</h1>
 
-        <form onSubmit={handleSubmit} data-cy="checkout-form">
-          <div className="grid lg:grid-cols-3 gap-8">
+        <form onSubmit={handleSubmit} data-cy="checkout-form" className="min-w-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
             {/* Checkout Form */}
             <div className="lg:col-span-2 space-y-6">
               {/* Contact Information */}
-              <div className="card p-6">
+              <div className="card p-4 md:p-6 min-w-0 overflow-hidden">
                 <h2 className="text-lg font-semibold text-text mb-4">Contact Information</h2>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="customer_first_name" className="form-label">First Name *</label>
                     <input
@@ -570,7 +570,7 @@ export default function CheckoutPage() {
               </div>
 
               {/* Shipping Address + verification */}
-              <div className="card p-6">
+              <div className="card p-4 md:p-6 min-w-0 overflow-hidden">
                   <h2 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
                     <MapPin className="w-5 h-5" />
                     Shipping Address
@@ -668,7 +668,7 @@ export default function CheckoutPage() {
 
               {/* Delivery Method */}
               {showDeliveryMethods && (
-                <div className="card p-6">
+                <div className="card p-4 md:p-6 min-w-0 overflow-hidden">
                   <h2 className="text-lg font-semibold text-text mb-4 flex items-center gap-2">
                     <Truck className="w-5 h-5" />
                     Delivery Method
@@ -792,7 +792,7 @@ export default function CheckoutPage() {
               )}
 
               {/* Order Notes */}
-              <div className="card p-6">
+              <div className="card p-4 md:p-6 min-w-0 overflow-hidden">
                 <h2 className="text-lg font-semibold text-text mb-4">Order Notes (Optional)</h2>
                 <textarea
                   value={formData.customer_notes}
@@ -805,8 +805,8 @@ export default function CheckoutPage() {
             </div>
 
             {/* Order Summary */}
-            <div className="lg:col-span-1">
-              <div className="card p-6 sticky top-24">
+            <div className="lg:col-span-1 min-w-0">
+              <div className="card p-4 md:p-6 sticky top-24 overflow-hidden">
                 <h2 className="text-lg font-semibold text-text mb-4">Order Summary</h2>
                 
                 {/* Items */}
