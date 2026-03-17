@@ -3,13 +3,53 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { ecommerceApi, newsApi } from '@/lib/api'
-import { Order } from '@/lib/types'
+import { Order, IntegrationSettings, IntegrationSettingsUpdatePayload } from '@/lib/types'
 import { useToast } from '@/contexts/ToastContext'
-import { Package, User, Mail, Calendar, MapPin, ChevronRight, Loader2, Save, Building2, Clock, Settings } from 'lucide-react'
+import { Package, User, Mail, Calendar, MapPin, ChevronRight, Loader2, Save, Building2, Clock, Settings, CreditCard, Truck, Eye, EyeOff, UserCircle, ShoppingBag, Globe, Zap } from 'lucide-react'
 import Link from 'next/link'
+
+const MASK_PREFIX = '•'
+
+const PROVINCES = [
+  { value: 'EC', label: 'Eastern Cape' },
+  { value: 'FS', label: 'Free State' },
+  { value: 'GP', label: 'Gauteng' },
+  { value: 'KZN', label: 'KwaZulu-Natal' },
+  { value: 'LP', label: 'Limpopo' },
+  { value: 'MP', label: 'Mpumalanga' },
+  { value: 'NC', label: 'Northern Cape' },
+  { value: 'NW', label: 'North West' },
+  { value: 'WC', label: 'Western Cape' },
+]
+
+// Map country name (from API) to ISO code (backend expects 2-char)
+const COUNTRY_NAME_TO_ISO: Record<string, string> = {
+  'South Africa': 'ZA',
+  'United States': 'US',
+  'United Kingdom': 'GB',
+  'Australia': 'AU',
+  'Canada': 'CA',
+  'Germany': 'DE',
+  'France': 'FR',
+  'Netherlands': 'NL',
+  'Namibia': 'NA',
+  'Botswana': 'BW',
+  'Zimbabwe': 'ZW',
+  'Mozambique': 'MZ',
+  'Lesotho': 'LS',
+  'Eswatini': 'SZ',
+}
+
+function parseFullName(full: string): { first: string; last: string } {
+  const parts = (full || '').trim().split(/\s+/)
+  if (parts.length === 0) return { first: '', last: '' }
+  if (parts.length === 1) return { first: parts[0], last: '' }
+  return { first: parts[0], last: parts.slice(1).join(' ') }
+}
 
 export default function ProfilePage() {
   const { user, profile, companyId, refreshProfile, loading: authLoading } = useAuth()
+  const isBusinessOwner = profile?.role === 'business_owner' && !!companyId
   const [orders, setOrders] = useState<Order[]>([])
   const [loadingOrders, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
@@ -38,30 +78,105 @@ export default function ProfilePage() {
   const [siteSettings, setSiteSettings] = useState<Record<string, { id: string; value: string; type: string }>>({})
   const [siteSettingsValues, setSiteSettingsValues] = useState<Record<string, string>>({})
   const [updatingSiteSettings, setUpdatingSiteSettings] = useState(false)
+  const [integrationSettings, setIntegrationSettings] = useState<IntegrationSettings | null>(null)
+  const [integrationForm, setIntegrationForm] = useState<IntegrationSettingsUpdatePayload & Record<string, unknown>>({})
+  const [updatingIntegration, setUpdatingIntegration] = useState(false)
+  const [secretVisible, setSecretVisible] = useState<Record<string, boolean>>({})
+  const [countries, setCountries] = useState<{ id: number; name: string }[]>([])
   const { showSuccess, showError } = useToast()
 
+  useEffect(() => {
+    ecommerceApi.countries.list().then((res: any) => {
+      const list = res?.data ?? (Array.isArray(res) ? res : [])
+      setCountries((list as any[]).filter((c: any) => c?.name).map((c: any) => ({ id: c.id, name: c.name })))
+    }).catch(() => {})
+  }, [])
+
   const [formData, setFormData] = useState({
-    full_name: '',
+    first_name: '',
+    last_name: '',
+    phone: '',
     bio: '',
     avatar_url: '',
+    social_links: { twitter: '', linkedin: '', instagram: '', website: '' } as Record<string, string>,
+    preferences: { newsletter: false, order_updates: false } as Record<string, boolean>,
   })
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  type TabId = 'personal' | 'orders' | 'business' | 'site' | 'integrations'
+  const [activeTab, setActiveTab] = useState<TabId>('personal')
+
+  const tabs: { id: TabId; label: string; icon: React.ReactNode; show: boolean }[] = [
+    { id: 'personal' as TabId, label: 'Personal', icon: <UserCircle className="w-4 h-4" />, show: true },
+    { id: 'orders' as TabId, label: 'Orders', icon: <ShoppingBag className="w-4 h-4" />, show: !isBusinessOwner },
+    { id: 'business' as TabId, label: 'Business Profile', icon: <Building2 className="w-4 h-4" />, show: isBusinessOwner },
+    { id: 'site' as TabId, label: 'Site Settings', icon: <Globe className="w-4 h-4" />, show: isBusinessOwner },
+    { id: 'integrations' as TabId, label: 'Integrations', icon: <Zap className="w-4 h-4" />, show: isBusinessOwner },
+  ].filter((t) => t.show)
+
+  useEffect(() => {
+    if (activeTab === 'orders' && isBusinessOwner) {
+      setActiveTab('personal')
+    }
+  }, [isBusinessOwner, activeTab])
+
+  useEffect(() => {
+    if (user && !profile) {
+      refreshProfile()
+    }
+  }, [user, profile, refreshProfile])
 
   useEffect(() => {
     if (user) {
-      // Customers have no profile; fall back to user data
       const fullName = profile?.full_name || (user?.first_name && user?.last_name
         ? `${user.first_name} ${user.last_name}`.trim()
         : user?.first_name || user?.last_name || '')
+      const { first, last } = parseFullName(fullName)
+      const social = profile?.social_links || {}
+      const prefs = profile?.preferences || {}
       setFormData({
-        full_name: fullName,
+        first_name: (profile as any)?.first_name || first,
+        last_name: (profile as any)?.last_name || last,
+        phone: (profile as any)?.phone || '',
         bio: profile?.bio || '',
         avatar_url: profile?.avatar_url || '',
+        social_links: {
+          twitter: social.twitter || '',
+          linkedin: social.linkedin || '',
+          instagram: social.instagram || '',
+          website: social.website || '',
+        },
+        preferences: {
+          newsletter: !!prefs.newsletter,
+          order_updates: !!prefs.order_updates,
+        },
       })
       fetchOrders()
     }
   }, [profile, user])
+
+  useEffect(() => {
+    if (isBusinessOwner) {
+      ecommerceApi.integrationSettings.getMe()
+        .then((res: any) => {
+          const data = res?.data ?? res
+          if (data?.id) {
+            setIntegrationSettings(data)
+            setIntegrationForm({
+              yoco_public_key: data.yoco_public_key ?? '',
+              yoco_secret_key: data.yoco_secret_key ?? '',
+              yoco_webhook_secret: data.yoco_webhook_secret ?? '',
+              yoco_sandbox_mode: data.yoco_sandbox_mode ?? false,
+              courier_guy_api_key: data.courier_guy_api_key ?? '',
+              courier_guy_api_secret: data.courier_guy_api_secret ?? '',
+              courier_guy_account_number: data.courier_guy_account_number ?? '',
+              courier_guy_sandbox_mode: data.courier_guy_sandbox_mode ?? false,
+            })
+          }
+        })
+        .catch(() => {})
+    }
+  }, [isBusinessOwner])
 
   useEffect(() => {
     if (companyId) {
@@ -124,8 +239,8 @@ export default function ProfilePage() {
   const fetchOrders = async () => {
     try {
       setLoading(true)
-      const response: any = await ecommerceApi.orders.list()
-      const orderData = Array.isArray(response) ? response : (response?.results || [])
+      const response: any = await ecommerceApi.orders.myOrders()
+      const orderData = response?.data ?? (Array.isArray(response) ? response : [])
       setOrders(orderData)
     } catch (error) {
       console.error('Error fetching orders:', error)
@@ -136,10 +251,19 @@ export default function ProfilePage() {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!profile) return // Customers have no News Profile; patch would 404
     setUpdating(true)
     try {
-      await newsApi.profile.patch({ full_name: formData.full_name, bio: formData.bio, avatar_url: formData.avatar_url })
+      const fullName = [formData.first_name, formData.last_name].filter(Boolean).join(' ')
+      await newsApi.profile.patch({
+        full_name: fullName || undefined,
+        first_name: formData.first_name || undefined,
+        last_name: formData.last_name || undefined,
+        phone: formData.phone || undefined,
+        bio: formData.bio || undefined,
+        avatar_url: formData.avatar_url || undefined,
+        social_links: formData.social_links,
+        preferences: formData.preferences,
+      })
       await refreshProfile()
       showSuccess('Profile updated successfully')
     } catch (error: any) {
@@ -193,7 +317,6 @@ export default function ProfilePage() {
   }
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!profile) return // Customers have no News Profile; patch would 404
     const file = e.target.files?.[0]
     if (!file || !file.type.startsWith('image/')) {
       showError('Please select an image file')
@@ -204,8 +327,18 @@ export default function ProfilePage() {
       const uploaded: any = await newsApi.media.upload(file, { media_type: 'image' })
       const url = uploaded?.file_url
       if (url) {
+        const fullName = [formData.first_name, formData.last_name].filter(Boolean).join(' ')
         setFormData((f) => ({ ...f, avatar_url: url }))
-        await newsApi.profile.patch({ full_name: formData.full_name, bio: formData.bio, avatar_url: url })
+        await newsApi.profile.patch({
+          full_name: fullName || undefined,
+          first_name: formData.first_name || undefined,
+          last_name: formData.last_name || undefined,
+          phone: formData.phone || undefined,
+          bio: formData.bio || undefined,
+          avatar_url: url,
+          social_links: formData.social_links,
+          preferences: formData.preferences,
+        })
         await refreshProfile()
         showSuccess('Profile picture updated')
       }
@@ -215,6 +348,43 @@ export default function ProfilePage() {
       setUploadingAvatar(false)
       e.target.value = ''
     }
+  }
+
+  const handleUpdateIntegrationSettings = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!integrationSettings?.id) return
+    setUpdatingIntegration(true)
+    try {
+      const payload: Record<string, unknown> = { ...integrationForm }
+      if (typeof payload.yoco_secret_key === 'string' && payload.yoco_secret_key.startsWith(MASK_PREFIX)) delete payload.yoco_secret_key
+      if (typeof payload.yoco_webhook_secret === 'string' && payload.yoco_webhook_secret.startsWith(MASK_PREFIX)) delete payload.yoco_webhook_secret
+      if (typeof payload.courier_guy_api_secret === 'string' && payload.courier_guy_api_secret.startsWith(MASK_PREFIX)) delete payload.courier_guy_api_secret
+      await ecommerceApi.integrationSettings.update(integrationSettings.id, payload)
+      const res: any = await ecommerceApi.integrationSettings.getMe()
+      const data = res?.data ?? res
+      if (data?.id) {
+        setIntegrationSettings(data)
+        setIntegrationForm({
+          yoco_public_key: data.yoco_public_key ?? '',
+          yoco_secret_key: data.yoco_secret_key ?? '',
+          yoco_webhook_secret: data.yoco_webhook_secret ?? '',
+          yoco_sandbox_mode: data.yoco_sandbox_mode ?? false,
+          courier_guy_api_key: data.courier_guy_api_key ?? '',
+          courier_guy_api_secret: data.courier_guy_api_secret ?? '',
+          courier_guy_account_number: data.courier_guy_account_number ?? '',
+          courier_guy_sandbox_mode: data.courier_guy_sandbox_mode ?? false,
+        })
+      }
+      showSuccess('Integration settings saved')
+    } catch (error: any) {
+      showError(error.message || 'Failed to save integration settings')
+    } finally {
+      setUpdatingIntegration(false)
+    }
+  }
+
+  const toggleSecretVisibility = (key: string) => {
+    setSecretVisible((v) => ({ ...v, [key]: !v[key] }))
   }
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -271,43 +441,89 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-vintage-background py-12">
       <div className="container-wide">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Sidebar: Profile Info */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="card p-6">
-              <div className="flex items-center gap-4 mb-6">
-                <label className="relative cursor-pointer group">
-                  <div className="w-16 h-16 rounded-full overflow-hidden bg-vintage-primary/10 flex items-center justify-center text-vintage-primary font-bold text-2xl border-2 border-transparent group-hover:border-vintage-primary/50 transition-colors">
-                    {(formData.avatar_url || profile?.avatar_url) ? (
-                      <img src={formData.avatar_url || profile?.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                      (formData.full_name || profile?.full_name || user.email).charAt(0).toUpperCase()
-                    )}
-                  </div>
-                  {uploadingAvatar && (
-                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                      <Loader2 className="w-6 h-6 animate-spin text-white" />
-                    </div>
-                  )}
-                  <input type="file" accept="image/*" className="sr-only" onChange={handleAvatarUpload} disabled={uploadingAvatar || !profile} />
-                </label>
-                <div>
-                  <h1 className="text-xl font-bold text-text">{formData.full_name || profile?.full_name || user.email?.split('@')[0] || 'User'}</h1>
-                  <p className="text-sm text-text-muted">{user.email}</p>
-                  <p className="text-xs text-text-muted mt-1">{profile ? 'Click photo to upload' : 'Profile photo is for publishers only'}</p>
-                </div>
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <label className="relative cursor-pointer group">
+            <div className="w-14 h-14 rounded-full overflow-hidden bg-vintage-primary/10 flex items-center justify-center text-vintage-primary font-bold text-xl border-2 border-transparent group-hover:border-vintage-primary/50 transition-colors">
+              {(formData.avatar_url || profile?.avatar_url) ? (
+                <img src={formData.avatar_url || profile?.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                ([formData.first_name, formData.last_name].filter(Boolean).join(' ') || profile?.full_name || user.email).charAt(0).toUpperCase()
+              )}
+            </div>
+            {uploadingAvatar && (
+              <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                <Loader2 className="w-5 h-5 animate-spin text-white" />
               </div>
+            )}
+            <input type="file" accept="image/*" className="sr-only" onChange={handleAvatarUpload} disabled={uploadingAvatar} />
+          </label>
+          <div>
+            <h1 className="text-xl font-bold text-text">
+              {[formData.first_name, formData.last_name].filter(Boolean).join(' ') || profile?.full_name || user.email?.split('@')[0] || 'User'}
+            </h1>
+            <p className="text-sm text-text-muted">{user.email}</p>
+            <p className="text-xs text-text-muted mt-0.5">Click photo to upload</p>
+          </div>
+        </div>
 
+        {/* Tab bar */}
+        <div className="flex flex-wrap gap-1 mb-6 border-b border-gray-200">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                activeTab === tab.id
+                  ? 'border-vintage-primary text-vintage-primary'
+                  : 'border-transparent text-text-muted hover:text-text hover:border-gray-300'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div className="space-y-6">
+          {activeTab === 'personal' && (
+            <div className="card p-6">
               <form onSubmit={handleUpdateProfile} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Full Name</label>
-                  <input
-                    type="text"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    className="form-input"
-                    placeholder="Your Name"
-                  />
+                <div className="profile-form-grid">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold uppercase tracking-widest text-text-muted">First Name</label>
+                    <input
+                      type="text"
+                      value={formData.first_name}
+                      onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                      className="form-input"
+                      placeholder="First name"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Last Name</label>
+                    <input
+                      type="text"
+                      value={formData.last_name}
+                      onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                      className="form-input"
+                      placeholder="Last name"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Cellphone *</label>
+                    <input
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="form-input"
+                      placeholder="+27 82 123 4567"
+                      required
+                    />
+                    <p className="text-xs text-text-muted">Required for delivery</p>
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Bio</label>
@@ -318,11 +534,78 @@ export default function ProfilePage() {
                     placeholder="Tell us about yourself..."
                   />
                 </div>
+                <div className="profile-section-divider">
+                  <h3 className="profile-section-subtitle">Social Links</h3>
+                  <div className="profile-form-grid">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Twitter / X</label>
+                      <input
+                        type="url"
+                        value={formData.social_links.twitter}
+                        onChange={(e) => setFormData({ ...formData, social_links: { ...formData.social_links, twitter: e.target.value } })}
+                        className="form-input"
+                        placeholder="https://twitter.com/..."
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold uppercase tracking-widest text-text-muted">LinkedIn</label>
+                      <input
+                        type="url"
+                        value={formData.social_links.linkedin}
+                        onChange={(e) => setFormData({ ...formData, social_links: { ...formData.social_links, linkedin: e.target.value } })}
+                        className="form-input"
+                        placeholder="https://linkedin.com/in/..."
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Instagram</label>
+                      <input
+                        type="url"
+                        value={formData.social_links.instagram}
+                        onChange={(e) => setFormData({ ...formData, social_links: { ...formData.social_links, instagram: e.target.value } })}
+                        className="form-input"
+                        placeholder="https://instagram.com/..."
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Website</label>
+                      <input
+                        type="url"
+                        value={formData.social_links.website}
+                        onChange={(e) => setFormData({ ...formData, social_links: { ...formData.social_links, website: e.target.value } })}
+                        className="form-input"
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="profile-section-divider">
+                  <h3 className="profile-section-subtitle">Preferences</h3>
+                  <div className="flex flex-col gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.preferences.newsletter}
+                        onChange={(e) => setFormData({ ...formData, preferences: { ...formData.preferences, newsletter: e.target.checked } })}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      <span className="text-sm text-text">Newsletter – receive updates and offers</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.preferences.order_updates}
+                        onChange={(e) => setFormData({ ...formData, preferences: { ...formData.preferences, order_updates: e.target.checked } })}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      <span className="text-sm text-text">Order updates – emails about order progress</span>
+                    </label>
+                  </div>
+                </div>
                 <button
                   type="submit"
-                  disabled={updating || !profile}
+                  disabled={updating}
                   className="btn btn-primary w-full flex items-center justify-center gap-2"
-                  title={!profile ? 'Profile updates are for publishers only' : undefined}
                 >
                   {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Save Changes
@@ -339,15 +622,72 @@ export default function ProfilePage() {
                   <span>Joined {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : '—'}</span>
                 </div>
               </div>
+            </div>
+          )}
 
-              {companyId && company && (
-                <>
-                  <div className="mt-8 pt-6 border-t border-gray-100">
-                    <h3 className="text-sm font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
-                      <Building2 className="w-4 h-4" />
-                      Business Profile
-                    </h3>
-                    <form onSubmit={handleUpdateCompany} className="space-y-4">
+          {activeTab === 'orders' && (
+            <div className="card p-6">
+              <h2 className="text-xl font-bold font-playfair text-text mb-6 flex items-center gap-2">
+                <Package className="w-6 h-6 text-vintage-primary" />
+                Order History
+              </h2>
+
+              {loadingOrders ? (
+                <div className="py-12 flex justify-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-vintage-primary opacity-50" />
+                </div>
+              ) : orders.length > 0 ? (
+                <div className="space-y-4">
+                  {orders.map((order) => (
+                    <Link
+                      key={order.id}
+                      href={`/profile/orders/${order.id}`}
+                      className="block border border-gray-100 rounded-xl p-4 hover:border-vintage-primary/30 transition-all group"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div className="space-y-1">
+                          <p className="text-xs font-bold text-vintage-primary uppercase tracking-widest">Order #{order.order_number}</p>
+                          <p className="text-sm text-text-muted">{new Date(order.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <div className="text-right">
+                            <p className="text-xs font-bold uppercase text-text-muted">Total</p>
+                            <p className="font-bold text-text">R{Number(order.total).toFixed(2)}</p>
+                          </div>
+                          <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            order.status === 'delivered' ? 'bg-green-100 text-green-700' :
+                            order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                            'bg-vintage-primary/10 text-vintage-primary'
+                          }`}>
+                            {order.status}
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-vintage-primary transition-colors" />
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 space-y-4">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-200">
+                    <Package className="w-8 h-8" />
+                  </div>
+                  <p className="text-text-muted">You haven&apos;t placed any orders yet.</p>
+                  <Link href="/products" className="btn btn-secondary btn-sm">
+                    Start Shopping
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'business' && isBusinessOwner && company && (
+            <div className="card p-6">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
+                <Building2 className="w-4 h-4" />
+                Business Profile
+              </h3>
+              <form onSubmit={handleUpdateCompany} className="space-y-4">
                       <div className="space-y-1">
                         <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Company Logo</label>
                         <div className="flex items-center gap-4">
@@ -397,13 +737,16 @@ export default function ProfilePage() {
                             className="form-input"
                             placeholder="City"
                           />
-                          <input
-                            type="text"
+                          <select
                             value={companyForm.address_province}
                             onChange={(e) => setCompanyForm({ ...companyForm, address_province: e.target.value })}
                             className="form-input"
-                            placeholder="Province"
-                          />
+                          >
+                            <option value="">Select province...</option>
+                            {PROVINCES.map((p) => (
+                              <option key={p.value} value={p.value}>{p.label}</option>
+                            ))}
+                          </select>
                         </div>
                         <div className="grid grid-cols-2 gap-2 mt-1">
                           <input
@@ -413,13 +756,19 @@ export default function ProfilePage() {
                             className="form-input"
                             placeholder="Postal code"
                           />
-                          <input
-                            type="text"
+                          <select
                             value={companyForm.address_country}
                             onChange={(e) => setCompanyForm({ ...companyForm, address_country: e.target.value })}
                             className="form-input"
-                            placeholder="Country (e.g. ZA)"
-                          />
+                          >
+                            <option value="">Select country...</option>
+                            {countries.map((c) => {
+                              const iso = COUNTRY_NAME_TO_ISO[c.name] || c.name
+                              return (
+                                <option key={c.id} value={iso}>{c.name}</option>
+                              )
+                            })}
+                          </select>
                         </div>
                       </div>
                       <div className="space-y-1">
@@ -539,24 +888,26 @@ export default function ProfilePage() {
                           />
                         </div>
                       </div>
-                      <button
-                        type="submit"
-                        disabled={updatingCompany}
-                        className="btn btn-secondary w-full flex items-center justify-center gap-2"
-                      >
-                        {updatingCompany ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        Save Business Profile
-                      </button>
-                    </form>
-                  </div>
+              <button
+                type="submit"
+                disabled={updatingCompany}
+                className="btn btn-secondary w-full flex items-center justify-center gap-2"
+              >
+                {updatingCompany ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Save Business Profile
+              </button>
+            </form>
+            </div>
+          )}
 
-                  <div className="mt-8 pt-6 border-t border-gray-100">
-                    <h3 className="text-sm font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
-                      <Settings className="w-4 h-4" />
-                      Site Settings
-                    </h3>
-                    <p className="text-xs text-text-muted mb-4">Social links shown in footer. Contact info comes from Business Profile above.</p>
-                    <form onSubmit={async (e) => {
+          {activeTab === 'site' && isBusinessOwner && (
+            <div className="card p-6">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Site Settings
+              </h3>
+              <p className="text-xs text-text-muted mb-4">Social links shown in footer. Contact info comes from Business Profile.</p>
+              <form onSubmit={async (e) => {
                       e.preventDefault()
                       setUpdatingSiteSettings(true)
                       try {
@@ -605,69 +956,151 @@ export default function ProfilePage() {
                           />
                         </div>
                       ))}
-                      <button type="submit" disabled={updatingSiteSettings} className="btn btn-secondary w-full flex items-center justify-center gap-2">
-                        {updatingSiteSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                        Save Site Settings
-                      </button>
-                    </form>
-                  </div>
-                </>
-              )}
+                <button type="submit" disabled={updatingSiteSettings} className="btn btn-secondary w-full flex items-center justify-center gap-2">
+                  {updatingSiteSettings ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Site Settings
+                </button>
+              </form>
             </div>
-          </div>
+          )}
 
-          {/* Main Content: Orders */}
-          <div className="lg:col-span-2 space-y-6">
+          {activeTab === 'integrations' && isBusinessOwner && (
             <div className="card p-6">
-              <h2 className="text-xl font-bold font-playfair text-text mb-6 flex items-center gap-2">
-                <Package className="w-6 h-6 text-vintage-primary" />
-                Order History
-              </h2>
-
-              {loadingOrders ? (
-                <div className="py-12 flex justify-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-vintage-primary opacity-50" />
-                </div>
-              ) : orders.length > 0 ? (
-                <div className="space-y-4">
-                  {orders.map((order) => (
-                    <div key={order.id} className="border border-gray-100 rounded-xl p-4 hover:border-vintage-primary/30 transition-all group">
-                      <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div className="space-y-1">
-                          <p className="text-xs font-bold text-vintage-primary uppercase tracking-widest">Order #{order.order_number}</p>
-                          <p className="text-sm text-text-muted">{new Date(order.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <div className="flex items-center gap-6">
-                          <div className="text-right">
-                            <p className="text-xs font-bold uppercase text-text-muted">Total</p>
-                            <p className="font-bold text-text">R{Number(order.total).toFixed(2)}</p>
+              <h3 className="text-sm font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                Integration Settings
+              </h3>
+              <p className="text-xs text-text-muted mb-4">Configure Yoco payments and Courier Guy shipping.</p>
+              <form onSubmit={handleUpdateIntegrationSettings} className="space-y-6">
+                      <div className="profile-integration-section">
+                        <h4 className="profile-section-subtitle flex items-center gap-2">
+                          <CreditCard className="w-4 h-4" />
+                          Yoco Payment Gateway
+                        </h4>
+                        <div className="profile-form-grid space-y-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Yoco Public Key</label>
+                            <input
+                              type="text"
+                              value={String(integrationForm.yoco_public_key ?? '')}
+                              onChange={(e) => setIntegrationForm({ ...integrationForm, yoco_public_key: e.target.value })}
+                              className="form-input"
+                              placeholder="pk_test_ or pk_live_"
+                            />
                           </div>
-                          <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            order.status === 'delivered' ? 'bg-green-100 text-green-700' :
-                            order.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                            'bg-vintage-primary/10 text-vintage-primary'
-                          }`}>
-                            {order.status}
+                          <div className="space-y-1 profile-secret-field">
+                            <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Yoco Secret Key</label>
+                            <div className="profile-secret-input-wrap">
+                              <input
+                                type={secretVisible.yoco_secret_key ? 'text' : 'password'}
+                                value={String(integrationForm.yoco_secret_key ?? '')}
+                                onChange={(e) => setIntegrationForm({ ...integrationForm, yoco_secret_key: e.target.value })}
+                                className="form-input profile-secret-input"
+                                placeholder="sk_test_ or sk_live_"
+                              />
+                              <button type="button" className="profile-toggle-secret" onClick={() => toggleSecretVisibility('yoco_secret_key')}>
+                                {secretVisible.yoco_secret_key ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                {secretVisible.yoco_secret_key ? 'Hide' : 'Show'}
+                              </button>
+                            </div>
+                            <p className="text-xs text-text-muted mt-1">Leave masked value unchanged if not updating.</p>
                           </div>
-                          <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-vintage-primary transition-colors" />
+                          <div className="space-y-1 profile-secret-field">
+                            <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Yoco Webhook Secret</label>
+                            <div className="profile-secret-input-wrap">
+                              <input
+                                type={secretVisible.yoco_webhook_secret ? 'text' : 'password'}
+                                value={String(integrationForm.yoco_webhook_secret ?? '')}
+                                onChange={(e) => setIntegrationForm({ ...integrationForm, yoco_webhook_secret: e.target.value })}
+                                className="form-input profile-secret-input"
+                                placeholder="whsec_..."
+                              />
+                              <button type="button" className="profile-toggle-secret" onClick={() => toggleSecretVisibility('yoco_webhook_secret')}>
+                                {secretVisible.yoco_webhook_secret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                {secretVisible.yoco_webhook_secret ? 'Hide' : 'Show'}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={!!integrationForm.yoco_sandbox_mode}
+                                onChange={(e) => setIntegrationForm({ ...integrationForm, yoco_sandbox_mode: e.target.checked })}
+                                className="w-4 h-4 rounded border-gray-300"
+                              />
+                              <span className="text-sm text-text">Use Sandbox/Test Mode</span>
+                            </label>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12 space-y-4">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-200">
-                    <Package className="w-8 h-8" />
-                  </div>
-                  <p className="text-text-muted">You haven&apos;t placed any orders yet.</p>
-                  <Link href="/products" className="btn btn-secondary btn-sm">
-                    Start Shopping
-                  </Link>
-                </div>
-              )}
+                      <div className="profile-integration-section">
+                        <h4 className="profile-section-subtitle flex items-center gap-2">
+                          <Truck className="w-4 h-4" />
+                          Courier Guy Shipping
+                        </h4>
+                        <div className="profile-form-grid space-y-4">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Courier Guy API Key</label>
+                            <input
+                              type="text"
+                              value={String(integrationForm.courier_guy_api_key ?? '')}
+                              onChange={(e) => setIntegrationForm({ ...integrationForm, courier_guy_api_key: e.target.value })}
+                              className="form-input"
+                              placeholder="API key"
+                            />
+                          </div>
+                          <div className="space-y-1 profile-secret-field">
+                            <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Courier Guy API Secret</label>
+                            <div className="profile-secret-input-wrap">
+                              <input
+                                type={secretVisible.courier_guy_api_secret ? 'text' : 'password'}
+                                value={String(integrationForm.courier_guy_api_secret ?? '')}
+                                onChange={(e) => setIntegrationForm({ ...integrationForm, courier_guy_api_secret: e.target.value })}
+                                className="form-input profile-secret-input"
+                                placeholder="API secret"
+                              />
+                              <button type="button" className="profile-toggle-secret" onClick={() => toggleSecretVisibility('courier_guy_api_secret')}>
+                                {secretVisible.courier_guy_api_secret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                {secretVisible.courier_guy_api_secret ? 'Hide' : 'Show'}
+                              </button>
+                            </div>
+                            <p className="text-xs text-text-muted mt-1">Leave masked value unchanged if not updating.</p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Courier Guy Account Number</label>
+                            <input
+                              type="text"
+                              value={String(integrationForm.courier_guy_account_number ?? '')}
+                              onChange={(e) => setIntegrationForm({ ...integrationForm, courier_guy_account_number: e.target.value })}
+                              className="form-input"
+                              placeholder="Account number"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={!!integrationForm.courier_guy_sandbox_mode}
+                                onChange={(e) => setIntegrationForm({ ...integrationForm, courier_guy_sandbox_mode: e.target.checked })}
+                                className="w-4 h-4 rounded border-gray-300"
+                              />
+                              <span className="text-sm text-text">Use Sandbox/Test Mode</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                <button
+                  type="submit"
+                  disabled={updatingIntegration}
+                  className="btn btn-secondary w-full flex items-center justify-center gap-2"
+                >
+                  {updatingIntegration ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Integration Settings
+                </button>
+              </form>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

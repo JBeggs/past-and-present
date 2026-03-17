@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { serverEcommerceApi, serverNewsApi } from '@/lib/api-server'
 export const dynamic = 'force-dynamic'
 import { Product, Article } from '@/lib/types'
-import { ArrowRight, Sparkles, Clock, Rocket } from 'lucide-react'
+import { ArrowRight, Sparkles, Clock, Rocket, Package, TimerReset } from 'lucide-react'
+import ProductCard from '@/components/products/ProductCard'
 
 function shuffleArray<T>(arr: T[]): T[] {
   const out = [...arr]
@@ -15,7 +16,7 @@ function shuffleArray<T>(arr: T[]): T[] {
 
 async function getHomeData() {
   try {
-    const [featuredRes, vintageRes, newRes, articlesData, futureArticlesData] = await Promise.all([
+    const [featuredRes, vintageRes, newRes, bundlesRes, timedRes, articlesData, futureArticlesData] = await Promise.all([
       serverEcommerceApi.products.list({
         is_active: true,
         featured: true,
@@ -33,6 +34,16 @@ async function getHomeData() {
         exclude_featured: true,
         page_size: 100,
       }),
+      serverEcommerceApi.products.list({
+        is_active: true,
+        page_size: 20,
+        bundle_only: 'true',
+      }),
+      serverEcommerceApi.products.list({
+        is_active: true,
+        page_size: 20,
+        timed_only: 'true',
+      }),
       serverNewsApi.articles.list({ status: 'published' }),
       serverNewsApi.articles.list({ status: 'published', category__slug: 'future' }),
     ])
@@ -40,6 +51,8 @@ async function getHomeData() {
     const featuredRaw = Array.isArray(featuredRes) ? featuredRes : (featuredRes as any)?.data || (featuredRes as any)?.results || []
     const vintageRaw = Array.isArray(vintageRes) ? vintageRes : (vintageRes as any)?.data || (vintageRes as any)?.results || []
     const newRaw = Array.isArray(newRes) ? newRes : (newRes as any)?.data || (newRes as any)?.results || []
+    const bundlesRaw = Array.isArray(bundlesRes) ? bundlesRes : (bundlesRes as any)?.data || (bundlesRes as any)?.results || []
+    const timedRaw = Array.isArray(timedRes) ? timedRes : (timedRes as any)?.data || (timedRes as any)?.results || []
     const articles = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.data || (articlesData as any)?.results || []
     const futureArticles = Array.isArray(futureArticlesData) ? futureArticlesData : (futureArticlesData as any)?.data || (futureArticlesData as any)?.results || []
 
@@ -60,11 +73,19 @@ async function getHomeData() {
       return !tags.includes('vintage')
     })
     const newProducts: Product[] = shuffleArray(newNonVintage).slice(0, 20)
+    const bundlesProducts: Product[] = bundlesRaw
+      .filter((p: Product) => p.status !== 'archived')
+      .slice(0, 20)
+    const timedProducts: Product[] = timedRaw
+      .filter((p: Product) => p.status !== 'archived')
+      .slice(0, 20)
 
     return {
       featuredProducts,
       vintageProducts,
       newProducts,
+      bundlesProducts,
+      timedProducts,
       latestArticles: articles.slice(0, 3),
       futureArticles: futureArticles.slice(0, 3),
     }
@@ -74,6 +95,8 @@ async function getHomeData() {
       featuredProducts: [],
       vintageProducts: [],
       newProducts: [],
+      bundlesProducts: [],
+      timedProducts: [],
       latestArticles: [],
       futureArticles: [],
     }
@@ -81,7 +104,7 @@ async function getHomeData() {
 }
 
 export default async function HomePage() {
-  const { featuredProducts, vintageProducts, newProducts, latestArticles, futureArticles } = await getHomeData()
+  const { featuredProducts, vintageProducts, newProducts, bundlesProducts, timedProducts, latestArticles, futureArticles } = await getHomeData()
 
   return (
     <div className="min-h-screen">
@@ -163,6 +186,52 @@ export default async function HomePage() {
                     </div>
                   </div>
                 </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Bundles Section */}
+      {bundlesProducts.length > 0 && (
+        <section className="py-16 bg-slate-50">
+          <div className="container-wide">
+            <div className="section-header">
+              <div>
+                <h2 className="section-title">Bundles</h2>
+                <p className="text-text-muted mt-1">Curated product bundles for great value</p>
+              </div>
+              <Link href="/products?bundle_only=true" className="btn btn-secondary">
+                <Package className="w-4 h-4 mr-2" />
+                View All
+              </Link>
+            </div>
+            <div className="product-grid">
+              {bundlesProducts.map((product: Product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Timed Section */}
+      {timedProducts.length > 0 && (
+        <section className="py-16 bg-amber-50/60">
+          <div className="container-wide">
+            <div className="section-header-modern">
+              <div>
+                <h2 className="section-title">Timed Products</h2>
+                <p className="text-text-muted mt-1">Limited-time products with live expiry windows</p>
+              </div>
+              <Link href="/products?timed_only=true" className="btn btn-modern">
+                <TimerReset className="w-4 h-4 mr-2" />
+                View All
+              </Link>
+            </div>
+            <div className="product-grid">
+              {timedProducts.map((product: Product) => (
+                <ProductCard key={product.id} product={product} />
               ))}
             </div>
           </div>

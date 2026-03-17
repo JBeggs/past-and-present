@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCart } from '@/contexts/CartContext'
 import { useToast } from '@/contexts/ToastContext'
 import { Lock, User, ArrowRight } from 'lucide-react'
 
@@ -12,8 +13,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { signIn } = useAuth()
+  const { syncCartAfterLogin } = useCart()
   const { showError, showSuccess } = useToast()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const returnUrl = searchParams.get('return') || '/'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,8 +29,13 @@ export default function LoginPage() {
       if (error) {
         showError(error)
       } else {
-        showSuccess('Welcome back!')
-        router.push('/')
+        showSuccess('Login successful! Syncing your cart...')
+        try {
+          await syncCartAfterLogin(true)
+        } catch (cartErr: any) {
+          console.error('Cart sync after login:', cartErr?.message ?? cartErr)
+        }
+        router.push(returnUrl)
       }
     } catch {
       showError('An unexpected error occurred')

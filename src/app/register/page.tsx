@@ -4,16 +4,19 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { useCart } from '@/contexts/CartContext'
 import { useToast } from '@/contexts/ToastContext'
-import { Mail, Lock, User, ArrowRight } from 'lucide-react'
+import { Mail, Lock, User, ArrowRight, Phone } from 'lucide-react'
 
 export default function RegisterPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const { signUp } = useAuth()
+  const { syncCartAfterLogin } = useCart()
   const { showError, showSuccess } = useToast()
   const router = useRouter()
 
@@ -32,13 +35,23 @@ export default function RegisterPage() {
 
     setIsLoading(true)
 
+    if (!phone.trim()) {
+      showError('Cellphone is required for delivery')
+      return
+    }
+
     try {
-      const { error } = await signUp(email, password, fullName)
+      const { error } = await signUp(email, password, fullName, phone.trim())
       
       if (error) {
         showError(error)
       } else {
-        showSuccess('Account created successfully!')
+        showSuccess('Account created! Syncing your cart...')
+        try {
+          await syncCartAfterLogin(true)
+        } catch (cartErr: any) {
+          console.error('Cart sync after register:', cartErr?.message ?? cartErr)
+        }
         router.push('/')
       }
     } catch {
@@ -82,6 +95,31 @@ export default function RegisterPage() {
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="phone" className="form-label text-sm font-semibold uppercase tracking-wider text-text-light">
+                Cellphone *
+              </label>
+              <div className="relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none transition-colors group-focus-within:text-vintage-primary z-20">
+                  <Phone className="w-5 h-5 text-text-muted" />
+                </div>
+                <input
+                  id="phone"
+                  data-cy="register-phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-md hover:border-vintage-primary/50 transition-all focus:bg-white focus:ring-4 focus:ring-vintage-primary/10 focus:outline-none focus:border-transparent relative z-10"
+                  placeholder="+27 82 123 4567"
+                  required
+                />
+              </div>
+              <p className="text-xs text-text-muted flex items-center gap-1 ml-1">
+                <span className="w-1 h-1 bg-text-muted rounded-full"></span>
+                Required for delivery
+              </p>
             </div>
 
             <div className="space-y-2">

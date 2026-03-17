@@ -3,19 +3,14 @@
 import { useState } from 'react'
 import { Product } from '@/lib/types'
 import { Clock, Sparkles } from 'lucide-react'
+import { getProductBundleImages } from '@/lib/image-utils'
 
 interface ProductGalleryProps {
   product: Product
 }
 
 export default function ProductGallery({ product }: ProductGalleryProps) {
-  // Ecommerce only: image + images (URLs). Never use news featured_image.
-  const toUrl = (img: any) => typeof img === 'string' ? img : (img?.url ?? '')
-  const allImages = [
-    product.image,
-    ...(Array.isArray(product.images) ? product.images.map(toUrl) : [])
-  ].filter(Boolean) as string[]
-
+  const allImages = getProductBundleImages(product)
   const [activeImage, setActiveImage] = useState(allImages[0] || '')
   const isVintage = Array.isArray(product.tags) && product.tags.some(t => (typeof t === 'string' ? t : t.name) === 'vintage')
 
@@ -31,14 +26,17 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     )
   }
 
+  const displayImages = allImages.slice(0, 4)
+
   return (
     <div className="space-y-4">
       {/* Main Image */}
-      <div className="relative aspect-[4/5] rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm group flex items-center justify-center">
+      <div className="relative aspect-square rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm group flex items-center justify-center">
         <img
           src={activeImage}
           alt={product.name}
-          className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          onError={(e) => { (e.target as HTMLImageElement).src = '/images/products/default.svg' }}
         />
         <div className="absolute top-4 left-4 flex flex-col gap-2">
           <span className={`tag ${isVintage ? 'tag-vintage' : 'tag-new'} shadow-md`}>
@@ -50,10 +48,10 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
         </div>
       </div>
 
-      {/* Thumbnails */}
-      {allImages.length > 1 && (
-        <div className="grid grid-cols-5 gap-3">
-          {allImages.map((img, index) => (
+      {/* Thumbnails - 2x2 grid, max 4 square cells */}
+      {displayImages.length > 1 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {displayImages.map((img, index) => (
             <button
               key={index}
               onClick={() => setActiveImage(img)}
@@ -69,6 +67,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                 loading="lazy"
                 decoding="async"
                 className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).src = '/images/products/default.svg' }}
               />
             </button>
           ))}

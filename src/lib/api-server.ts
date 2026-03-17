@@ -15,7 +15,7 @@ class ServerApiClient {
     this.baseURL = baseURL
   }
 
-  private async getHeaders(overrides?: Record<string, string>): Promise<HeadersInit> {
+  private async getHeaders(overrides?: Record<string, string>, skipAuth?: boolean): Promise<HeadersInit> {
     const cookieStore = await cookies()
     const token = cookieStore.get('auth_token')?.value
     const companyId = cookieStore.get('company_id')?.value
@@ -28,7 +28,7 @@ class ServerApiClient {
       headers['X-Company-Slug'] = DEFAULT_COMPANY_SLUG
     }
 
-    if (token) {
+    if (token && !skipAuth) {
       headers['Authorization'] = `Bearer ${token}`
     }
 
@@ -43,6 +43,15 @@ class ServerApiClient {
     return headers
   }
 
+  private isPublicEndpoint(endpoint: string): boolean {
+    return (
+      endpoint.includes('/v1/public/') ||
+      endpoint.includes('/v1/categories/') ||
+      endpoint.includes('/news/') ||
+      endpoint.includes('/v1/products/')
+    )
+  }
+
   async get<T>(endpoint: string, params?: Record<string, any>, headerOverrides?: Record<string, string>): Promise<T> {
     const url = new URL(`${this.baseURL}${endpoint}`)
     if (params) {
@@ -53,7 +62,8 @@ class ServerApiClient {
       })
     }
 
-    const headers = await this.getHeaders(headerOverrides)
+    const skipAuth = this.isPublicEndpoint(endpoint)
+    const headers = await this.getHeaders(headerOverrides, skipAuth)
 
     let response: Response
     try {
@@ -175,6 +185,12 @@ export const serverEcommerceApi = {
       tags?: string
       ordering?: string
       condition?: string
+      bundle_only?: boolean | string
+      timed_only?: boolean | string
+      exclude_bundles?: boolean | string
+      exclude_timed?: boolean | string
+      supplier_slug?: string
+      delivery_group?: string
     }) =>
       serverApiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/products/`, params),
     get: (id: string) => serverApiClient.get(`/v1/products/${id}/`),

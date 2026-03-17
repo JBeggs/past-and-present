@@ -3,9 +3,10 @@ import Link from 'next/link'
 import { serverEcommerceApi } from '@/lib/api-server'
 export const dynamic = 'force-dynamic'
 import { Product } from '@/lib/types'
-import { ArrowLeft, Shield, Info, Phone, FileText } from 'lucide-react'
+import { ArrowLeft, Shield, Info, Phone, FileText, Package, TimerReset, Truck } from 'lucide-react'
 import AddToCartButton from './AddToCartButton'
 import ProductGallery from './ProductGallery'
+import { getMinQuantity, getStockQuantity, isBundleProduct, isTimedProduct } from '@/lib/product-utils'
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>
@@ -54,11 +55,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const isVintage = Array.isArray(product.tags) 
     ? product.tags.some(t => (typeof t === 'string' ? t : t.name) === 'vintage')
     : false
-  const stockQuantity = product.stock_quantity ?? product.quantity ?? 0
   const hasDiscount = product.compare_at_price && Number(product.compare_at_price) > Number(product.price)
   const discountPercent = hasDiscount 
     ? Math.round((1 - Number(product.price) / Number(product.compare_at_price!)) * 100)
     : 0
+  const isBundle = isBundleProduct(product)
+  const isTimed = isTimedProduct(product)
+  const minQty = getMinQuantity(product)
 
   return (
     <div className="min-h-screen bg-vintage-background pb-20">
@@ -110,6 +113,18 @@ export default async function ProductPage({ params }: ProductPageProps) {
                       SAVE {discountPercent}%
                     </span>
                   )}
+                  {isBundle && (
+                    <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold inline-flex items-center gap-2">
+                      <Package className="w-4 h-4" />
+                      Bundle
+                    </span>
+                  )}
+                  {isTimed && (
+                    <span className="bg-amber-600 text-white px-3 py-1 rounded-full text-sm font-bold inline-flex items-center gap-2">
+                      <TimerReset className="w-4 h-4" />
+                      Timed
+                    </span>
+                  )}
                 </div>
 
                 {product.short_description && (
@@ -124,19 +139,33 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-xs uppercase font-bold tracking-widest text-text-muted">Availability</p>
-                    {stockQuantity > 0 ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
-                        <span className="text-green-600 font-bold">
-                          {stockQuantity <= 5 ? `Only ${stockQuantity} left!` : 'In Stock'}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-red-500" />
-                        <span className="text-red-600 font-bold">Out of Stock</span>
-                      </div>
-                    )}
+                    {(() => {
+                      const stockQty = getStockQuantity(product)
+                      // stock 0 = supplier controlled / endless; only show Out of Stock when we track and are out
+                      const isOutOfStock = product.track_inventory === true && stockQty != null && stockQty <= 0
+                      if (isOutOfStock) {
+                        return (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-red-500" />
+                            <span className="text-red-600 font-bold">Out of Stock</span>
+                          </div>
+                        )
+                      }
+                      if (stockQty != null && stockQty > 0 && stockQty <= 5) {
+                        return (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-amber-500" />
+                            <span className="text-amber-700 font-bold">Only {stockQty} left</span>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-green-500" />
+                          <span className="text-green-600 font-bold">In Stock</span>
+                        </div>
+                      )
+                    })()}
                   </div>
                   {product.sku && (
                     <div className="text-right space-y-1">
@@ -147,6 +176,21 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 </div>
 
                 <AddToCartButton product={product} />
+
+                <div className="grid gap-3 text-sm text-text-muted">
+                  {product.delivery_time && (
+                    <p className="flex items-center gap-2">
+                      <Truck className="w-4 h-4 text-vintage-primary" />
+                      Delivery: {product.delivery_time}
+                    </p>
+                  )}
+                  {minQty > 1 && (
+                    <p>Minimum order quantity: {minQty}</p>
+                  )}
+                  {product.supplier_slug && (
+                    <p>Supplier: {product.supplier_slug}</p>
+                  )}
+                </div>
                 
                 <p className="text-[10px] text-center text-text-muted uppercase tracking-widest font-bold">
                   Personalized Service for All Orders

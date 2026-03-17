@@ -9,6 +9,7 @@ import ProductForm from '@/components/products/ProductForm'
 import CategoryManager from '@/components/products/CategoryManager'
 import BulkEditModal from '@/components/products/BulkEditModal'
 import PaginationNav from '@/components/ui/PaginationNav'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
@@ -31,6 +32,12 @@ export default function InventoryPage() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; title: string; message: string; onConfirm: () => Promise<void> }>({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: async () => {},
+  })
   const { showSuccess, showError } = useToast()
   const router = useRouter()
 
@@ -122,18 +129,26 @@ export default function InventoryPage() {
     }
   }
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedIds.size === 0) return
-    if (!confirm(`Archive ${selectedIds.size} product(s)? This will remove them from the store.`)) return
-    try {
-      await ecommerceApi.products.bulk({ operation: 'delete', ids: [...selectedIds] })
-      showSuccess(`${selectedIds.size} product(s) archived`)
-      setSelectedIds(new Set())
-      fetchProducts()
-    } catch (error) {
-      console.error('Error bulk deleting:', error)
-      showError('Failed to archive products')
-    }
+    const count = selectedIds.size
+    setConfirmDialog({
+      open: true,
+      title: 'Archive products',
+      message: `Archive ${count} product(s)? This will remove them from the store.`,
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, open: false }))
+        try {
+          await ecommerceApi.products.bulk({ operation: 'delete', ids: [...selectedIds] })
+          showSuccess(`${count} product(s) archived`)
+          setSelectedIds(new Set())
+          fetchProducts()
+        } catch (error) {
+          console.error('Error bulk deleting:', error)
+          showError('Failed to archive products')
+        }
+      },
+    })
   }
 
   const handleBulkEdit = () => {
@@ -154,17 +169,23 @@ export default function InventoryPage() {
     }
   }
 
-  const handleDelete = async (product: Product) => {
-    if (!confirm(`Are you sure you want to delete "${product.name}"?`)) return
-
-    try {
-      await ecommerceApi.products.delete(product.id)
-      showSuccess('Product deleted successfully')
-      fetchProducts()
-    } catch (error) {
-      console.error('Error deleting product:', error)
-      showError('Failed to delete product')
-    }
+  const handleDelete = (product: Product) => {
+    setConfirmDialog({
+      open: true,
+      title: 'Delete product',
+      message: `Are you sure you want to delete "${product.name}"?`,
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, open: false }))
+        try {
+          await ecommerceApi.products.delete(product.id)
+          showSuccess('Product deleted successfully')
+          fetchProducts()
+        } catch (error) {
+          console.error('Error deleting product:', error)
+          showError('Failed to delete product')
+        }
+      },
+    })
   }
 
   const handleExportCsv = () => {
@@ -599,6 +620,15 @@ export default function InventoryPage() {
           onSubmit={handleBulkEditSubmit}
         />
       )}
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        confirmLabel="Confirm"
+        danger
+        onConfirm={() => confirmDialog.onConfirm()}
+        onCancel={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}
+      />
     </div>
   )
 }

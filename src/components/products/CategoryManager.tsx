@@ -5,6 +5,7 @@ import { ecommerceApi } from '@/lib/api'
 import { Category } from '@/lib/types'
 import { X, Plus, Trash2, Loader2 } from 'lucide-react'
 import { useToast } from '@/contexts/ToastContext'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 interface CategoryManagerProps {
   onClose: () => void
@@ -15,6 +16,7 @@ export default function CategoryManager({ onClose }: CategoryManagerProps) {
   const [loading, setLoading] = useState(true)
   const [isAdding, setIsAdding] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const { showSuccess, showError } = useToast()
 
   useEffect(() => {
@@ -58,9 +60,14 @@ export default function CategoryManager({ onClose }: CategoryManagerProps) {
     }
   }
 
-  const handleDeleteCategory = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this category?')) return
+  const handleDeleteCategory = (id: string) => {
+    setDeleteConfirmId(id)
+  }
 
+  const handleDeleteCategoryConfirm = async () => {
+    const id = deleteConfirmId
+    setDeleteConfirmId(null)
+    if (!id) return
     try {
       await ecommerceApi.categories.delete(id)
       showSuccess('Category deleted successfully')
@@ -140,6 +147,15 @@ export default function CategoryManager({ onClose }: CategoryManagerProps) {
           </button>
         </div>
       </div>
+      <ConfirmDialog
+        open={deleteConfirmId !== null}
+        title="Delete category"
+        message="Are you sure you want to delete this category?"
+        confirmLabel="Delete"
+        danger
+        onConfirm={handleDeleteCategoryConfirm}
+        onCancel={() => setDeleteConfirmId(null)}
+      />
     </div>
   )
 }

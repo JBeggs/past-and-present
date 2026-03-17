@@ -16,6 +16,8 @@ describe('Checkout', () => {
     cy.visit('/checkout');
     cy.get('[data-cy="checkout-content"]').should('be.visible');
     cy.get('[data-cy="checkout-form"]').should('be.visible');
-    cy.get('[data-cy="checkout-submit"]').scrollIntoView().should('be.visible');
+    // Pay button is hidden until address is checked; click Check address first
+    cy.get('[data-cy="checkout-check-address"]').scrollIntoView().should('be.visible').click();
+    cy.get('[data-cy="checkout-submit"]', { timeout: 5000 }).scrollIntoView().should('be.visible');
   });
 });

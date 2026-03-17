@@ -1,14 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { ecommerceApi } from '@/lib/api'
 import { useToast } from '@/contexts/ToastContext'
 import { useCart } from '@/contexts/CartContext'
 import { Product } from '@/lib/types'
 import { useAuth } from '@/contexts/AuthContext'
-import { ShoppingCart, Plus, Minus, Lock } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, Package, TimerReset, Truck } from 'lucide-react'
+import { formatCountdown, getMinQuantity, getStockQuantity, isBundleProduct } from '@/lib/product-utils'
 
 interface AddToCartButtonProps {
   product: Product
@@ -16,34 +15,53 @@ interface AddToCartButtonProps {
 
 export default function AddToCartButton({ product }: AddToCartButtonProps) {
   const { user } = useAuth()
-  const [quantity, setQuantity] = useState(1)
+  const minQty = getMinQuantity(product)
+  const isBundle = isBundleProduct(product)
+  const stockQty = getStockQuantity(product)
+  const maxQuantity = isBundle ? 1 : (stockQty != null && stockQty > 0 ? Math.min(10, stockQty) : 10)
+  // stock 0 or null = supplier controlled / endless stock; never block (backend can reject if needed)
+  const outOfStock = false
+  const [quantity, setQuantity] = useState(minQty)
   const [loading, setLoading] = useState(false)
+  const [countdown, setCountdown] = useState(() => formatCountdown(product.timed_expires_at))
   const { showSuccess, showError } = useToast()
-  const { refreshCart } = useCart()
+  const { cart, addItemToCart } = useCart()
   const router = useRouter()
 
-  const handleAddToCart = async () => {
-    // alert('AddToCartButton: handleAddToCart clicked')
-    console.log('AddToCartButton: handleAddToCart clicked', { productId: product.id, quantity, user: !!user })
-    const stockQuantity = product.stock_quantity ?? product.quantity ?? 0
-    if (stockQuantity === 0) {
-      console.warn('AddToCartButton: Product out of stock')
+  useEffect(() => {
+    setQuantity(minQty)
+  }, [minQty, product.id])
+
+  useEffect(() => {
+    if (!product.timed_expires_at) {
+      setCountdown('')
       return
     }
+    setCountdown(formatCountdown(product.timed_expires_at))
+    const interval = window.setInterval(() => {
+      setCountdown(formatCountdown(product.timed_expires_at))
+    }, 1000)
+    return () => window.clearInterval(interval)
+  }, [product.timed_expires_at])
 
-    if (!user) {
-      console.warn('AddToCartButton: No user logged in')
+  const isExpired = countdown === 'Expired'
+  const quantityLabel = useMemo(() => (isBundle ? 'Bundle quantity' : 'Quantity'), [isBundle])
+
+  const handleAddToCart = async () => {
+    if (isExpired) {
+      showError('This timed product has expired')
+      return
+    }
+    const cartAlreadyHasBundle = cart?.items?.some((i) => i.is_bundle) ?? false
+    if (isBundle && cartAlreadyHasBundle) {
+      showError('Bundles are limited to one per customer.')
       return
     }
 
     setLoading(true)
     try {
-      console.log('AddToCartButton: Calling addItem API...')
-      // Use the correct endpoint from JavaMellow if needed
-      const response = await ecommerceApi.cart.addItem(product.id, quantity)
-      console.log('AddToCartButton: addItem response', response)
+      await addItemToCart(product, quantity)
       showSuccess(`${product.name} added to cart!`)
-      await refreshCart()
       router.refresh()
     } catch (error: any) {
       console.error('AddToCartButton: addItem failed', error)
@@ -54,59 +72,76 @@ export default function AddToCartButton({ product }: AddToCartButtonProps) {
     }
   }
 
-  const stockQuantity = product.stock_quantity ?? product.quantity ?? 0
-  const isOutOfStock = stockQuantity === 0
-  const maxQuantity = Math.min(stockQuantity || 10, 10)
-
   return (
     <div className="space-y-4">
-      {/* Quantity Selector */}
-      <div className="flex items-center gap-4">
-        <span className="text-sm font-medium text-text">Quantity:</span>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setQuantity(Math.max(1, quantity - 1))}
-            disabled={quantity <= 1 || isOutOfStock}
-            className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 disabled:opacity-50 transition-colors"
-          >
-            <Minus className="w-4 h-4" />
-          </button>
-          <span className="w-12 text-center font-medium text-lg">{quantity}</span>
-          <button
-            onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))}
-            disabled={quantity >= maxQuantity || isOutOfStock}
-            className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 disabled:opacity-50 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        </div>
+      <div className="space-y-2">
+        {isBundle && (
+          <p className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+            <Package className="w-4 h-4" />
+            Bundle
+          </p>
+        )}
+        {product.timed_expires_at && (
+          <p className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${isExpired ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
+            <TimerReset className="w-4 h-4" />
+            {countdown}
+          </p>
+        )}
+        {product.delivery_time && (
+          <p className="flex items-center gap-2 text-sm text-text-muted">
+            <Truck className="w-4 h-4" />
+            Delivery: {product.delivery_time}
+          </p>
+        )}
+        {minQty > 1 && (
+          <p className="text-sm text-text-muted">Minimum order: {minQty}</p>
+        )}
+        {isBundle && (
+          <p className="text-sm text-text-muted">Bundles are limited to one per customer.</p>
+        )}
       </div>
+
+      {/* Quantity Selector */}
+      {!outOfStock && (
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-text">{quantityLabel}:</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setQuantity(Math.max(minQty, quantity - 1))}
+              disabled={quantity <= minQty || isExpired}
+              className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 disabled:opacity-50 transition-colors"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+            <span className="w-12 text-center font-medium text-lg">{quantity}</span>
+            <button
+              onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))}
+              disabled={quantity >= maxQuantity || isExpired}
+              className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 disabled:opacity-50 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Add to Cart Button */}
       <div className="space-y-2">
         <button
           onClick={handleAddToCart}
           data-cy="add-to-cart"
-          disabled={loading || isOutOfStock || !user}
+          disabled={loading || isExpired || outOfStock}
           className={`w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 transition-colors ${
-            !user
-              ? 'bg-gray-200 text-text-muted cursor-not-allowed'
-              : isOutOfStock
+            isExpired || outOfStock
               ? 'bg-gray-200 text-text-muted cursor-not-allowed'
               : (Array.isArray(product.tags) && product.tags.some((t: any) => (typeof t === 'string' ? t : t.name) === 'vintage'))
               ? 'bg-vintage-primary text-white hover:bg-vintage-primary-dark'
               : 'bg-modern-primary text-white hover:bg-modern-primary-dark'
           } shadow-lg shadow-vintage-primary/10`}
         >
-          {!user ? <Lock className="w-5 h-5" /> : <ShoppingCart className="w-5 h-5" />}
-          {loading ? 'Adding...' : !user ? 'Login to Purchase' : isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+          <ShoppingCart className="w-5 h-5" />
+          {loading ? 'Adding...' : isExpired ? 'Expired' : outOfStock ? 'Out of Stock' : (user ? 'Add to Cart' : 'Add to Cart (Guest)')}
         </button>
-        
-        {!user && (
-          <p className="text-xs text-center text-vintage-accent font-bold uppercase tracking-wider">
-            Please <Link href="/login" className="underline">login</Link> or <Link href="/register" className="underline">register</Link> to add items to your cart
-          </p>
-        )}
       </div>
     </div>
   )

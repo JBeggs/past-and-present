@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { serverEcommerceApi } from '@/lib/api-server'
 export const dynamic = 'force-dynamic'
 import { Product } from '@/lib/types'
-import { Clock, Sparkles, Filter, Search, Star } from 'lucide-react'
+import { Clock, Sparkles, Filter, Search, Star, Package, TimerReset, Truck } from 'lucide-react'
 import { Suspense } from 'react'
 import ProductsSortSelect from '@/components/products/ProductsSortSelect'
 import AdminActions from '@/components/products/AdminActions'
@@ -10,10 +10,32 @@ import ProductCard from '@/components/products/ProductCard'
 import PaginationNav from '@/components/ui/PaginationNav'
 
 interface ProductsPageProps {
-  searchParams: Promise<{ condition?: string; category?: string; search?: string; page?: string; featured?: string; sort?: string }>
+  searchParams: Promise<{
+    condition?: string
+    category?: string
+    search?: string
+    page?: string
+    featured?: string
+    sort?: string
+    bundle_only?: string
+    timed_only?: string
+    supplier_slug?: string
+    delivery_group?: string
+  }>
 }
 
-async function getProducts(params: { condition?: string; category?: string; search?: string; page?: string; featured?: string; sort?: string }) {
+async function getProducts(params: {
+  condition?: string
+  category?: string
+  search?: string
+  page?: string
+  featured?: string
+  sort?: string
+  bundle_only?: string
+  timed_only?: string
+  supplier_slug?: string
+  delivery_group?: string
+}) {
   try {
     const response = await serverEcommerceApi.products.list({
       is_active: true,
@@ -24,10 +46,18 @@ async function getProducts(params: { condition?: string; category?: string; sear
       page: params.page ? parseInt(params.page) : 1,
       page_size: 24,
       ordering: params.sort || undefined,
+      bundle_only: params.bundle_only === 'true' ? 'true' : undefined,
+      timed_only: params.timed_only === 'true' ? 'true' : undefined,
+      supplier_slug: params.supplier_slug || undefined,
     })
 
     const raw = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.results || []
-    const products = raw.filter((p: Product) => p.status !== 'archived')
+    const products = raw
+      .filter((p: Product) => p.status !== 'archived')
+      .filter((p: any) => {
+        if (!params.supplier_slug) return true
+        return String(p.supplier_slug || '').toLowerCase() === params.supplier_slug.toLowerCase()
+      })
     const pagination = (response as any)?.pagination
 
     return {
@@ -51,8 +81,10 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const { products, pagination } = await getProducts(params)
   const isVintage = params.condition === 'vintage'
   const isNew = params.condition === 'new'
-
   const isFeatured = params.featured === 'true'
+  const isBundles = params.bundle_only === 'true'
+  const isTimed = params.timed_only === 'true'
+  const isSupplierGroup = !!params.supplier_slug
 
   const searchParamsForNav: Record<string, string> = {}
   if (params.condition) searchParamsForNav.condition = params.condition
@@ -60,6 +92,58 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   if (params.search) searchParamsForNav.search = params.search
   if (params.featured) searchParamsForNav.featured = params.featured
   if (params.sort) searchParamsForNav.sort = params.sort
+  if (params.bundle_only) searchParamsForNav.bundle_only = params.bundle_only
+  if (params.timed_only) searchParamsForNav.timed_only = params.timed_only
+  if (params.supplier_slug) searchParamsForNav.supplier_slug = params.supplier_slug
+  if (params.delivery_group) searchParamsForNav.delivery_group = params.delivery_group
+
+  const title = isSupplierGroup
+    ? 'Delivery Group'
+    : isBundles
+      ? 'Bundles'
+      : isTimed
+        ? 'Timed Products'
+        : isVintage
+          ? 'Vintage Treasures'
+          : isNew
+            ? 'New Arrivals'
+            : isFeatured
+              ? 'Featured Products'
+              : 'All Products'
+
+  const subtitle = isSupplierGroup
+    ? 'Products grouped together by supplier delivery rules.'
+    : isBundles
+      ? 'Curated bundles with bundled buying rules.'
+      : isTimed
+        ? 'Limited-time products with expiry countdowns.'
+        : isVintage
+          ? 'Unique second-hand finds with character and history'
+          : isNew
+            ? 'Fresh finds and modern essentials'
+            : isFeatured
+              ? 'Hand-picked favorites and standout items'
+              : 'Browse our complete collection of products'
+
+  const makeHref = (overrides: Record<string, string | null>) => {
+    const query = new URLSearchParams()
+    const base = {
+      condition: params.condition || null,
+      category: params.category || null,
+      search: params.search || null,
+      featured: params.featured || null,
+      sort: params.sort || null,
+      bundle_only: params.bundle_only || null,
+      timed_only: params.timed_only || null,
+      supplier_slug: params.supplier_slug || null,
+      delivery_group: params.delivery_group || null,
+    }
+    Object.entries({ ...base, ...overrides }).forEach(([key, value]) => {
+      if (value) query.set(key, value)
+    })
+    const qs = query.toString()
+    return qs ? `/products?${qs}` : '/products'
+  }
 
   return (
     <div className="min-h-screen bg-vintage-background" data-cy="products-section">
@@ -67,19 +151,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       <AdminActions />
 
       {/* Page Header */}
-      <section className={`py-12 ${isVintage ? 'bg-vintage-primary' : isNew ? 'bg-modern-primary' : isFeatured ? 'bg-purple-600' : 'bg-gradient-to-r from-vintage-primary to-modern-primary'} text-white`}>
+      <section className={`py-12 ${isBundles ? 'bg-blue-700' : isTimed ? 'bg-amber-600' : isVintage ? 'bg-vintage-primary' : isNew ? 'bg-modern-primary' : isFeatured ? 'bg-purple-600' : isSupplierGroup ? 'bg-slate-700' : 'bg-gradient-to-r from-vintage-primary to-modern-primary'} text-white`}>
         <div className="container-wide">
           <h1 className="text-3xl md:text-4xl font-bold font-playfair mb-2">
-            {isVintage ? 'Vintage Treasures' : isNew ? 'New Arrivals' : isFeatured ? 'Featured Products' : 'All Products'}
+            {title}
           </h1>
           <p className="text-lg opacity-90">
-            {isVintage 
-              ? 'Unique second-hand finds with character and history'
-              : isNew 
-                ? 'Fresh finds and modern essentials'
-                : isFeatured
-                  ? 'Hand-picked favorites and standout items'
-                  : 'Browse our complete collection of vintage and new items'}
+            {subtitle}
           </p>
         </div>
       </section>
@@ -99,6 +177,10 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 {params.category && <input type="hidden" name="category" value={params.category} />}
                 {params.featured && <input type="hidden" name="featured" value={params.featured} />}
                 {params.sort && <input type="hidden" name="sort" value={params.sort} />}
+                {params.bundle_only && <input type="hidden" name="bundle_only" value={params.bundle_only} />}
+                {params.timed_only && <input type="hidden" name="timed_only" value={params.timed_only} />}
+                {params.supplier_slug && <input type="hidden" name="supplier_slug" value={params.supplier_slug} />}
+                {params.delivery_group && <input type="hidden" name="delivery_group" value={params.delivery_group} />}
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
                 <input
                   type="search"
@@ -122,21 +204,23 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link
-                  href={(() => {
-                    const q: Record<string, string> = {}
-                    if (params.search) q.search = params.search
-                    if (params.featured) q.featured = params.featured
-                    if (params.sort) q.sort = params.sort
-                    return Object.keys(q).length ? `/products?${new URLSearchParams(q).toString()}` : '/products'
-                  })()}
+                  href={makeHref({
+                    condition: null,
+                    category: null,
+                    featured: null,
+                    bundle_only: null,
+                    timed_only: null,
+                    supplier_slug: null,
+                    delivery_group: null,
+                  })}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
-                    !params.condition ? 'bg-vintage-primary text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
+                    !params.condition && !params.bundle_only && !params.timed_only && !params.supplier_slug ? 'bg-vintage-primary text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
                   }`}
                 >
                   All
                 </Link>
                 <Link
-                  href={`/products?${new URLSearchParams({ condition: 'vintage', ...(params.search && { search: params.search }), ...(params.featured && { featured: params.featured }), ...(params.sort && { sort: params.sort }) }).toString()}`}
+                  href={makeHref({ condition: 'vintage', bundle_only: null, timed_only: null, supplier_slug: null, delivery_group: null })}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
                     isVintage ? 'bg-vintage-primary text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
                   }`}
@@ -145,7 +229,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   Vintage
                 </Link>
                 <Link
-                  href={`/products?${new URLSearchParams({ condition: 'new', ...(params.search && { search: params.search }), ...(params.featured && { featured: params.featured }), ...(params.sort && { sort: params.sort }) }).toString()}`}
+                  href={makeHref({ condition: 'new', bundle_only: null, timed_only: null, supplier_slug: null, delivery_group: null })}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
                     isNew ? 'bg-modern-primary text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
                   }`}
@@ -154,9 +238,27 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   New
                 </Link>
                 <Link
+                  href={makeHref({ bundle_only: 'true', timed_only: null, condition: null, supplier_slug: null, delivery_group: null })}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
+                    isBundles ? 'bg-blue-700 text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
+                  }`}
+                >
+                  <Package className="w-4 h-4" />
+                  Bundles
+                </Link>
+                <Link
+                  href={makeHref({ timed_only: 'true', bundle_only: null, condition: null, supplier_slug: null, delivery_group: null })}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
+                    isTimed ? 'bg-amber-600 text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
+                  }`}
+                >
+                  <TimerReset className="w-4 h-4" />
+                  Timed
+                </Link>
+                <Link
                   href={params.featured === 'true'
-                    ? `/products?${new URLSearchParams({ ...(params.condition && { condition: params.condition }), ...(params.search && { search: params.search }), ...(params.sort && { sort: params.sort }) }).toString()}`
-                    : `/products?${new URLSearchParams({ featured: 'true', ...(params.condition && { condition: params.condition }), ...(params.search && { search: params.search }), ...(params.sort && { sort: params.sort }) }).toString()}`
+                    ? makeHref({ featured: null })
+                    : makeHref({ featured: 'true', bundle_only: null, timed_only: null, supplier_slug: null, delivery_group: null })
                   }
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
                     isFeatured ? 'bg-purple-600 text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
@@ -165,6 +267,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   <Star className="w-4 h-4" />
                   Featured
                 </Link>
+                {isSupplierGroup && (
+                  <span className="px-4 py-2 rounded-full text-sm font-medium bg-slate-700 text-white flex items-center gap-1">
+                    <Truck className="w-4 h-4" />
+                    {params.supplier_slug}
+                  </span>
+                )}
               </div>
             </div>
           </div>

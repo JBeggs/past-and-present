@@ -3,7 +3,7 @@
  * Uses mocked fetch; aligns with Django API response shapes
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { authApi, apiClient } from './api';
+import { authApi, apiClient, ecommerceApi } from './api';
 
 const API_BASE = 'http://localhost:8000/api';
 const COMPANY_SLUG = 'past-and-present';
@@ -124,6 +124,47 @@ describe('apiClient', () => {
     localStorage.clear();
     vi.restoreAllMocks();
   });
+
+  describe('payments.createCheckout (Yoco)', () => {
+    it('POSTs to /v1/yoco/orders/{orderId}/yoco-checkout/ with successUrl and cancelUrl', async () => {
+      const orderId = 'order-uuid-123'
+      const redirectUrl = 'https://payments.yoco.com/checkout/abc'
+      const mockResponse = {
+        success: true,
+        data: { checkoutId: 'abc', redirectUrl, orderId },
+      }
+      const fetchMock = vi.fn().mockResolvedValue(createMockResponse(mockResponse))
+      vi.stubGlobal('fetch', fetchMock)
+
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'
+      await authApi.login('u', 'p')
+      const result = await ecommerceApi.payments.createCheckout(orderId) as { data?: { data?: { redirectUrl?: string }; redirectUrl?: string } }
+
+      const call = fetchMock.mock.calls.find((c: [string]) => c[0].includes('yoco-checkout'))
+      expect(call).toBeDefined()
+      expect(call[0]).toContain(`/v1/yoco/orders/${orderId}/yoco-checkout/`)
+      const body = JSON.parse((call[1] as RequestInit).body as string)
+      expect(body.successUrl).toBe(`${origin}/checkout/success`)
+      expect(body.cancelUrl).toBe(`${origin}/checkout`)
+      expect((result as { data?: { redirectUrl?: string } })?.data?.redirectUrl).toBe(redirectUrl)
+    })
+
+    it('accepts custom successUrl and cancelUrl options', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(createMockResponse({ success: true, data: {} }))
+      vi.stubGlobal('fetch', fetchMock)
+      await authApi.login('u', 'p')
+
+      await ecommerceApi.payments.createCheckout('ord-1', {
+        successUrl: 'https://example.com/success',
+        cancelUrl: 'https://example.com/cancel',
+      })
+
+      const call = fetchMock.mock.calls.find((c: [string]) => c[0].includes('yoco-checkout'))
+      const body = JSON.parse((call[1] as RequestInit).body as string)
+      expect(body.successUrl).toBe('https://example.com/success')
+      expect(body.cancelUrl).toBe('https://example.com/cancel')
+    })
+  })
 
   describe('request headers', () => {
     it('adds Authorization Bearer and X-Company-Id when authenticated', async () => {

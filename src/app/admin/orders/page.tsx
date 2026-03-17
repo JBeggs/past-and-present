@@ -37,6 +37,8 @@ interface Order {
   customer_first_name?: string
   customer_last_name?: string
   items?: OrderItem[]
+  refund_needed?: boolean
+  refund_due?: number
 }
 
 const PAGE_SIZE = 20
@@ -287,6 +289,11 @@ export default function AdminOrdersPage() {
                         #{order.order_number}
                       </Link>
                       {getStatusBadge(order.status)}
+                      {order.refund_needed && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-800">
+                          Refund needed
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-text-muted truncate">
                       {order.customer_first_name} {order.customer_last_name} • {order.customer_email}

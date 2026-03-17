@@ -18,6 +18,7 @@ interface Profile {
   full_name?: string
   bio?: string
   avatar_url?: string
+  phone?: string
   role: 'user' | 'admin' | 'editor' | 'author' | 'business_owner' | 'subscriber'
   is_verified: boolean
   social_links: Record<string, string>
@@ -33,12 +34,23 @@ interface AuthContextType {
   companyId: string | null
   loading: boolean
   signIn: (username: string, password: string) => Promise<{ error: any }>
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>
+  signUp: (email: string, password: string, fullName: string, phone: string) => Promise<{ error: any }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const defaultAuthValue: AuthContextType = {
+  user: null,
+  profile: null,
+  companyId: null,
+  loading: false,
+  signIn: async () => ({ error: null }),
+  signUp: async () => ({ error: null }),
+  signOut: async () => {},
+  refreshProfile: async () => {},
+}
+
+const AuthContext = createContext<AuthContextType>(defaultAuthValue)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -190,24 +202,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: null }
     } catch (error: any) {
       const errDetail = error?.details?.error
+      const errFromDetails = typeof error?.details === 'object' && error?.details !== null
+        ? (typeof error.details.error === 'string' ? error.details.error : error.details.message)
+        : null
       const errorMessage =
         error?.message ||
         (typeof errDetail === 'string' ? errDetail : null) ||
+        errFromDetails ||
         error?.response?.data?.error ||
         'Login failed. Please check your credentials.'
-      console.error('Login error:', {
-        message: errorMessage,
-        status: error?.status,
-        url: error?.url,
-        cause: error?.cause,
-      })
-      return { error: errorMessage }
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Login error:', errorMessage, error)
+      }
+      return { error: String(errorMessage || 'Login failed. Please check your credentials.') }
     } finally {
       setLoading(false)
     }
   }
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, phone: string) => {
     setLoading(true)
     try {
       const response = await authApi.register({
@@ -215,6 +228,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
         password_confirm: password,
         full_name: fullName,
+        phone,
       })
       
       setUser(response.user)
@@ -239,6 +253,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             password: 'Password',
             password_confirm: 'Password confirmation',
             full_name: 'Full name',
+            phone: 'Cellphone',
           }
           
           const errorMessages = Object.entries(errorDetails).map(([field, messages]: [string, any]) => {
@@ -292,9 +307,5 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
+  return useContext(AuthContext)
 }

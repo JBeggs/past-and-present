@@ -7,6 +7,7 @@ describe('Register', () => {
 
   it('renders register form', () => {
     cy.get('[data-cy="register-full-name"]').should('be.visible');
+    cy.get('[data-cy="register-phone"]').should('be.visible');
     cy.get('[data-cy="register-email"]').should('be.visible');
     cy.get('[data-cy="register-password"]').should('be.visible');
     cy.get('[data-cy="register-password-confirm"]').should('be.visible');
@@ -15,6 +16,7 @@ describe('Register', () => {
 
   it('shows error when passwords do not match', () => {
     cy.get('[data-cy="register-full-name"]').type('Test User');
+    cy.get('[data-cy="register-phone"]').type('0821234567');
     cy.get('[data-cy="register-email"]').type('newuser@example.com');
     cy.get('[data-cy="register-password"]').type('password123');
     cy.get('[data-cy="register-password-confirm"]').type('different123');
@@ -28,6 +30,7 @@ describe('Register', () => {
     const password = 'TestPass123!';
 
     cy.get('[data-cy="register-full-name"]').type('Cypress Test');
+    cy.get('[data-cy="register-phone"]').type('0821234567');
     cy.get('[data-cy="register-email"]').type(email);
     cy.get('[data-cy="register-password"]').type(password);
     cy.get('[data-cy="register-password-confirm"]').type(password);

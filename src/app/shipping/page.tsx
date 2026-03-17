@@ -1,81 +1,86 @@
-import { Truck, Clock } from 'lucide-react'
+import { Truck, Clock, Package, MapPin, CheckCircle } from 'lucide-react'
 
 export default function ShippingPage() {
   return (
     <div className="min-h-screen bg-vintage-background">
-      {/* Header */}
       <section className="py-12 bg-vintage-primary text-white">
         <div className="container-wide">
           <h1 className="text-3xl md:text-4xl font-bold font-playfair mb-2">
             Shipping Information
           </h1>
           <p className="text-lg text-green-100">
-            Everything you need to know about delivery
+            Courier Guy for imports, supplier delivery for local stock
           </p>
         </div>
       </section>
 
-      {/* Content */}
       <section className="py-12">
         <div className="container-narrow">
-          {/* Shipping Options */}
-          <div className="grid md:grid-cols-2 gap-6 mb-12">
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
             <div className="card p-6">
               <div className="w-12 h-12 bg-vintage-primary/10 rounded-lg flex items-center justify-center mb-4">
                 <Truck className="w-6 h-6 text-vintage-primary" />
               </div>
-              <h3 className="text-lg font-semibold text-text mb-2">Standard Shipping</h3>
-              <p className="text-text-muted mb-4">3-5 business days</p>
+              <h3 className="text-lg font-semibold text-text mb-2">Courier Guy (Imported + Gumtree)</h3>
+              <p className="text-text-muted mb-4">Used for Temu, AliExpress, Ubuy and Gumtree products.</p>
               <ul className="text-sm text-text-light space-y-2">
-                <li>Free on orders over R500</li>
-                <li>R65 for orders under R500</li>
-                <li>Tracking included</li>
+                <li>Standard: from R90</li>
+                <li>Express: from R130</li>
+                <li>Pudo pickup: from R40</li>
+                <li>Collect in-store: free</li>
               </ul>
             </div>
 
             <div className="card p-6">
               <div className="w-12 h-12 bg-modern-accent/10 rounded-lg flex items-center justify-center mb-4">
-                <Clock className="w-6 h-6 text-modern-accent-dark" />
+                <Package className="w-6 h-6 text-modern-accent-dark" />
               </div>
-              <h3 className="text-lg font-semibold text-text mb-2">Express Shipping</h3>
-              <p className="text-text-muted mb-4">1-2 business days</p>
+              <h3 className="text-lg font-semibold text-text mb-2">Supplier Delivery (South African suppliers)</h3>
+              <p className="text-text-muted mb-4">Used for local supplier groups such as Makro, Takealot, Game, etc.</p>
               <ul className="text-sm text-text-light space-y-2">
-                <li>R120 flat rate</li>
-                <li>Priority handling</li>
-                <li>Real-time tracking</li>
+                <li>Flat supplier delivery charge applies per supplier group</li>
+                <li>Free delivery unlocks when supplier threshold is met (commonly R500)</li>
+                <li>Your cart shows exactly how much more to add for free delivery</li>
               </ul>
             </div>
           </div>
 
-          {/* Shipping Details */}
           <div className="prose prose-lg max-w-none">
-            <h2 className="text-2xl font-bold font-playfair text-text">Delivery Areas</h2>
+            <h2 className="text-2xl font-bold font-playfair text-text flex items-center gap-2">
+              <CheckCircle className="h-6 w-6 text-vintage-primary" />
+              How delivery is calculated
+            </h2>
             <p className="text-text-light">
-              We currently ship to all major cities and towns within South Africa. 
-              Delivery times may vary for remote areas.
+              Orders can include multiple supplier groups. Delivery is calculated per supplier group:
+              if you are below a supplier&apos;s free-delivery threshold, that supplier&apos;s flat delivery
+              rate is added once; if you meet the threshold, delivery for that group is free.
             </p>
 
-            <h2 className="text-2xl font-bold font-playfair text-text mt-8">Order Processing</h2>
+            <h2 className="text-2xl font-bold font-playfair text-text mt-8 flex items-center gap-2">
+              <Clock className="h-6 w-6 text-vintage-primary" />
+              Delivery times
+            </h2>
             <p className="text-text-light">
-              Orders placed before 2pm on business days are processed the same day. 
-              Orders placed after 2pm or on weekends will be processed the next business day.
+              Imported products generally take 7-14 business days. South African supplier products
+              are usually delivered in 2-5 business days. Exact timing varies by supplier and your location.
             </p>
 
-            <h2 className="text-2xl font-bold font-playfair text-text mt-8">Tracking Your Order</h2>
+            <h2 className="text-2xl font-bold font-playfair text-text mt-8 flex items-center gap-2">
+              <MapPin className="h-6 w-6 text-vintage-primary" />
+              Delivery areas
+            </h2>
             <p className="text-text-light">
-              Once your order ships, you&apos;ll receive an email with your tracking number. 
-              You can track your package directly through our courier partner&apos;s website.
+              We deliver nationwide across South Africa. Courier Guy coverage and supplier coverage
+              can vary by area, but major cities and surrounding regions are supported.
             </p>
 
-            <h2 className="text-2xl font-bold font-playfair text-text mt-8">Packaging</h2>
+            <h2 className="text-2xl font-bold font-playfair text-text mt-8">Tracking</h2>
             <p className="text-text-light">
-              We take extra care with vintage items. All products are carefully wrapped 
-              and packaged to ensure they arrive safely. We use eco-friendly packaging 
-              materials whenever possible.
+              Courier Guy shipments include tracking. Supplier-handled deliveries are tracked by
+              the supplier where available.
             </p>
           </div>
 
-          {/* Contact */}
           <div className="mt-12 p-6 bg-white rounded-lg border border-gray-200">
             <h3 className="font-semibold text-text mb-2">Questions about shipping?</h3>
             <p className="text-text-muted mb-4">

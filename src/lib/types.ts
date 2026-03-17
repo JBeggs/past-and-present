@@ -128,6 +128,23 @@ export interface Product {
   seo_keywords?: string
   canonical_url?: string
   source_url?: string
+  supplier_slug?: string | null
+  supplier_delivery_cost?: number | null
+  free_delivery_threshold?: number | null
+  delivery_time?: string | null
+  min_quantity?: number | null
+  bundle_product_ids?: string[]
+  is_bundle?: boolean
+  bundle_images?: Array<string | { url?: string }>
+  bundle_product_details?: Array<{
+    id: string
+    name: string
+    slug?: string
+    image?: string
+    images?: Array<string | { url?: string; file_url?: string }>
+  }>
+  timed_duration_minutes?: number | null
+  timed_expires_at?: string | null
   created_at: string
   updated_at: string
   published_at?: string
@@ -151,6 +168,18 @@ export interface ProductImage {
 }
 
 // Shopping Cart
+export interface SupplierDeliveryBreakdownItem {
+  supplier_slug: string
+  supplier_name: string
+  delivery_cost: number
+  weight_based?: boolean
+  total_weight_kg?: number
+  free_delivery_threshold?: number
+  group_subtotal?: number
+  threshold_met?: boolean
+  amount_to_free_delivery?: number
+}
+
 export interface CartItem {
   id: string
   product_id: string
@@ -159,7 +188,27 @@ export interface CartItem {
   product_sku?: string
   quantity: number
   price: number
+  cost_price?: number | null
   subtotal: number
+  min_quantity?: number
+  is_bundle?: boolean
+  bundle_product_ids?: string[]
+  timed_expires_at?: string | null
+  bundle_product_details?: Array<{
+    id: string
+    name: string
+    slug?: string
+    image?: string
+    images?: Array<string | { url?: string; file_url?: string }>
+  }>
+  bundle_images?: Array<string | { url?: string }>
+  supplier_slug?: string | null
+  supplierSlug?: string | null  // API may return camelCase
+  supplier_delivery_cost?: number | null
+  free_delivery_threshold?: number | null
+  stock_quantity?: number | null
+  featured?: boolean
+  gumtree_origin_complete?: boolean
   created_at: string
   product?: Product
 }
@@ -170,11 +219,65 @@ export interface Cart {
   session_id?: string
   items: CartItem[]
   subtotal: number
+  supplier_delivery?: number
+  supplier_delivery_breakdown?: SupplierDeliveryBreakdownItem[]
   tax: number
   shipping: number
+  discount?: number
   total: number
+  currency?: string
   created_at: string
   updated_at: string
+}
+
+export interface CollectionAddress {
+  display?: string
+  street_address?: string
+  suburb?: string
+  city?: string
+  postal_code?: string
+  province?: string
+}
+
+export interface ShippingQuoteData {
+  rates?: Array<Record<string, unknown>>
+  fallback?: boolean
+  courier_guy_not_needed?: boolean
+  message?: string
+  standard_rate?: number
+  express_rate?: number
+  pudo_available?: boolean
+  collection_address?: CollectionAddress | null
+}
+
+/**
+ * Split fulfillment payload for checkout when cart has both Gumtree and other Courier Guy items.
+ *
+ * - gumtree_fulfillment_method: 'collect' | 'deliver'
+ *   - Required when cart has Gumtree items.
+ *   - 'collect' = Gumtree items collected in-store (no courier cost for Gumtree).
+ *   - 'deliver' = Gumtree items shipped via Courier Guy (included in courier quote).
+ *
+ * - courier_fulfillment_method: 'standard' | 'express' | 'pudo'
+ *   - Required when cart has non-Gumtree Courier Guy items (temu, aliexpress, ubuy).
+ *   - Used for Courier Guy delivery of import items.
+ *
+ * - supplier_delivery: number (existing)
+ * - courier_guy_shipping: number
+ *   - When gumtree_fulfillment_method='collect': cost for non-Gumtree parcels only.
+ *   - When gumtree_fulfillment_method='deliver': full courier cost (all parcels).
+ *
+ * - fulfillment_split: persisted on order
+ *   - { gumtree: 'collect'|'deliver', other_courier: 'standard'|'express'|'pudo' }
+ */
+export type GumtreeFulfillmentMethod = 'collect' | 'deliver'
+export type CourierFulfillmentMethod = 'standard' | 'express' | 'pudo'
+
+export interface CheckoutFulfillmentPayload {
+  gumtree_fulfillment_method?: GumtreeFulfillmentMethod
+  courier_fulfillment_method?: CourierFulfillmentMethod
+  supplier_delivery: number
+  courier_guy_shipping: number
 }
 
 // Order
@@ -317,4 +420,36 @@ export interface YocoPaymentVerification {
   order_id?: string
   payment_reference?: string
   error?: string
+}
+
+// Integration settings (Yoco + Courier Guy) for business owners
+export interface IntegrationSettings {
+  id: string
+  company?: string
+  company_name?: string
+  payment_gateway?: string
+  yoco_public_key?: string
+  yoco_secret_key?: string
+  yoco_webhook_secret?: string
+  yoco_sandbox_mode?: boolean
+  courier_service?: string
+  courier_guy_api_key?: string
+  courier_guy_api_secret?: string
+  courier_guy_account_number?: string
+  courier_guy_sandbox_mode?: boolean
+  payment_gateway_settings?: Record<string, unknown>
+  courier_settings?: Record<string, unknown>
+  created_at?: string
+  updated_at?: string
+}
+
+export interface IntegrationSettingsUpdatePayload {
+  yoco_public_key?: string
+  yoco_secret_key?: string
+  yoco_webhook_secret?: string
+  yoco_sandbox_mode?: boolean
+  courier_guy_api_key?: string
+  courier_guy_api_secret?: string
+  courier_guy_account_number?: string
+  courier_guy_sandbox_mode?: boolean
 }

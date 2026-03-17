@@ -2,6 +2,7 @@
  * API Client for Django REST API
  * Adapted from Riverside Herald for Past and Present
  */
+import type { ShippingQuoteData } from './types'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://3pillars.pythonanywhere.com/api'
 const DEFAULT_COMPANY_SLUG = process.env.NEXT_PUBLIC_COMPANY_SLUG || 'past-and-present'
@@ -477,6 +478,7 @@ export const authApi = {
     company_name?: string
     company_email?: string
     full_name?: string
+    phone?: string
     password_confirm?: string
     role?: string
   }) {
@@ -487,6 +489,7 @@ export const authApi = {
       password: data.password,
       password_confirm: data.password_confirm || data.password,
       company_slug: DEFAULT_COMPANY_SLUG,
+      phone: data.phone || '',
     }
     
     if (data.company_name) {
@@ -503,7 +506,9 @@ export const authApi = {
       }
     } else {
       if (data.full_name) {
-        requestData.full_name = data.full_name
+        const nameParts = data.full_name.trim().split(/\s+/)
+        requestData.first_name = nameParts[0] || ''
+        requestData.last_name = nameParts.slice(1).join(' ') || ''
       }
       if (data.role) {
         requestData.role = data.role
@@ -634,6 +639,12 @@ export const ecommerceApi = {
       tags?: string
       ordering?: string
       condition?: string
+      bundle_only?: boolean | string
+      timed_only?: boolean | string
+      exclude_bundles?: boolean | string
+      exclude_timed?: boolean | string
+      supplier_slug?: string
+      delivery_group?: string
     }) =>
       apiClient.get(`/v1/public/${DEFAULT_COMPANY_SLUG}/products/`, params),
     /** List all products including drafts (for store admin). Uses authenticated /v1/products/ */
@@ -671,6 +682,8 @@ export const ecommerceApi = {
   orders: {
     list: (params?: { status?: string; page?: number; limit?: number }) =>
       apiClient.get('/v1/orders/', params),
+    /** Customer orders (current user only). Use for profile / non-business flow. */
+    myOrders: () => apiClient.get<{ success?: boolean; data?: unknown[] }>('/v1/orders/my-orders/'),
     get: (id: string) => apiClient.get(`/v1/orders/${id}/`),
     create: (data: Record<string, unknown>) => apiClient.post('/v1/orders/', data),
     update: (id: string, data: Record<string, unknown>) => apiClient.patch(`/v1/orders/${id}/`, data),
@@ -687,16 +700,25 @@ export const ecommerceApi = {
   },
 
   cart: {
-    get: () => apiClient.get('/v1/carts/'),
+    get: () => apiClient.get('/v1/carts/me/'),
     addItem: (productId: string, quantity: number) =>
       apiClient.post('/v1/carts/items/', { product_id: productId, quantity }),
-    updateItem: (itemId: string, quantity: number) =>
-      apiClient.patch(`/v1/carts/items/${itemId}/`, { quantity }),
-    removeItem: (itemId: string) =>
-      apiClient.delete(`/v1/carts/items/${itemId}/`),
-    clear: () => apiClient.delete('/v1/carts/clear/'),
+    updateItem: (productId: string, quantity: number) =>
+      apiClient.patch(`/v1/carts/items/${productId}/`, { quantity }),
+    removeItem: (productId: string) =>
+      apiClient.delete(`/v1/carts/items/${productId}/`),
+    clear: () => apiClient.delete('/v1/carts/me/'),
     updateShipping: (data: { delivery_method?: string; shipping_address?: Record<string, unknown>; pudo_pickup_point?: Record<string, unknown> | object }) =>
       apiClient.put('/v1/carts/me/shipping/', data),
+    shippingQuote: (data: {
+      shipping_address: Record<string, unknown>
+      items?: Array<{ product_id: string; quantity: number }>
+      gumtree_fulfillment_method?: 'collect' | 'deliver'
+    }) =>
+      apiClient.post<ShippingQuoteData | { success?: boolean; data?: ShippingQuoteData }>('/v1/carts/me/shipping-quote/', data),
+    /** Get calculated totals for guest cart items (supplier_delivery, supplier_delivery_breakdown). No auth required. */
+    quote: (items: Array<{ product_id: string; quantity: number }>) =>
+      apiClient.post('/v1/carts/quote/', { items }),
   },
 
   checkout: {
@@ -710,10 +732,26 @@ export const ecommerceApi = {
     update: (id: string, data: Record<string, unknown>) => apiClient.patch(`/v1/companies/${id}/`, data),
   },
 
-  // Yoco payment integration
+  countries: {
+    list: () => apiClient.get('/v1/countries/'),
+  },
+
+  integrationSettings: {
+    getMe: () => apiClient.get('/v1/integration-settings/me/'),
+    update: (id: string, data: Record<string, unknown>) => apiClient.put(`/v1/integration-settings/${id}/`, data),
+  },
+
+  // Yoco payment integration (backend: POST /v1/yoco/orders/{orderId}/yoco-checkout/)
   payments: {
-    createCheckout: (orderId: string) =>
-      apiClient.post(`/v1/payments/yoco/checkout/`, { order_id: orderId }),
+    createCheckout: (orderId: string, options?: { successUrl?: string; cancelUrl?: string }) => {
+      const base = typeof window !== 'undefined' ? window.location.origin : ''
+      const successUrl = options?.successUrl ?? `${base}/checkout/success`
+      const cancelUrl = options?.cancelUrl ?? `${base}/checkout`
+      return apiClient.post(`/v1/yoco/orders/${orderId}/yoco-checkout/`, {
+        successUrl,
+        cancelUrl,
+      })
+    },
     verifyPayment: (checkoutId: string) =>
       apiClient.get(`/v1/payments/yoco/verify/${checkoutId}/`),
   },
