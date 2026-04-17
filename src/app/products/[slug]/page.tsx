@@ -6,7 +6,7 @@ import { Product } from '@/lib/types'
 import { ArrowLeft, Shield, Info, Phone, FileText, Package, TimerReset, Truck } from 'lucide-react'
 import AddToCartButton from './AddToCartButton'
 import ProductGallery from './ProductGallery'
-import { getMinQuantity, getStockQuantity, isBundleProduct, isTimedProduct } from '@/lib/product-utils'
+import { getMinQuantity, getStockQuantity, isBundleProduct, isGumtreeProduct, isTimedProduct } from '@/lib/product-utils'
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>
@@ -61,6 +61,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     : 0
   const isBundle = isBundleProduct(product)
   const isTimed = isTimedProduct(product)
+  const isGumtree = isGumtreeProduct(product)
   const minQty = getMinQuantity(product)
 
   return (
@@ -127,7 +128,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                   )}
                 </div>
 
-                {product.short_description && (
+                {!isGumtree && product.short_description && (
                   <p className="text-lg text-text-light leading-relaxed italic border-l-4 border-vintage-primary/20 pl-4 py-1 mb-6">
                     {product.short_description}
                   </p>
@@ -199,20 +200,21 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
               {/* Description Tabs/Sections */}
               <div className="space-y-6">
-                {product.description && (
+                {((isGumtree && (product.description || '').trim()) || (!isGumtree && product.description)) && (
                   <div className="space-y-3">
                     <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-text">
                       <Info className="w-4 h-4 text-vintage-primary" />
                       About this item
                     </h3>
                     <p className="text-text-light leading-relaxed whitespace-pre-line">
-                      {product.description}
+                      {isGumtree ? (product.description || '').trim() : product.description}
                     </p>
                   </div>
                 )}
 
-                {/* Specs Grid - Only show if data exists */}
-                {(product.weight || (Number(product.dimension_length) > 0 || Number(product.dimension_width) > 0 || Number(product.dimension_height) > 0)) && (
+                {/* Specs: hide for Gumtree (no reliable weight/dims from listing scrape) */}
+                {!isGumtree &&
+                  (product.weight || (Number(product.dimension_length) > 0 || Number(product.dimension_width) > 0 || Number(product.dimension_height) > 0)) && (
                   <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-100">
                     {product.weight && (
                       <div className="space-y-1">

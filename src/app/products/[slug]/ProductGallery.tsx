@@ -26,7 +26,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     )
   }
 
-  const displayImages = allImages.slice(0, 4)
+  const displayImages = allImages
 
   return (
     <div className="space-y-4">
@@ -48,7 +48,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
         </div>
       </div>
 
-      {/* Thumbnails - 2x2 grid, max 4 square cells */}
+      {/* Thumbnails — wrap (parent caps image count via getProductBundleImages) */}
       {displayImages.length > 1 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {displayImages.map((img, index) => (

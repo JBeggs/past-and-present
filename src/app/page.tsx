@@ -2,47 +2,85 @@ import Link from 'next/link'
 import { serverEcommerceApi, serverNewsApi } from '@/lib/api-server'
 export const dynamic = 'force-dynamic'
 import { Product, Article } from '@/lib/types'
-import { ArrowRight, Sparkles, Clock, Rocket, Package, TimerReset } from 'lucide-react'
+import { ArrowRight, Sparkles, Clock, Rocket, Package, TimerReset, ShoppingBasket, Wrench } from 'lucide-react'
 import ProductCard from '@/components/products/ProductCard'
+import {
+  CATEGORY_SHELF_EXCLUDE_TAGS,
+  CONSUMABLES_CATEGORY_SLUG,
+  HARDWARE_CATEGORY_SLUG,
+  NEW_LISTING_EXCLUDED_CATEGORY_SLUGS,
+  consumablesListingHref,
+  hardwareListingHref,
+} from '@/lib/store-shelves'
 
-function shuffleArray<T>(arr: T[]): T[] {
-  const out = [...arr]
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]]
-  }
-  return out
+/** Stable A–Z by product name for home shelves (case-insensitive). */
+function sortProductsByName(products: Product[]): Product[] {
+  return [...products].sort((a, b) =>
+    (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
+  )
 }
 
 async function getHomeData() {
   try {
-    const [featuredRes, vintageRes, newRes, bundlesRes, timedRes, articlesData, futureArticlesData] = await Promise.all([
+    const [
+      featuredRes,
+      vintageRes,
+      newRes,
+      bundlesRes,
+      timedRes,
+      hardwareRes,
+      consumablesRes,
+      articlesData,
+      futureArticlesData,
+    ] = await Promise.all([
       serverEcommerceApi.products.list({
         is_active: true,
         featured: true,
         page_size: 100,
+        ordering: 'name',
       }),
       serverEcommerceApi.products.list({
         is_active: true,
         exclude_featured: true,
         tags: 'vintage',
         page_size: 20,
-        ordering: 'random',
+        ordering: 'name',
       }),
       serverEcommerceApi.products.list({
         is_active: true,
         exclude_featured: true,
+        exclude_category: NEW_LISTING_EXCLUDED_CATEGORY_SLUGS,
+        exclude_bundles: 'true',
         page_size: 100,
+        ordering: 'name',
       }),
       serverEcommerceApi.products.list({
         is_active: true,
         page_size: 20,
         bundle_only: 'true',
+        ordering: 'name',
       }),
       serverEcommerceApi.products.list({
         is_active: true,
         page_size: 20,
         timed_only: 'true',
+        ordering: 'name',
+      }),
+      serverEcommerceApi.products.list({
+        is_active: true,
+        category: HARDWARE_CATEGORY_SLUG,
+        exclude_tags: CATEGORY_SHELF_EXCLUDE_TAGS,
+        exclude_bundles: 'true',
+        page_size: 20,
+        ordering: 'name',
+      }),
+      serverEcommerceApi.products.list({
+        is_active: true,
+        category: CONSUMABLES_CATEGORY_SLUG,
+        exclude_tags: CATEGORY_SHELF_EXCLUDE_TAGS,
+        exclude_bundles: 'true',
+        page_size: 20,
+        ordering: 'name',
       }),
       serverNewsApi.articles.list({ status: 'published' }),
       serverNewsApi.articles.list({ status: 'published', category__slug: 'future' }),
@@ -53,32 +91,46 @@ async function getHomeData() {
     const newRaw = Array.isArray(newRes) ? newRes : (newRes as any)?.data || (newRes as any)?.results || []
     const bundlesRaw = Array.isArray(bundlesRes) ? bundlesRes : (bundlesRes as any)?.data || (bundlesRes as any)?.results || []
     const timedRaw = Array.isArray(timedRes) ? timedRes : (timedRes as any)?.data || (timedRes as any)?.results || []
+    const hardwareRaw = Array.isArray(hardwareRes)
+      ? hardwareRes
+      : (hardwareRes as any)?.data || (hardwareRes as any)?.results || []
+    const consumablesRaw = Array.isArray(consumablesRes)
+      ? consumablesRes
+      : (consumablesRes as any)?.data || (consumablesRes as any)?.results || []
     const articles = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.data || (articlesData as any)?.results || []
     const futureArticles = Array.isArray(futureArticlesData) ? futureArticlesData : (futureArticlesData as any)?.data || (futureArticlesData as any)?.results || []
 
-    const featuredProducts = featuredRaw
-      .filter((p: Product) => p.status !== 'archived')
-      .map((p: Product) => ({
-        ...p,
-        is_vintage: Array.isArray(p.tags) && p.tags.some((t: string | { name: string }) => (typeof t === 'string' ? t : t.name) === 'vintage'),
-      }))
+    const featuredProducts = sortProductsByName(
+      featuredRaw
+        .filter((p: Product) => p.status !== 'archived')
+        .map((p: Product) => ({
+          ...p,
+          is_vintage: Array.isArray(p.tags) && p.tags.some((t: string | { name: string }) => (typeof t === 'string' ? t : t.name) === 'vintage'),
+        }))
+    )
 
-    const vintageProducts: Product[] = vintageRaw
-      .filter((p: Product) => p.status !== 'archived')
-      .slice(0, 20)
+    const vintageProducts: Product[] = sortProductsByName(
+      vintageRaw.filter((p: Product) => p.status !== 'archived').slice(0, 20)
+    )
 
     const newNonVintage: Product[] = newRaw.filter((p: Product) => {
       if (p.status === 'archived') return false
       const tags = Array.isArray(p.tags) ? p.tags.map((t: string | { name: string }) => typeof t === 'string' ? t : t.name) : []
       return !tags.includes('vintage')
     })
-    const newProducts: Product[] = shuffleArray(newNonVintage).slice(0, 20)
-    const bundlesProducts: Product[] = bundlesRaw
-      .filter((p: Product) => p.status !== 'archived')
-      .slice(0, 20)
-    const timedProducts: Product[] = timedRaw
-      .filter((p: Product) => p.status !== 'archived')
-      .slice(0, 20)
+    const newProducts: Product[] = sortProductsByName(newNonVintage).slice(0, 20)
+    const bundlesProducts: Product[] = sortProductsByName(
+      bundlesRaw.filter((p: Product) => p.status !== 'archived').slice(0, 20)
+    )
+    const timedProducts: Product[] = sortProductsByName(
+      timedRaw.filter((p: Product) => p.status !== 'archived').slice(0, 20)
+    )
+    const hardwareProducts: Product[] = sortProductsByName(
+      hardwareRaw.filter((p: Product) => p.status !== 'archived').slice(0, 20)
+    )
+    const consumablesProducts: Product[] = sortProductsByName(
+      consumablesRaw.filter((p: Product) => p.status !== 'archived').slice(0, 20)
+    )
 
     return {
       featuredProducts,
@@ -86,6 +138,8 @@ async function getHomeData() {
       newProducts,
       bundlesProducts,
       timedProducts,
+      hardwareProducts,
+      consumablesProducts,
       latestArticles: articles.slice(0, 3),
       futureArticles: futureArticles.slice(0, 3),
     }
@@ -97,6 +151,8 @@ async function getHomeData() {
       newProducts: [],
       bundlesProducts: [],
       timedProducts: [],
+      hardwareProducts: [],
+      consumablesProducts: [],
       latestArticles: [],
       futureArticles: [],
     }
@@ -104,7 +160,17 @@ async function getHomeData() {
 }
 
 export default async function HomePage() {
-  const { featuredProducts, vintageProducts, newProducts, bundlesProducts, timedProducts, latestArticles, futureArticles } = await getHomeData()
+  const {
+    featuredProducts,
+    vintageProducts,
+    newProducts,
+    bundlesProducts,
+    timedProducts,
+    hardwareProducts,
+    consumablesProducts,
+    latestArticles,
+    futureArticles,
+  } = await getHomeData()
 
   return (
     <div className="min-h-screen">
@@ -152,63 +218,93 @@ export default async function HomePage() {
             </div>
             
             <div className="product-grid">
-              {featuredProducts.map((product: any) => (
-                <Link key={product.id} href={`/products/${product.slug}`} className={`group relative flex flex-col ${product.is_vintage ? 'product-card-vintage' : 'product-card-modern'}`} prefetch={false}>
-                  <div className="relative overflow-hidden aspect-square bg-gray-50">
-                    {product.image ? (
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                        <Sparkles className="w-12 h-12 text-vintage-primary/30" />
-                      </div>
-                    )}
-                    <span className="tag tag-featured absolute top-2 right-2 shadow-sm">Featured</span>
-                    <span className={`tag absolute top-2 left-2 ${product.is_vintage ? 'tag-vintage' : 'tag-new'}`}>
-                      {product.is_vintage ? 'Vintage' : 'New'}
-                    </span>
-                  </div>
-                  <div className="p-4 flex-1 flex flex-col">
-                    <h3 className="font-semibold text-text group-hover:text-vintage-primary transition-colors line-clamp-1">
-                      {product.name}
-                    </h3>
-                    <p className="text-sm text-text-muted mt-1 line-clamp-2 flex-1">{product.description}</p>
-                    <div className="mt-3 flex items-center justify-between pt-3 border-t border-gray-50">
-                      <span className="price">R{Number(product.price).toFixed(2)}</span>
-                      {product.compare_at_price && Number(product.compare_at_price) > Number(product.price) && (
-                        <span className="price-original">R{Number(product.compare_at_price).toFixed(2)}</span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
+              {featuredProducts.map((product: Product) => (
+                <ProductCard key={product.id} product={product} homeQuickView />
               ))}
             </div>
           </div>
         </section>
       )}
 
-      {/* Bundles Section */}
-      {bundlesProducts.length > 0 && (
-        <section className="py-16 bg-slate-50">
+      {/* Bundles — always on home (after Featured); hardware / consumables / new rails exclude bundles */}
+      <section className="py-16 bg-slate-50">
+        <div className="container-wide">
+          <div className="section-header">
+            <div>
+              <h2 className="section-title">Bundles</h2>
+              <p className="text-text-muted mt-1">Curated product bundles for great value</p>
+            </div>
+            <Link href="/products?bundle_only=true" className="btn btn-secondary">
+              <Package className="w-4 h-4 mr-2" />
+              View All
+            </Link>
+          </div>
+          {bundlesProducts.length > 0 ? (
+            <div className="product-grid">
+              {bundlesProducts.map((product: Product) => (
+                <ProductCard key={product.id} product={product} homeQuickView />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-text-muted">
+              <Package className="w-16 h-16 mx-auto mb-4 opacity-30" />
+              <p className="font-medium text-text">No bundles to show yet</p>
+              <p className="text-sm mt-2 max-w-md mx-auto">
+                When bundle products are published in the CRM, they will appear here. They stay out of New Arrivals,
+                Hardware, and Consumables by design.
+              </p>
+              <Link href="/products?bundle_only=true" className="btn btn-secondary mt-6 inline-flex">
+                Browse bundles
+              </Link>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Hardware: before consumables; same tag exclusions as consumables shelf */}
+      {hardwareProducts.length > 0 && (
+        <section className="py-16 bg-zinc-100">
           <div className="container-wide">
             <div className="section-header">
               <div>
-                <h2 className="section-title">Bundles</h2>
-                <p className="text-text-muted mt-1">Curated product bundles for great value</p>
+                <h2 className="section-title">Hardware</h2>
+                <p className="text-text-muted mt-1">
+                  Tools and hardware in the hardware category (excludes bundles, vintage, new, and other tagged specials)
+                </p>
               </div>
-              <Link href="/products?bundle_only=true" className="btn btn-secondary">
-                <Package className="w-4 h-4 mr-2" />
+              <Link href={hardwareListingHref()} className="btn btn-secondary">
+                <Wrench className="w-4 h-4 mr-2" />
                 View All
               </Link>
             </div>
             <div className="product-grid">
-              {bundlesProducts.map((product: Product) => (
-                <ProductCard key={product.id} product={product} />
+              {hardwareProducts.map((product: Product) => (
+                <ProductCard key={product.id} product={product} homeQuickView />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Consumables: category shelf excluding vintage / new / others tags */}
+      {consumablesProducts.length > 0 && (
+        <section className="py-16 bg-emerald-50/80">
+          <div className="container-wide">
+            <div className="section-header">
+              <div>
+                <h2 className="section-title">Consumables</h2>
+                <p className="text-text-muted mt-1">
+                  Everyday essentials in the consumables category (excludes bundles, vintage, new, and other tagged specials)
+                </p>
+              </div>
+              <Link href={consumablesListingHref()} className="btn btn-secondary">
+                <ShoppingBasket className="w-4 h-4 mr-2" />
+                View All
+              </Link>
+            </div>
+            <div className="product-grid">
+              {consumablesProducts.map((product: Product) => (
+                <ProductCard key={product.id} product={product} homeQuickView />
               ))}
             </div>
           </div>
@@ -231,7 +327,7 @@ export default async function HomePage() {
             </div>
             <div className="product-grid">
               {timedProducts.map((product: Product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard key={product.id} product={product} homeQuickView />
               ))}
             </div>
           </div>
@@ -254,36 +350,7 @@ export default async function HomePage() {
           {vintageProducts.length > 0 ? (
             <div className="product-grid">
               {vintageProducts.map((product: Product) => (
-                <Link key={product.id} href={`/products/${product.slug}`} className="product-card-vintage group" prefetch={false}>
-        <div className="relative overflow-hidden aspect-square bg-vintage-background">
-          {product.image ? (
-            <img
-              src={product.image}
-              alt={product.name}
-              loading="lazy"
-              decoding="async"
-              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-            />
-          ) : (
-            <div className="w-full h-full bg-vintage-primary/10 flex items-center justify-center">
-              <Clock className="w-12 h-12 text-vintage-primary/30" />
-            </div>
-          )}
-          <span className="tag tag-vintage absolute top-2 left-2">Vintage</span>
-        </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-text group-hover:text-vintage-primary transition-colors">
-                      {product.name}
-                    </h3>
-                    <p className="text-sm text-text-muted mt-1 line-clamp-2">{product.description}</p>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="price">R{Number(product.price).toFixed(2)}</span>
-                      {product.compare_at_price && Number(product.compare_at_price) > Number(product.price) && (
-                        <span className="price-original">R{Number(product.compare_at_price).toFixed(2)}</span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
+                <ProductCard key={product.id} product={product} homeQuickView />
               ))}
             </div>
           ) : (
@@ -311,36 +378,7 @@ export default async function HomePage() {
           {newProducts.length > 0 ? (
             <div className="product-grid">
               {newProducts.map((product: Product) => (
-                <Link key={product.id} href={`/products/${product.slug}`} className="product-card-modern group" prefetch={false}>
-        <div className="relative overflow-hidden aspect-square bg-modern-background">
-          {product.image ? (
-            <img
-              src={product.image}
-              alt={product.name}
-              loading="lazy"
-              decoding="async"
-              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-            />
-          ) : (
-            <div className="w-full h-full bg-modern-primary/10 flex items-center justify-center">
-              <Sparkles className="w-12 h-12 text-modern-primary/30" />
-            </div>
-          )}
-          <span className="tag tag-new absolute top-2 left-2">New</span>
-        </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-text group-hover:text-modern-primary transition-colors">
-                      {product.name}
-                    </h3>
-                    <p className="text-sm text-text-muted mt-1 line-clamp-2">{product.description}</p>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className="price text-modern-primary">R{Number(product.price).toFixed(2)}</span>
-                      {product.compare_at_price && Number(product.compare_at_price) > Number(product.price) && (
-                        <span className="price-original">R{Number(product.compare_at_price).toFixed(2)}</span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
+                <ProductCard key={product.id} product={product} homeQuickView />
               ))}
             </div>
           ) : (

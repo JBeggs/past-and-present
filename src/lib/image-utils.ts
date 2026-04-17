@@ -67,11 +67,14 @@ type ProductLike = {
   }>
 } | null | undefined
 
+/** Max URLs from parent `image` + `images` for bundles (matches what sync uploads to the API). */
+export const MAX_BUNDLE_PRODUCT_IMAGES = 32
+
 /**
  * Get all image URLs for a product for preview grids (product card, gallery, cart, checkout).
  * For bundles: use the bundle product's own image + images only (parent media). Do not use child bundle_product_details.
  * For non-bundles: product.image + product.images
- * All URLs are resolved to absolute form. Deduped. Capped at 4 images. Returns at least default placeholder if empty.
+ * All URLs are resolved to absolute form. Deduped. Capped at MAX_BUNDLE_PRODUCT_IMAGES.
  */
 export function getProductBundleImages(product: ProductLike): string[] {
   if (!product) return [DEFAULT_PLACEHOLDER]
@@ -96,5 +99,5 @@ export function getProductBundleImages(product: ProductLike): string[] {
   })
 
   const out = result.length > 0 ? result : [DEFAULT_PLACEHOLDER]
-  return out.slice(0, 4)
+  return out.slice(0, MAX_BUNDLE_PRODUCT_IMAGES)
 }

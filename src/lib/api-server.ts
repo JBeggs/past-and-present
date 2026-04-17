@@ -176,6 +176,7 @@ export const serverEcommerceApi = {
   products: {
     list: (params?: {
       category?: string
+      exclude_category?: string
       search?: string
       page?: number
       page_size?: number
@@ -189,6 +190,7 @@ export const serverEcommerceApi = {
       timed_only?: boolean | string
       exclude_bundles?: boolean | string
       exclude_timed?: boolean | string
+      exclude_tags?: string
       supplier_slug?: string
       delivery_group?: string
     }) =>

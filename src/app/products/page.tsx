@@ -8,6 +8,11 @@ import ProductsSortSelect from '@/components/products/ProductsSortSelect'
 import AdminActions from '@/components/products/AdminActions'
 import ProductCard from '@/components/products/ProductCard'
 import PaginationNav from '@/components/ui/PaginationNav'
+import {
+  CONSUMABLES_CATEGORY_SLUG,
+  HARDWARE_CATEGORY_SLUG,
+  NEW_LISTING_EXCLUDED_CATEGORY_SLUGS,
+} from '@/lib/store-shelves'
 
 interface ProductsPageProps {
   searchParams: Promise<{
@@ -19,6 +24,8 @@ interface ProductsPageProps {
     sort?: string
     bundle_only?: string
     timed_only?: string
+    exclude_tags?: string
+    exclude_bundles?: string
     supplier_slug?: string
     delivery_group?: string
   }>
@@ -33,6 +40,8 @@ async function getProducts(params: {
   sort?: string
   bundle_only?: string
   timed_only?: string
+  exclude_tags?: string
+  exclude_bundles?: string
   supplier_slug?: string
   delivery_group?: string
 }) {
@@ -48,6 +57,16 @@ async function getProducts(params: {
       ordering: params.sort || undefined,
       bundle_only: params.bundle_only === 'true' ? 'true' : undefined,
       timed_only: params.timed_only === 'true' ? 'true' : undefined,
+      exclude_tags: params.exclude_tags || undefined,
+      exclude_bundles:
+        params.category === HARDWARE_CATEGORY_SLUG ||
+        params.category === CONSUMABLES_CATEGORY_SLUG ||
+        params.condition === 'new' ||
+        params.exclude_bundles === 'true'
+          ? 'true'
+          : undefined,
+      exclude_category:
+        params.condition === 'new' ? NEW_LISTING_EXCLUDED_CATEGORY_SLUGS : undefined,
       supplier_slug: params.supplier_slug || undefined,
     })
 
@@ -85,6 +104,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const isBundles = params.bundle_only === 'true'
   const isTimed = params.timed_only === 'true'
   const isSupplierGroup = !!params.supplier_slug
+  const isHardwareCategory = params.category === HARDWARE_CATEGORY_SLUG
+  const isConsumablesCategory = params.category === CONSUMABLES_CATEGORY_SLUG
 
   const searchParamsForNav: Record<string, string> = {}
   if (params.condition) searchParamsForNav.condition = params.condition
@@ -94,6 +115,15 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   if (params.sort) searchParamsForNav.sort = params.sort
   if (params.bundle_only) searchParamsForNav.bundle_only = params.bundle_only
   if (params.timed_only) searchParamsForNav.timed_only = params.timed_only
+  if (params.exclude_tags) searchParamsForNav.exclude_tags = params.exclude_tags
+  if (
+    params.category === HARDWARE_CATEGORY_SLUG ||
+    params.category === CONSUMABLES_CATEGORY_SLUG ||
+    params.condition === 'new' ||
+    params.exclude_bundles === 'true'
+  ) {
+    searchParamsForNav.exclude_bundles = 'true'
+  }
   if (params.supplier_slug) searchParamsForNav.supplier_slug = params.supplier_slug
   if (params.delivery_group) searchParamsForNav.delivery_group = params.delivery_group
 
@@ -103,13 +133,17 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       ? 'Bundles'
       : isTimed
         ? 'Timed Products'
-        : isVintage
-          ? 'Vintage Treasures'
-          : isNew
-            ? 'New Arrivals'
-            : isFeatured
-              ? 'Featured Products'
-              : 'All Products'
+        : isHardwareCategory
+          ? 'Hardware'
+          : isConsumablesCategory
+            ? 'Consumables'
+            : isVintage
+              ? 'Vintage Treasures'
+              : isNew
+                ? 'New Arrivals'
+                : isFeatured
+                  ? 'Featured Products'
+                  : 'All Products'
 
   const subtitle = isSupplierGroup
     ? 'Products grouped together by supplier delivery rules.'
@@ -117,13 +151,25 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       ? 'Curated bundles with bundled buying rules.'
       : isTimed
         ? 'Limited-time products with expiry countdowns.'
-        : isVintage
-          ? 'Unique second-hand finds with character and history'
-          : isNew
-            ? 'Fresh finds and modern essentials'
-            : isFeatured
-              ? 'Hand-picked favorites and standout items'
-              : 'Browse our complete collection of products'
+        : isHardwareCategory
+          ? params.exclude_tags
+            ? 'Hardware category (no bundles). Products with these tags are hidden: ' +
+              params.exclude_tags.replace(/,/g, ', ') +
+              '.'
+            : 'Products in the hardware category. Bundles are excluded.'
+          : isConsumablesCategory
+            ? params.exclude_tags
+              ? 'Consumables category (no bundles). Products with these tags are hidden: ' +
+                params.exclude_tags.replace(/,/g, ', ') +
+                '.'
+              : 'Products in the consumables category. Bundles are excluded.'
+            : isVintage
+              ? 'Unique second-hand finds with character and history'
+              : isNew
+                ? 'Fresh finds and modern essentials. Bundles, hardware, and consumables use their own pages.'
+                : isFeatured
+                  ? 'Hand-picked favorites and standout items'
+                  : 'Browse our complete collection of products'
 
   const makeHref = (overrides: Record<string, string | null>) => {
     const query = new URLSearchParams()
@@ -135,6 +181,14 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       sort: params.sort || null,
       bundle_only: params.bundle_only || null,
       timed_only: params.timed_only || null,
+      exclude_tags: params.exclude_tags || null,
+      exclude_bundles:
+        params.category === HARDWARE_CATEGORY_SLUG ||
+        params.category === CONSUMABLES_CATEGORY_SLUG ||
+        params.condition === 'new' ||
+        params.exclude_bundles === 'true'
+          ? 'true'
+          : null,
       supplier_slug: params.supplier_slug || null,
       delivery_group: params.delivery_group || null,
     }
@@ -151,7 +205,27 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       <AdminActions />
 
       {/* Page Header */}
-      <section className={`py-12 ${isBundles ? 'bg-blue-700' : isTimed ? 'bg-amber-600' : isVintage ? 'bg-vintage-primary' : isNew ? 'bg-modern-primary' : isFeatured ? 'bg-purple-600' : isSupplierGroup ? 'bg-slate-700' : 'bg-gradient-to-r from-vintage-primary to-modern-primary'} text-white`}>
+      <section
+        className={`py-12 ${
+          isBundles
+            ? 'bg-blue-700'
+            : isTimed
+              ? 'bg-amber-600'
+              : isHardwareCategory
+                ? 'bg-zinc-700'
+                : isConsumablesCategory
+                  ? 'bg-emerald-700'
+                  : isVintage
+                  ? 'bg-vintage-primary'
+                  : isNew
+                    ? 'bg-modern-primary'
+                    : isFeatured
+                      ? 'bg-purple-600'
+                      : isSupplierGroup
+                        ? 'bg-slate-700'
+                        : 'bg-gradient-to-r from-vintage-primary to-modern-primary'
+        } text-white`}
+      >
         <div className="container-wide">
           <h1 className="text-3xl md:text-4xl font-bold font-playfair mb-2">
             {title}
@@ -179,6 +253,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 {params.sort && <input type="hidden" name="sort" value={params.sort} />}
                 {params.bundle_only && <input type="hidden" name="bundle_only" value={params.bundle_only} />}
                 {params.timed_only && <input type="hidden" name="timed_only" value={params.timed_only} />}
+                {params.exclude_tags && <input type="hidden" name="exclude_tags" value={params.exclude_tags} />}
+                {(params.category === HARDWARE_CATEGORY_SLUG ||
+                  params.category === CONSUMABLES_CATEGORY_SLUG ||
+                  params.condition === 'new' ||
+                  params.exclude_bundles === 'true') && (
+                  <input type="hidden" name="exclude_bundles" value="true" />
+                )}
                 {params.supplier_slug && <input type="hidden" name="supplier_slug" value={params.supplier_slug} />}
                 {params.delivery_group && <input type="hidden" name="delivery_group" value={params.delivery_group} />}
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
@@ -210,6 +291,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                     featured: null,
                     bundle_only: null,
                     timed_only: null,
+                    exclude_tags: null,
+                    exclude_bundles: null,
                     supplier_slug: null,
                     delivery_group: null,
                   })}
@@ -220,7 +303,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   All
                 </Link>
                 <Link
-                  href={makeHref({ condition: 'vintage', bundle_only: null, timed_only: null, supplier_slug: null, delivery_group: null })}
+                  href={makeHref({
+                    condition: 'vintage',
+                    category: null,
+                    exclude_tags: null,
+                    exclude_bundles: null,
+                    bundle_only: null,
+                    timed_only: null,
+                    supplier_slug: null,
+                    delivery_group: null,
+                  })}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
                     isVintage ? 'bg-vintage-primary text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
                   }`}
@@ -229,7 +321,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   Vintage
                 </Link>
                 <Link
-                  href={makeHref({ condition: 'new', bundle_only: null, timed_only: null, supplier_slug: null, delivery_group: null })}
+                  href={makeHref({
+                    condition: 'new',
+                    category: null,
+                    exclude_tags: null,
+                    exclude_bundles: null,
+                    bundle_only: null,
+                    timed_only: null,
+                    supplier_slug: null,
+                    delivery_group: null,
+                  })}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
                     isNew ? 'bg-modern-primary text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
                   }`}
@@ -238,7 +339,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   New
                 </Link>
                 <Link
-                  href={makeHref({ bundle_only: 'true', timed_only: null, condition: null, supplier_slug: null, delivery_group: null })}
+                  href={makeHref({
+                    bundle_only: 'true',
+                    timed_only: null,
+                    condition: null,
+                    category: null,
+                    exclude_tags: null,
+                    exclude_bundles: null,
+                    supplier_slug: null,
+                    delivery_group: null,
+                  })}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
                     isBundles ? 'bg-blue-700 text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
                   }`}
@@ -247,7 +357,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   Bundles
                 </Link>
                 <Link
-                  href={makeHref({ timed_only: 'true', bundle_only: null, condition: null, supplier_slug: null, delivery_group: null })}
+                  href={makeHref({
+                    timed_only: 'true',
+                    bundle_only: null,
+                    condition: null,
+                    category: null,
+                    exclude_tags: null,
+                    exclude_bundles: null,
+                    supplier_slug: null,
+                    delivery_group: null,
+                  })}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
                     isTimed ? 'bg-amber-600 text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
                   }`}
@@ -256,9 +375,19 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   Timed
                 </Link>
                 <Link
-                  href={params.featured === 'true'
-                    ? makeHref({ featured: null })
-                    : makeHref({ featured: 'true', bundle_only: null, timed_only: null, supplier_slug: null, delivery_group: null })
+                  href={
+                    params.featured === 'true'
+                      ? makeHref({ featured: null })
+                      : makeHref({
+                          featured: 'true',
+                          bundle_only: null,
+                          timed_only: null,
+                          category: null,
+                          exclude_tags: null,
+                          exclude_bundles: null,
+                          supplier_slug: null,
+                          delivery_group: null,
+                        })
                   }
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
                     isFeatured ? 'bg-purple-600 text-white' : 'bg-gray-100 text-text hover:bg-gray-200'

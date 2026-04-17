@@ -1,6 +1,6 @@
 import type { Cart, CartItem } from './types'
 import { formatCountdown, getMinQuantity, getStockQuantity, isBundleProduct } from './product-utils'
-import { ensureAbsoluteImageUrl } from './image-utils'
+import { ensureAbsoluteImageUrl, MAX_BUNDLE_PRODUCT_IMAGES } from './image-utils'
 
 export const COURIER_GUY_SLUGS = new Set(['temu', 'aliexpress', 'ubuy', 'gumtree'])
 export const OTHER_GROUP = '__other__'
@@ -25,7 +25,7 @@ export function getCartItemImages(item: CartItem): string[] {
   const raw = (item.is_bundle && parsedBundleImages.length > 0)
     ? parsedBundleImages
     : [main, ...parsedBundleImages].filter(Boolean)
-  return raw.map(ensureAbsoluteImageUrl).slice(0, 4)
+  return raw.map(ensureAbsoluteImageUrl).slice(0, MAX_BUNDLE_PRODUCT_IMAGES)
 }
 
 export function isTimedCartItem(item: CartItem): boolean {

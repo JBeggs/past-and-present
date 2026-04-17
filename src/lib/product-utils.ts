@@ -2,6 +2,15 @@ import type { CartItem, Product } from './types'
 
 type ProductLike = Product | CartItem | Record<string, any>
 
+/** Listings synced from Gumtree (supplier or source URL). */
+export function isGumtreeProduct(product: ProductLike | null | undefined): boolean {
+  if (!product) return false
+  const slug = String((product as any).supplier_slug || '').toLowerCase()
+  if (slug === 'gumtree') return true
+  const src = String((product as any).source_url || (product as any).canonical_url || '').toLowerCase()
+  return src.includes('gumtree.co.za')
+}
+
 export function isBundleProduct(product: ProductLike | null | undefined): boolean {
   const ids = (product as any)?.bundle_product_ids
   const itemFlag = (product as any)?.is_bundle
