@@ -6,6 +6,7 @@ import { Product } from '@/lib/types'
 import { ArrowLeft, Shield, Info, Phone, FileText, Package, TimerReset, Truck } from 'lucide-react'
 import AddToCartButton from './AddToCartButton'
 import ProductGallery from './ProductGallery'
+import WhatsAppShareButton from './WhatsAppShareButton'
 import { getMinQuantity, getStockQuantity, isBundleProduct, isGumtreeProduct, isTimedProduct } from '@/lib/product-utils'
 
 interface ProductPageProps {
@@ -177,6 +178,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 </div>
 
                 <AddToCartButton product={product} />
+                <WhatsAppShareButton product={product} />
 
                 <div className="grid gap-3 text-sm text-text-muted">
                   {product.delivery_time && (
