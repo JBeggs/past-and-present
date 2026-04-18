@@ -17,9 +17,16 @@ export default function WhatsAppShareButton({
     const desc = (product.short_description || product.description || '')
       .replace(/\s+/g, ' ')
       .trim()
+    const price = Number(product.price)
+    const compare = product.compare_at_price != null ? Number(product.compare_at_price) : null
+    const priceLine =
+      compare != null && compare > price
+        ? `R${price.toFixed(2)} (was R${compare.toFixed(2)})`
+        : `R${price.toFixed(2)}`
     const msg = [
       `Discover ${product.name}${companyName ? ` from ${companyName}` : ''}`,
       desc,
+      priceLine,
       url,
       companyName ? `Love ${companyName}` : '',
     ]
