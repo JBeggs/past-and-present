@@ -30,6 +30,47 @@ function backendOriginForMedia(): string {
   return apiBase.replace(/\/api\/?$/, '').replace(/\/$/, '') || 'https://3pillars.pythonanywhere.com'
 }
 
+function mediaApiHostname(): string {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_API_URL || 'https://3pillars.pythonanywhere.com/api').hostname
+  } catch {
+    return '3pillars.pythonanywhere.com'
+  }
+}
+
+/**
+ * WhatsApp/link previews often work more reliably when og:image is served from the
+ * same host as the page. Proxy API /media/* through /api/og-proxy on the storefront.
+ */
+function sameOriginOgImageUrl(directImageUrl: string): string {
+  const site = publicSiteOrigin()
+  if (!site) return directImageUrl
+
+  let imageUrl: URL
+  try {
+    imageUrl = new URL(directImageUrl)
+  } catch {
+    return directImageUrl
+  }
+
+  let storefront: URL
+  try {
+    storefront = new URL(site)
+  } catch {
+    return directImageUrl
+  }
+
+  if (imageUrl.hostname === storefront.hostname) {
+    return directImageUrl
+  }
+  if (imageUrl.hostname !== mediaApiHostname() || !imageUrl.pathname.startsWith('/media/')) {
+    return directImageUrl
+  }
+
+  const base = site.replace(/\/$/, '')
+  return `${base}/api/og-proxy?src=${encodeURIComponent(imageUrl.toString())}`
+}
+
 /** Public site origin (https, no trailing slash). Used for absolute OG URLs and optional og:url. */
 export function publicSiteOrigin(): string | null {
   let raw = (process.env.NEXT_PUBLIC_SITE_URL || '').trim().replace(/\/$/, '')
@@ -91,12 +132,12 @@ function absolutizeProductImageForOg(url: string): string {
 export function buildProductOgImage(product: Product): string {
   const flat = typeof product.image === 'string' ? product.image.trim() : ''
   if (flat && !isGalleryPlaceholderUrl(flat)) {
-    return absolutizeProductImageForOg(flat)
+    return sameOriginOgImageUrl(absolutizeProductImageForOg(flat))
   }
 
   for (const cand of getProductBundleImages(product)) {
     if (!cand || isGalleryPlaceholderUrl(cand)) continue
-    return absolutizeProductImageForOg(cand)
+    return sameOriginOgImageUrl(absolutizeProductImageForOg(cand))
   }
 
   return fallbackOgImageUrl()
