@@ -238,12 +238,12 @@ export default async function AboutPage() {
                       : 'product-card-modern'
                   }`}
                 >
-                  <div className="relative overflow-hidden aspect-square">
+                  <div className="relative aspect-square overflow-hidden bg-gray-50">
                     {product.image ? (
                       <img
                         src={product.image}
                         alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-[1.02]"
                       />
                     ) : (
                       <div className="w-full h-full bg-gray-100 flex items-center justify-center">
