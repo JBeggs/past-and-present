@@ -1,7 +1,8 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import PageHero from '@/components/hero/PageHero'
 import { serverEcommerceApi } from '@/lib/api-server'
-export const dynamic = 'force-dynamic'
+import { getShareImage } from '@/lib/share-image'
 import { Product } from '@/lib/types'
 import {
   Clock,
@@ -26,6 +27,16 @@ import {
   HARDWARE_CATEGORY_SLUG,
   NEW_LISTING_EXCLUDED_CATEGORY_SLUGS,
 } from '@/lib/store-shelves'
+
+export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const image = await getShareImage('products')
+  return {
+    openGraph: { images: [{ url: image }] },
+    twitter: { card: 'summary_large_image', images: [image] },
+  }
+}
 
 interface ProductsPageProps {
   searchParams: Promise<{

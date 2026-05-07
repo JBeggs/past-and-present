@@ -80,16 +80,41 @@ export async function generateMetadata(): Promise<Metadata> {
         title: `${siteName} | ${tagline}`,
         description,
         type: 'website',
+        siteName,
+        images: [{ url: '/favicon.png', width: 512, height: 512, alt: siteName }],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: `${siteName} | ${tagline}`,
+        description,
+        images: ['/favicon.png'],
       },
     }
   } catch {
     const metadataBase = resolveMetadataBase()
+    const siteName = 'Past and Present'
+    const tagline = 'Vintage & Modern Treasures'
+    const description =
+      'Discover unique vintage treasures and modern finds. Quality second-hand items and new products, all in one place.'
     return {
       ...(metadataBase ? { metadataBase } : {}),
-      title: 'Past and Present | Vintage & Modern Treasures',
-      description: 'Discover unique vintage treasures and modern finds. Quality second-hand items and new products, all in one place.',
+      title: `${siteName} | ${tagline}`,
+      description,
       icons: {
         icon: '/favicon.png',
+      },
+      openGraph: {
+        title: `${siteName} | ${tagline}`,
+        description,
+        type: 'website',
+        siteName,
+        images: [{ url: '/favicon.png', width: 512, height: 512, alt: siteName }],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: `${siteName} | ${tagline}`,
+        description,
+        images: ['/favicon.png'],
       },
     }
   }

@@ -1,6 +1,7 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { serverEcommerceApi, serverNewsApi } from '@/lib/api-server'
-export const dynamic = 'force-dynamic'
+import { getShareImage } from '@/lib/share-image'
 import { Product, Article } from '@/lib/types'
 import { ArrowRight, Sparkles, Clock, Rocket, Package, TimerReset, ShoppingBasket, Wrench } from 'lucide-react'
 import ProductCard from '@/components/products/ProductCard'
@@ -13,6 +14,16 @@ import {
   consumablesListingHref,
   hardwareListingHref,
 } from '@/lib/store-shelves'
+
+export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const image = await getShareImage('home')
+  return {
+    openGraph: { images: [{ url: image }] },
+    twitter: { card: 'summary_large_image', images: [image] },
+  }
+}
 
 /** Stable A–Z by product name for home shelves (case-insensitive). */
 function sortProductsByName(products: Product[]): Product[] {

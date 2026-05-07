@@ -1,10 +1,20 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import PageHero from '@/components/hero/PageHero'
+import { getShareImage } from '@/lib/share-image'
 import { serverEcommerceApi, serverNewsApi } from '@/lib/api-server'
 import AboutPageClient, { AnimatedSection, AnimatedCard } from '@/components/about/AboutPageClient'
 import { Clock, Sparkles, Heart, Leaf, TrendingUp, Zap, Link2, Package } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const image = await getShareImage('about')
+  return {
+    openGraph: { images: [{ url: image }] },
+    twitter: { card: 'summary_large_image', images: [image] },
+  }
+}
 
 async function getAboutContent() {
   try {

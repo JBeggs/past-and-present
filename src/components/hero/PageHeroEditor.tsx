@@ -6,6 +6,7 @@ import { ExternalLink, ImageIcon, Loader2, Upload, Trash2 } from 'lucide-react'
 import { newsApi } from '@/lib/api'
 import type { HeroablePage } from '@/lib/hero-pages'
 import type { PageHero } from '@/lib/page-hero'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 type Props = {
   page: HeroablePage
@@ -43,6 +44,7 @@ export default function PageHeroEditor({
   const [enabled, setEnabled] = useState(hero?.enabled ?? true)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const currentImageUrl = previewUrl ?? hero?.imageUrl ?? null
@@ -124,9 +126,14 @@ export default function PageHeroEditor({
     }
   }
 
+  const requestDelete = () => {
+    if (!hero?.id || deleting) return
+    setConfirmRemoveOpen(true)
+  }
+
   const handleDelete = async () => {
     if (!hero?.id || deleting) return
-    if (!window.confirm(`Remove the uploaded hero for ${page.label}?`)) return
+    setConfirmRemoveOpen(false)
     setDeleting(true)
     try {
       await newsApi.pageHeroes.delete(hero.id)
@@ -229,7 +236,7 @@ export default function PageHeroEditor({
               {hasExisting && !file && (
                 <button
                   type="button"
-                  onClick={handleDelete}
+                  onClick={requestDelete}
                   disabled={deleting}
                   className="inline-flex items-center gap-1 text-xs text-vintage-accent hover:underline disabled:opacity-50"
                 >
@@ -300,6 +307,17 @@ export default function PageHeroEditor({
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmRemoveOpen}
+        title="Remove hero"
+        message={`Remove the uploaded hero for ${page.label}?`}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        danger
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmRemoveOpen(false)}
+      />
     </section>
   )
 }

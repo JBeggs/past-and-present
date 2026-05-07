@@ -1,8 +1,18 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
+import { getShareImage } from '@/lib/share-image'
 import PageHero from '@/components/hero/PageHero'
 import { serverNewsApi } from '@/lib/api-server'
 import { Article } from '@/lib/types'
 import { Calendar, User, ArrowRight, Search } from 'lucide-react'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const image = await getShareImage('articles')
+  return {
+    openGraph: { images: [{ url: image }] },
+    twitter: { card: 'summary_large_image', images: [image] },
+  }
+}
 
 interface ArticlesPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>

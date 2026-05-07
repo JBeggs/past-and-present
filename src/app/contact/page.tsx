@@ -1,6 +1,16 @@
+import type { Metadata } from 'next'
 import PageHero from '@/components/hero/PageHero'
+import { getShareImage } from '@/lib/share-image'
 import { serverNewsApi } from '@/lib/api-server'
 import ContactForm from './ContactForm'
+
+export async function generateMetadata(): Promise<Metadata> {
+  const image = await getShareImage('contact')
+  return {
+    openGraph: { images: [{ url: image }] },
+    twitter: { card: 'summary_large_image', images: [image] },
+  }
+}
 
 async function getContactData() {
   try {
