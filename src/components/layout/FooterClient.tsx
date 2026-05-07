@@ -6,6 +6,7 @@ import { Facebook, Twitter, Instagram, Mail, Phone, MapPin } from 'lucide-react'
 interface FooterClientProps {
   siteName: string
   description: string
+  logoUrl?: string | null
   contact: {
     address: string
     phone: string
@@ -19,7 +20,9 @@ interface FooterClientProps {
   menuItems: Array<{ title: string; href: string }>
 }
 
-export default function FooterClient({ siteName, description, contact, social, menuItems }: FooterClientProps) {
+export default function FooterClient({ siteName, description, logoUrl, contact, social, menuItems }: FooterClientProps) {
+  const useLogoImage = !!logoUrl
+
   return (
     <footer className="bg-vintage-primary text-white">
       <div className="container-wide">
@@ -28,9 +31,18 @@ export default function FooterClient({ siteName, description, contact, social, m
           {/* About Section */}
           <div>
             <div className="flex items-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-modern-accent to-vintage-accent rounded-lg flex items-center justify-center">
-                <span className="text-white font-playfair font-bold text-lg">P&P</span>
-              </div>
+              {useLogoImage ? (
+                <img
+                  src={logoUrl as string}
+                  alt=""
+                  className="w-10 h-10 rounded-lg object-contain bg-white/10"
+                  aria-hidden
+                />
+              ) : (
+                <div className="w-10 h-10 bg-gradient-to-br from-modern-accent to-vintage-accent rounded-lg flex items-center justify-center">
+                  <span className="text-white font-playfair font-bold text-lg">P&P</span>
+                </div>
+              )}
               <span className="font-bold font-playfair text-lg">{siteName}</span>
             </div>
             <p className="text-green-100 mb-4">{description}</p>

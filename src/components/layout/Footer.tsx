@@ -27,6 +27,7 @@ async function getFooterData() {
     return {
       siteName: settingsMap.site_name || 'Past and Present',
       description: settingsMap.site_description || 'Discover unique vintage treasures and modern finds. Quality second-hand items and new products, all in one place.',
+      logo: settingsMap.site_logo || null,
       contact: {
         address: settingsMap.contact_address || '',
         phone: settingsMap.contact_phone || '',
@@ -44,6 +45,7 @@ async function getFooterData() {
     return {
       siteName: 'Past and Present',
       description: 'Discover unique vintage treasures and modern finds. Quality second-hand items and new products, all in one place.',
+      logo: null as string | null,
       contact: {
         address: '',
         phone: '',
@@ -65,9 +67,16 @@ async function getFooterData() {
 }
 
 export async function Footer() {
-  const { siteName, description, contact, social, menuItems } = await getFooterData()
-  
+  const { siteName, description, contact, social, menuItems, logo } = await getFooterData()
+
   return (
-    <FooterClient siteName={siteName} description={description} contact={contact} social={social} menuItems={menuItems} />
+    <FooterClient
+      siteName={siteName}
+      description={description}
+      contact={contact}
+      social={social}
+      menuItems={menuItems}
+      logoUrl={logo || null}
+    />
   )
 }

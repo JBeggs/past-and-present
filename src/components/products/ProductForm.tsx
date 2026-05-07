@@ -94,7 +94,7 @@ export default function ProductForm({ product, onClose, onSuccess, inline = fals
   const fetchCategories = async () => {
     try {
       setFetchingCategories(true)
-      const data = await ecommerceApi.categories.list()
+      const data = await ecommerceApi.categories.listForAdmin()
       setCategories(Array.isArray(data) ? data : (data as any)?.data || (data as any)?.results || [])
     } catch (error) {
       console.error('Error fetching categories:', error)

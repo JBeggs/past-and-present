@@ -26,7 +26,7 @@ export default function CategoryManager({ onClose }: CategoryManagerProps) {
   const fetchCategories = async () => {
     try {
       setLoading(true)
-      const data = await ecommerceApi.categories.list()
+      const data = await ecommerceApi.categories.listForAdmin()
       setCategories(Array.isArray(data) ? data : (data as any)?.data || (data as any)?.results || [])
     } catch (error) {
       console.error('Error fetching categories:', error)
