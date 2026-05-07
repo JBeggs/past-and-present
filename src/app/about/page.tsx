@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import PageHero from '@/components/hero/PageHero'
 import { serverEcommerceApi, serverNewsApi } from '@/lib/api-server'
 import AboutPageClient, { AnimatedSection, AnimatedCard } from '@/components/about/AboutPageClient'
 import { Clock, Sparkles, Heart, Leaf, TrendingUp, Zap, Link2, Package } from 'lucide-react'
@@ -47,6 +48,7 @@ export default async function AboutPage() {
 
   return (
     <div className="min-h-screen bg-vintage-background">
+      <PageHero pageSlug="about" />
       {/* Hero */}
       <section className="py-16 md:py-20 bg-gradient-to-br from-vintage-primary to-vintage-primary-dark text-white">
         <div className="container-wide">

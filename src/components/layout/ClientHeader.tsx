@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ShoppingCart, User, LogOut, Package } from 'lucide-react'
+import { ShoppingCart, User, LogOut, Package, Boxes, ImageIcon } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCartSafe } from '@/contexts/CartContext'
 import { useMounted } from '@/hooks/useMounted'
@@ -63,14 +63,32 @@ export default function ClientHeader() {
       {user ? (
         <div className="flex items-center space-x-3" data-cy="header-user">
           {isAdmin && (
-            <Link
-              href="/admin/orders"
-              className="p-2 text-text hover:text-vintage-primary transition-colors"
-              aria-label="View orders"
-              title="Orders"
-            >
-              <Package className="w-5 h-5" />
-            </Link>
+            <>
+              <Link
+                href="/admin/inventory"
+                title="Inventory"
+                aria-label="Inventory"
+                className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center p-2 text-text hover:text-vintage-primary transition-colors"
+              >
+                <Boxes className="w-5 h-5" />
+              </Link>
+              <Link
+                href="/admin/orders"
+                title="Orders"
+                aria-label="Orders"
+                className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center p-2 text-text hover:text-vintage-primary transition-colors"
+              >
+                <Package className="w-5 h-5" />
+              </Link>
+              <Link
+                href="/admin/branding"
+                title="Branding & Heroes"
+                aria-label="Branding & Heroes"
+                className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center p-2 text-text hover:text-vintage-primary transition-colors"
+              >
+                <ImageIcon className="w-5 h-5" />
+              </Link>
+            </>
           )}
           <Link
             href="/profile"

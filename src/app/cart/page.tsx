@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ecommerceApi } from '@/lib/api'
 import { Cart, CartItem, SupplierDeliveryBreakdownItem } from '@/lib/types'
@@ -65,6 +65,9 @@ function getDeliveryGroupUrl(slug: string): string {
   return `/products?delivery_group=${encodeURIComponent(token)}&supplier_slug=${encodeURIComponent(slug)}`
 }
 
+/** Stable fallback when cart or items are absent (avoids new [] each render). */
+const EMPTY_CART_ITEMS: CartItem[] = []
+
 function ItemImage({ item }: { item: CartItem }) {
   const images = getCartItemImages(item)
   const isBundle = item.is_bundle === true
@@ -121,7 +124,7 @@ export default function CartPage() {
   const { user } = useAuth()
   const { cart: contextCart, refreshCart, updateItemQuantity, removeItemFromCart, clearCart } = useCart()
 
-  const fetchCart = async () => {
+  const fetchCart = useCallback(async () => {
     if (!user) {
       await refreshCart()
       setLoading(false)
@@ -166,11 +169,11 @@ export default function CartPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, refreshCart])
 
   useEffect(() => {
     fetchCart()
-  }, [user])
+  }, [fetchCart])
 
   useEffect(() => {
     if (!user) {
@@ -209,6 +212,7 @@ export default function CartPage() {
       }
     }
     fetchQuote()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- quote when cart identity/length changes only
   }, [user, cart?.id, cart?.items?.length])
 
   useEffect(() => {
@@ -216,9 +220,9 @@ export default function CartPage() {
     return () => window.clearInterval(interval)
   }, [])
 
-  const items = cart?.items || []
+  const items = cart?.items ?? EMPTY_CART_ITEMS
 
-  const removeItem = async (productId: string, silent = false) => {
+  const removeItem = useCallback(async (productId: string, silent = false) => {
     setUpdating(productId)
     try {
       await removeItemFromCart(productId)
@@ -229,7 +233,7 @@ export default function CartPage() {
     } finally {
       setUpdating(null)
     }
-  }
+  }, [removeItemFromCart, showSuccess, showError, fetchCart])
 
   const handleClearCart = () => {
     setClearConfirmOpen(true)
@@ -262,7 +266,7 @@ export default function CartPage() {
       timeouts.push(timeout)
     })
     return () => timeouts.forEach((timeout) => window.clearTimeout(timeout))
-  }, [items])
+  }, [items, removeItem])
 
   const updateQuantity = async (productId: string, newQuantity: number) => {
     const item = items.find((entry) => getCartItemKey(entry) === productId)

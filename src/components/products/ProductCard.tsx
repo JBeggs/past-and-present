@@ -48,11 +48,14 @@ export default function ProductCard({ product, homeQuickView = false }: ProductC
 
   useEffect(() => {
     bundleLoadedRef.current = new Set()
+    // Reset bundle reveal state when tile set changes (sync with layout layer)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional reset when bundleKey/nBundleTiles changes
     setBundleAllLoaded(nBundleTiles === 0)
   }, [bundleKey, nBundleTiles])
 
   useLayoutEffect(() => {
     if (showBundleGrid || !mainImage) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reset loader before measuring decoded main image
     setMainImageLoaded(false)
     const el = mainImgRef.current
     if (el?.complete && el.naturalHeight > 0) {
@@ -73,6 +76,7 @@ export default function ProductCard({ product, homeQuickView = false }: ProductC
 
   useEffect(() => {
     if (!product.timed_expires_at) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- prime countdown before interval ticks
     setCountdown(formatCountdown(product.timed_expires_at))
     const interval = window.setInterval(() => {
       setCountdown(formatCountdown(product.timed_expires_at))

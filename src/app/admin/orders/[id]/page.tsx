@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ecommerceApi } from '@/lib/api'
@@ -108,7 +108,7 @@ export default function OrderDetailPage() {
 
   const isAuthorized = profile?.role === 'admin' || profile?.role === 'business_owner'
 
-  const fetchOrder = async () => {
+  const fetchOrder = useCallback(async () => {
     try {
       setLoading(true)
       const response: any = await ecommerceApi.orders.get(id)
@@ -121,17 +121,20 @@ export default function OrderDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [id, showError, router])
 
   useEffect(() => {
     if (!authLoading && !isAuthorized) {
       router.push('/login')
       return
     }
+  }, [isAuthorized, authLoading, router])
+
+  useEffect(() => {
     if (isAuthorized && id) {
       fetchOrder()
     }
-  }, [isAuthorized, authLoading, id])
+  }, [isAuthorized, id, fetchOrder])
 
   const handleTrackShipment = async () => {
     setLoadingTracking(true)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ecommerceApi } from '@/lib/api'
@@ -105,6 +105,7 @@ export default function CheckoutPage() {
         customer_phone: phone,
       }))
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate when user/profile change; fetchCart is declared below on purpose
   }, [profile, user])
 
   // Guests must log in before checkout (match JavaMellow)
@@ -132,6 +133,7 @@ export default function CheckoutPage() {
     ecommerceApi.cart.updateShipping(payload)
       .then(() => fetchCart())
       .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid feedback loops with fetchCart/delivery state
   }, [user, deliveryMethod, selectedPudoLocation, addressChecked, hasCourierGuyItems, courierShipping, cart, loading, processing])
 
   // Refetch shipping quote when gumtree fulfillment changes (affects rate when mixed cart)

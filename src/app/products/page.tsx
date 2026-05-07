@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import PageHero from '@/components/hero/PageHero'
 import { serverEcommerceApi } from '@/lib/api-server'
 export const dynamic = 'force-dynamic'
 import { Product } from '@/lib/types'
@@ -235,6 +236,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
   return (
     <div className="min-h-screen bg-vintage-background" data-cy="products-section">
+      <PageHero pageSlug="products" />
       {/* Admin Management Actions */}
       <AdminActions />
 

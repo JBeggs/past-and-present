@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 import { Product, Article } from '@/lib/types'
 import { ArrowRight, Sparkles, Clock, Rocket, Package, TimerReset, ShoppingBasket, Wrench } from 'lucide-react'
 import ProductCard from '@/components/products/ProductCard'
+import PageHero from '@/components/hero/PageHero'
 import {
   CATEGORY_SHELF_EXCLUDE_TAGS,
   CONSUMABLES_CATEGORY_SLUG,
@@ -159,6 +160,38 @@ async function getHomeData() {
   }
 }
 
+function DefaultHomeHero() {
+  return (
+    <section className="bg-gradient-to-br from-vintage-primary to-vintage-primary-dark text-white py-20 min-h-[24rem] sm:min-h-[28rem] md:min-h-[32rem] flex flex-col justify-center">
+      <div className="container-wide">
+        <div className="max-w-3xl">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-playfair mb-6">
+            Where Past Meets Present
+          </h1>
+          <p className="text-xl text-green-100 mb-8">
+            Discover unique vintage treasures alongside carefully curated modern finds.
+            Every item tells a story, every purchase supports sustainable shopping.
+          </p>
+          <div className="flex flex-wrap gap-4">
+            <Link href="/products?condition=vintage" className="btn bg-modern-accent text-modern-primary hover:bg-modern-accent-dark">
+              <Clock className="w-5 h-5 mr-2" />
+              Shop Vintage
+            </Link>
+            <Link href="/products?condition=new" className="btn bg-white text-vintage-primary hover:bg-gray-100">
+              <Sparkles className="w-5 h-5 mr-2" />
+              Shop New
+            </Link>
+            <Link href="/future" className="btn bg-amber-500/90 text-white hover:bg-amber-600">
+              <Rocket className="w-5 h-5 mr-2" />
+              Future Plans
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default async function HomePage() {
   const {
     featuredProducts,
@@ -174,34 +207,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-vintage-primary to-vintage-primary-dark text-white py-20">
-        <div className="container-wide">
-          <div className="max-w-3xl">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-playfair mb-6">
-              Where Past Meets Present
-            </h1>
-            <p className="text-xl text-green-100 mb-8">
-              Discover unique vintage treasures alongside carefully curated modern finds. 
-              Every item tells a story, every purchase supports sustainable shopping.
-            </p>
-            <div className="flex flex-wrap gap-4">
-              <Link href="/products?condition=vintage" className="btn bg-modern-accent text-modern-primary hover:bg-modern-accent-dark">
-                <Clock className="w-5 h-5 mr-2" />
-                Shop Vintage
-              </Link>
-              <Link href="/products?condition=new" className="btn bg-white text-vintage-primary hover:bg-gray-100">
-                <Sparkles className="w-5 h-5 mr-2" />
-                Shop New
-              </Link>
-              <Link href="/future" className="btn bg-amber-500/90 text-white hover:bg-amber-600">
-                <Rocket className="w-5 h-5 mr-2" />
-                Future Plans
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PageHero pageSlug="home" fallback={<DefaultHomeHero />} />
 
       {/* Featured Section */}
       {featuredProducts.length > 0 && (
