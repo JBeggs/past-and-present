@@ -94,6 +94,9 @@ export interface Article {
   category?: Category
   tags?: Tag[]
   featured_media?: Media
+  seo_title?: string
+  seo_description?: string
+  social_image?: Media
 }
 
 // Product for e-commerce

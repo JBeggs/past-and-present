@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { serverEcommerceApi, serverNewsApi } from '@/lib/api-server'
+import { mergeArticleListParams, isArticleAllowedForStorefront } from '@/lib/article-author'
 import { getShareImage } from '@/lib/share-image'
 import { Product, Article } from '@/lib/types'
 import { ArrowRight, Sparkles, Clock, Rocket, Package, TimerReset, ShoppingBasket, Wrench } from 'lucide-react'
@@ -94,8 +95,10 @@ async function getHomeData() {
         page_size: 20,
         ordering: 'name',
       }),
-      serverNewsApi.articles.list({ status: 'published' }),
-      serverNewsApi.articles.list({ status: 'published', category__slug: 'future' }),
+      serverNewsApi.articles.list(mergeArticleListParams({ status: 'published' })),
+      serverNewsApi.articles.list(
+        mergeArticleListParams({ status: 'published', category__slug: 'future' }),
+      ),
     ])
 
     const featuredRaw = Array.isArray(featuredRes) ? featuredRes : (featuredRes as any)?.data || (featuredRes as any)?.results || []
@@ -109,8 +112,12 @@ async function getHomeData() {
     const consumablesRaw = Array.isArray(consumablesRes)
       ? consumablesRes
       : (consumablesRes as any)?.data || (consumablesRes as any)?.results || []
-    const articles = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.data || (articlesData as any)?.results || []
-    const futureArticles = Array.isArray(futureArticlesData) ? futureArticlesData : (futureArticlesData as any)?.data || (futureArticlesData as any)?.results || []
+    const articlesRaw = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.data || (articlesData as any)?.results || []
+    const futureArticlesRaw = Array.isArray(futureArticlesData)
+      ? futureArticlesData
+      : (futureArticlesData as any)?.data || (futureArticlesData as any)?.results || []
+    const articles = articlesRaw.filter(isArticleAllowedForStorefront)
+    const futureArticles = futureArticlesRaw.filter(isArticleAllowedForStorefront)
 
     const featuredProducts = sortProductsByName(
       featuredRaw

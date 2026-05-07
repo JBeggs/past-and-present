@@ -1,8 +1,13 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { serverNewsApi } from '@/lib/api-server'
+import { isArticleAllowedForStorefront } from '@/lib/article-author'
+import { openGraphImageFromMediaUrl, publicSiteOrigin } from '@/lib/product-seo'
 import { Article } from '@/lib/types'
 import { Calendar, User, ArrowLeft, Clock } from 'lucide-react'
+
+const STORE_NAME = 'Past and Present'
 
 interface ArticlePageProps {
   params: Promise<{ slug: string }>
@@ -19,11 +24,54 @@ async function getArticle(slug: string): Promise<Article | null> {
   }
 }
 
+export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
+  const { slug } = await params
+  const article = await getArticle(slug)
+  if (!article || !isArticleAllowedForStorefront(article)) {
+    return { title: `Article | ${STORE_NAME}` }
+  }
+
+  const titleBase = (article.seo_title || article.title || '').trim() || 'Article'
+  const title = `${titleBase} | ${STORE_NAME}`
+  const description = (
+    article.seo_description ||
+    article.excerpt ||
+    article.subtitle ||
+    ''
+  ).trim()
+  const site = publicSiteOrigin()
+  const canonical = site ? `${site}/articles/${slug}` : undefined
+  const thumb =
+    article.featured_media?.file_url ||
+    article.social_image?.file_url ||
+    ''
+  const ogImage = openGraphImageFromMediaUrl(thumb)
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'article',
+      ...(canonical ? { url: canonical } : {}),
+      images: [{ url: ogImage, alt: titleBase }],
+      ...(article.published_at ? { publishedTime: article.published_at } : {}),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImage],
+    },
+  }
+}
+
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug } = await params
   const article = await getArticle(slug)
 
-  if (!article) {
+  if (!article || !isArticleAllowedForStorefront(article)) {
     notFound()
   }
 

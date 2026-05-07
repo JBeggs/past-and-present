@@ -1,15 +1,19 @@
 import Link from 'next/link'
 import { serverNewsApi } from '@/lib/api-server'
+import { mergeArticleListParams, isArticleAllowedForStorefront } from '@/lib/article-author'
 import { Article } from '@/lib/types'
 import { Calendar, User, ArrowRight, Rocket } from 'lucide-react'
 
 async function getFutureArticles() {
   try {
-    const data = await serverNewsApi.articles.list({
-      status: 'published',
-      category__slug: 'future',
-    } as { status: string; category__slug: string })
-    return Array.isArray(data) ? data : (data as any)?.results || []
+    const data = await serverNewsApi.articles.list(
+      mergeArticleListParams({
+        status: 'published',
+        category__slug: 'future',
+      }),
+    )
+    const raw = Array.isArray(data) ? data : (data as any)?.results || []
+    return raw.filter(isArticleAllowedForStorefront)
   } catch (error) {
     console.error('Error fetching future articles:', error)
     return []

@@ -150,19 +150,23 @@ const serverApiClient = new ServerApiClient()
 // Server-side News API
 export const serverNewsApi = {
   articles: {
-    list: (params?: { status?: string; category?: string; search?: string; page?: number } & Record<string, string | number | undefined>) =>
-      serverApiClient.get('/news/articles/', params),
+    list: (
+      params?: {
+        status?: string
+        category?: string
+        category__slug?: string
+        search?: string
+        page?: number
+        author?: string
+      } & Record<string, string | number | undefined>,
+    ) => serverApiClient.get('/news/articles/', params),
     get: (id: string) => serverApiClient.get(`/news/articles/${id}/`),
     getBySlug: (slug: string) => serverApiClient.get(`/news/articles/?slug=${slug}`),
   },
 
   categories: {
-    list: (params?: { for_articles?: boolean }) =>
-      serverApiClient.get(
-        '/news/categories/',
-        undefined,
-        params?.for_articles ? { 'X-Company-Slug': 'riverside-herald' } : undefined
-      ),
+    list: (params?: Record<string, string | number | undefined>) =>
+      serverApiClient.get('/news/categories/', params),
     get: (id: string) => serverApiClient.get(`/news/categories/${id}/`),
   },
 

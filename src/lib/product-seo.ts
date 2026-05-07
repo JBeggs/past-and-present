@@ -122,6 +122,13 @@ function absolutizeProductImageForOg(url: string): string {
   return `${backend}/${u}`
 }
 
+/** Absolute og:image URL for any media URL (article featured/social images, etc.). */
+export function openGraphImageFromMediaUrl(url: string | null | undefined): string {
+  const u = (url || '').trim()
+  if (!u) return fallbackOgImageUrl()
+  return sameOriginOgImageUrl(absolutizeProductImageForOg(u))
+}
+
 /**
  * Absolute URL for og:image.
  * Prefer flat `product.image` (same as JavaMellow); then first non-placeholder from gallery list.

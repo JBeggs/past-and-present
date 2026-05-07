@@ -3,14 +3,29 @@ import Link from 'next/link'
 import { getShareImage } from '@/lib/share-image'
 import PageHero from '@/components/hero/PageHero'
 import { serverNewsApi } from '@/lib/api-server'
+import { mergeArticleListParams, isArticleAllowedForStorefront } from '@/lib/article-author'
 import { Article } from '@/lib/types'
 import { Calendar, User, ArrowRight, Search } from 'lucide-react'
 
 export async function generateMetadata(): Promise<Metadata> {
   const image = await getShareImage('articles')
+  const title = 'Stories & Inspiration | Past and Present'
+  const description =
+    'Tips, guides, and behind-the-scenes from the world of vintage and modern treasures.'
   return {
-    openGraph: { images: [{ url: image }] },
-    twitter: { card: 'summary_large_image', images: [image] },
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [{ url: image }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    },
   }
 }
 
@@ -20,12 +35,15 @@ interface ArticlesPageProps {
 
 async function getArticles(params: { search?: string; category?: string }) {
   try {
-    const apiParams: Record<string, string> = { status: 'published' }
-    if (params.search?.trim()) apiParams.search = params.search.trim()
-    if (params.category) apiParams.category = params.category
-
-    const articlesData = await serverNewsApi.articles.list(apiParams)
-    return Array.isArray(articlesData) ? articlesData : (articlesData as any)?.results || []
+    const articlesData = await serverNewsApi.articles.list(
+      mergeArticleListParams({
+        status: 'published',
+        ...(params.search?.trim() ? { search: params.search.trim() } : {}),
+        ...(params.category ? { category: params.category } : {}),
+      }),
+    )
+    const raw = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.results || []
+    return raw.filter(isArticleAllowedForStorefront)
   } catch (error) {
     console.error('Error fetching articles:', error)
     return []
@@ -34,14 +52,8 @@ async function getArticles(params: { search?: string; category?: string }) {
 
 async function getCategories(): Promise<{ id: string; name: string }[]> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://3pillars.pythonanywhere.com/api'
-    const res = await fetch(`${baseUrl}/news/categories/`, {
-      headers: { 'X-Company-Slug': 'riverside-herald', 'Content-Type': 'application/json' },
-      cache: 'no-store',
-    })
-    if (!res.ok) return []
-    const data: any = await res.json()
-    const raw = Array.isArray(data) ? data : data?.results || []
+    const data = await serverNewsApi.categories.list()
+    const raw = Array.isArray(data) ? data : (data as any)?.results || []
     return raw.map((c: any) => ({ id: String(c.id), name: c.name || 'Uncategorized' }))
   } catch (error) {
     console.error('Error fetching categories:', error)
