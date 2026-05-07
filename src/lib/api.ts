@@ -315,7 +315,7 @@ export class ApiClient {
     return await response.text() as unknown as T
   }
 
-  async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+  async get<T>(endpoint: string, params?: Record<string, any>, includeAuth: boolean = true): Promise<T> {
     const url = new URL(`${this.baseURL}${endpoint}`)
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -327,11 +327,11 @@ export class ApiClient {
 
     const makeRequest = () => fetch(url.toString(), {
       method: 'GET',
-      headers: this.getHeaders(),
+      headers: this.getHeaders(includeAuth),
     })
 
     const response = await makeRequest()
-    return this.handleResponse<T>(response, makeRequest)
+    return this.handleResponse<T>(response, includeAuth ? makeRequest : undefined)
   }
 
   async post<T>(endpoint: string, data?: any, includeAuth: boolean = true): Promise<T> {
@@ -599,8 +599,27 @@ export const newsApi = {
   },
 
   siteSettings: {
-    list: () => apiClient.get('/news/site-settings/'),
-    get: (key: string) => apiClient.get(`/news/site-settings/?key=${key}`),
+    /** Stale JWT causes 401 before IsAuthenticatedOrReadOnly runs; retry without Bearer for public keys only. */
+    list: async () => {
+      try {
+        return await apiClient.get('/news/site-settings/')
+      } catch (err: unknown) {
+        if ((err as ApiError)?.status === 401) {
+          return apiClient.get('/news/site-settings/', undefined, false)
+        }
+        throw err
+      }
+    },
+    get: async (key: string) => {
+      try {
+        return await apiClient.get(`/news/site-settings/?key=${encodeURIComponent(key)}`)
+      } catch (err: unknown) {
+        if ((err as ApiError)?.status === 401) {
+          return apiClient.get(`/news/site-settings/?key=${encodeURIComponent(key)}`, undefined, false)
+        }
+        throw err
+      }
+    },
     create: (data: any) => apiClient.post('/news/site-settings/', data),
     update: (id: string, data: any) => apiClient.put(`/news/site-settings/${id}/`, data),
     delete: (id: string) => apiClient.delete(`/news/site-settings/${id}/`),
