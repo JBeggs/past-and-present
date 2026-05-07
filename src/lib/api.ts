@@ -728,6 +728,8 @@ export const ecommerceApi = {
       apiClient.put(`/v1/orders/${orderId}/items/${itemId}/cancel/`, {}),
     createShipment: (orderId: string) =>
       apiClient.post(`/v1/orders/${orderId}/create-shipment/`, {}),
+    cancelShipment: (orderId: string, data?: { reason?: string }) =>
+      apiClient.post(`/v1/orders/${orderId}/cancel-shipment/`, data || {}),
     trackShipment: (orderId: string) =>
       apiClient.get(`/v1/orders/${orderId}/track-shipment/`),
   },

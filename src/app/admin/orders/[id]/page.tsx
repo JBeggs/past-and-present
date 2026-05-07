@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { ecommerceApi } from '@/lib/api'
+import { requiresCourierGuyShipment } from '@/lib/courier-shipment'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import {
@@ -21,6 +22,7 @@ import {
 interface OrderItem {
   id: string
   product_id?: string
+  supplier_slug?: string
   product_name: string
   product_image: string
   product_sku?: string
@@ -103,6 +105,9 @@ export default function OrderDetailPage() {
   const [showCancelOrderModal, setShowCancelOrderModal] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [cancellingOrder, setCancellingOrder] = useState(false)
+  const [showCancelShipmentModal, setShowCancelShipmentModal] = useState(false)
+  const [cancelShipmentReason, setCancelShipmentReason] = useState('')
+  const [cancellingShipment, setCancellingShipment] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [newStatus, setNewStatus] = useState('')
 
@@ -164,6 +169,23 @@ export default function OrderDetailPage() {
     }
   }
 
+  const handleCancelShipment = async () => {
+    setCancellingShipment(true)
+    try {
+      await ecommerceApi.orders.cancelShipment(id, { reason: cancelShipmentReason.trim() || undefined })
+      showSuccess('Shipment cancelled successfully')
+      setShowCancelShipmentModal(false)
+      setCancelShipmentReason('')
+      setTrackingInfo(null)
+      fetchOrder()
+    } catch (error: any) {
+      const msg = error?.details?.error?.message || error?.message || 'Failed to cancel shipment'
+      showError(msg)
+    } finally {
+      setCancellingShipment(false)
+    }
+  }
+
   const handleCancelItem = async (itemId: string) => {
     setCancellingItem(itemId)
     try {
@@ -214,7 +236,9 @@ export default function OrderDetailPage() {
     }
   }
 
+  const shipmentRequired = requiresCourierGuyShipment(order)
   const canCreateShipment = order &&
+    shipmentRequired &&
     (order.status === 'paid' || order.status === 'processing') &&
     !order.waybill_number &&
     !order.tracking_number
@@ -222,6 +246,7 @@ export default function OrderDetailPage() {
   const canCancelOrder = order && ['pending', 'paid'].includes(order.status)
   const canCancelItem = order && !['shipped', 'delivered', 'cancelled'].includes(order.status)
   const hasShipment = order && (order.waybill_number || order.tracking_number)
+  const canCancelShipment = Boolean(order && shipmentRequired && hasShipment)
 
   const addr = order?.shipping_address || {}
 
@@ -377,18 +402,30 @@ export default function OrderDetailPage() {
                 </div>
               )}
             </div>
-            <button
-              onClick={handleTrackShipment}
-              disabled={loadingTracking}
-              className="min-h-[44px] px-4 py-2 btn btn-secondary flex items-center gap-2"
-            >
-              {loadingTracking ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <ExternalLink className="w-4 h-4" />
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleTrackShipment}
+                disabled={loadingTracking}
+                className="min-h-[44px] px-4 py-2 btn btn-secondary flex items-center gap-2"
+              >
+                {loadingTracking ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ExternalLink className="w-4 h-4" />
+                )}
+                {loadingTracking ? 'Loading...' : 'Track Shipment'}
+              </button>
+              {canCancelShipment && (
+                <button
+                  onClick={() => setShowCancelShipmentModal(true)}
+                  disabled={cancellingShipment}
+                  className="min-h-[44px] px-4 py-2 btn btn-accent flex items-center gap-2"
+                >
+                  {cancellingShipment ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                  Cancel Shipment
+                </button>
               )}
-              {loadingTracking ? 'Loading...' : 'Track Shipment'}
-            </button>
+            </div>
             {trackingInfo && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
                 <p className="text-sm font-medium text-text mb-2">
@@ -517,6 +554,51 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Cancel Shipment Modal */}
+      {showCancelShipmentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-text">Cancel Shipment</h2>
+              <button
+                type="button"
+                onClick={() => { setShowCancelShipmentModal(false); setCancelShipmentReason('') }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-text-muted mb-4">
+              This only cancels the Courier Guy booking. The customer order remains active.
+            </p>
+            <textarea
+              value={cancelShipmentReason}
+              onChange={(e) => setCancelShipmentReason(e.target.value)}
+              placeholder="Optional cancellation note..."
+              rows={3}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-vintage-primary mb-4"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => { setShowCancelShipmentModal(false); setCancelShipmentReason('') }}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-text hover:bg-gray-50"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleCancelShipment}
+                disabled={cancellingShipment}
+                className="px-4 py-2 btn btn-accent disabled:opacity-50"
+              >
+                {cancellingShipment ? 'Cancelling...' : 'Cancel Shipment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cancel Order Modal */}
       {showCancelOrderModal && (

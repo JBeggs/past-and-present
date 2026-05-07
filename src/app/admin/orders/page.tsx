@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ecommerceApi } from '@/lib/api'
+import { requiresCourierGuyShipment } from '@/lib/courier-shipment'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import PaginationNav from '@/components/ui/PaginationNav'
@@ -19,6 +20,8 @@ import {
 interface OrderItem {
   id: string
   product_image?: string
+  supplier_slug?: string
+  cancelled?: boolean
 }
 
 interface Order {
@@ -31,6 +34,7 @@ interface Order {
   delivery_method: string
   waybill_number?: string
   tracking_number?: string
+  fulfillment_split?: { gumtree?: 'collect' | 'deliver'; other_courier?: string }
   created_at: string
   paid_at?: string
   customer_email?: string
@@ -136,6 +140,7 @@ export default function AdminOrdersPage() {
   }
 
   const canCreateShipment = (order: Order) =>
+    requiresCourierGuyShipment(order) &&
     (order.status === 'paid' || order.status === 'processing') &&
     !order.waybill_number &&
     !order.tracking_number
