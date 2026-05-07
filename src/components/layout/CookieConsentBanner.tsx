@@ -6,6 +6,9 @@ import { useSyncExternalStore } from 'react'
 const CONSENT_COOKIE_NAME = 'cookie_consent'
 const CONSENT_COOKIE_VALUE = 'essential_accepted'
 const CONSENT_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+const CONSENT_STORAGE_KEY = 'cookie_consent'
+
+let sessionConsentAccepted = false
 
 function hasCookieConsent(): boolean {
   return document.cookie
@@ -17,13 +20,33 @@ function getSecureAttribute(): string {
   return window.location.protocol === 'https:' ? '; Secure' : ''
 }
 
+function hasStoredConsent(): boolean {
+  try {
+    return window.localStorage.getItem(CONSENT_STORAGE_KEY) === CONSENT_COOKIE_VALUE
+  } catch {
+    return false
+  }
+}
+
+function storeCookieConsent(): void {
+  sessionConsentAccepted = true
+
+  try {
+    window.localStorage.setItem(CONSENT_STORAGE_KEY, CONSENT_COOKIE_VALUE)
+  } catch {
+    // Some mobile/private browsers block storage; keep the session acknowledgement.
+  }
+
+  document.cookie = `${CONSENT_COOKIE_NAME}=${CONSENT_COOKIE_VALUE}; Max-Age=${CONSENT_COOKIE_MAX_AGE}; Path=/; SameSite=Lax${getSecureAttribute()}`
+}
+
 function subscribeToCookieConsent(callback: () => void): () => void {
   window.addEventListener('cookie-consent-change', callback)
   return () => window.removeEventListener('cookie-consent-change', callback)
 }
 
 function getCookieConsentSnapshot(): boolean {
-  return hasCookieConsent()
+  return sessionConsentAccepted || hasStoredConsent() || hasCookieConsent()
 }
 
 function getServerCookieConsentSnapshot(): boolean {
@@ -38,7 +61,7 @@ export function CookieConsentBanner() {
   )
 
   const acceptCookies = () => {
-    document.cookie = `${CONSENT_COOKIE_NAME}=${CONSENT_COOKIE_VALUE}; Max-Age=${CONSENT_COOKIE_MAX_AGE}; Path=/; SameSite=Lax${getSecureAttribute()}`
+    storeCookieConsent()
     window.dispatchEvent(new Event('cookie-consent-change'))
   }
 
