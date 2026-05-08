@@ -35,17 +35,11 @@ function sortProductsByName(products: Product[]): Product[] {
 
 async function getHomeData() {
   try {
-    const [
-      featuredRes,
-      vintageRes,
-      newRes,
-      bundlesRes,
-      timedRes,
-      hardwareRes,
-      consumablesRes,
-      articlesData,
-      futureArticlesData,
-    ] = await Promise.all([
+    /**
+     * One bad fetch should NOT zero every shelf.
+     * `Promise.allSettled` lets each shelf fail independently; the rest still render.
+     */
+    const settled = await Promise.allSettled([
       serverEcommerceApi.products.list({
         is_active: true,
         featured: true,
@@ -100,6 +94,46 @@ async function getHomeData() {
         mergeArticleListParams({ status: 'published', category__slug: 'future' }),
       ),
     ])
+
+    const SHELF_LABELS = [
+      'featured',
+      'vintage',
+      'new',
+      'bundles',
+      'timed',
+      'hardware',
+      'consumables',
+      'articles',
+      'futureArticles',
+    ] as const
+
+    const valueOrEmpty = (i: number): unknown =>
+      settled[i].status === 'fulfilled'
+        ? (settled[i] as PromiseFulfilledResult<unknown>).value
+        : []
+
+    const failures = settled
+      .map((s, i) =>
+        s.status === 'rejected'
+          ? { shelf: SHELF_LABELS[i], reason: (s as PromiseRejectedResult).reason }
+          : null,
+      )
+      .filter(Boolean)
+    if (failures.length) {
+      console.error('[home] some SSR fetches failed; rendering remaining shelves', failures)
+    }
+
+    const [
+      featuredRes,
+      vintageRes,
+      newRes,
+      bundlesRes,
+      timedRes,
+      hardwareRes,
+      consumablesRes,
+      articlesData,
+      futureArticlesData,
+    ] = settled.map((_, i) => valueOrEmpty(i))
 
     const featuredRaw = Array.isArray(featuredRes) ? featuredRes : (featuredRes as any)?.data || (featuredRes as any)?.results || []
     const vintageRaw = Array.isArray(vintageRes) ? vintageRes : (vintageRes as any)?.data || (vintageRes as any)?.results || []
