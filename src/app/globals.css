@@ -154,25 +154,25 @@ body {
   @apply w-full h-64 md:h-80 object-cover;
 }
 
-/* Tag/badge styling */
+/* Tag/badge styling — opaque on product photography (no /10 tints) */
 .tag {
   @apply inline-block px-2 py-1 text-xs font-medium rounded-full;
 }
 
 .tag-vintage {
-  @apply bg-vintage-primary/10 text-vintage-primary;
+  @apply bg-white text-vintage-primary border border-vintage-primary;
 }
 
 .tag-new {
-  @apply bg-modern-primary/10 text-modern-primary;
+  @apply bg-white text-modern-primary border border-modern-primary;
 }
 
 .tag-sale {
-  @apply bg-vintage-accent/10 text-vintage-accent;
+  @apply bg-white text-vintage-accent border border-vintage-accent;
 }
 
 .tag-featured {
-  @apply bg-modern-accent/10 text-modern-accent-dark;
+  @apply bg-white text-modern-accent-dark border border-modern-accent;
 }
 
 /* Price styling */
