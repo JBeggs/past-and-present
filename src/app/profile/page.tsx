@@ -56,6 +56,7 @@ export default function ProfilePage() {
   const [company, setCompany] = useState<Record<string, any> | null>(null)
   const [companyForm, setCompanyForm] = useState({
     logo: '',
+    name: '',
     phone: '',
     website: '',
     address_street: '',
@@ -200,6 +201,7 @@ export default function ProfilePage() {
         setCompany(c)
         setCompanyForm({
           logo: c?.logo?.file_url || c?.logo_url || '',
+          name: c?.name || '',
           phone: c?.phone || '',
           website: c?.website || '',
           address_street: c?.address_street || '',
@@ -279,6 +281,7 @@ export default function ProfilePage() {
     setUpdatingCompany(true)
     try {
       const updated = await ecommerceApi.companies.update(companyId, {
+        name: companyForm.name.trim(),
         phone: companyForm.phone || '',
         website: companyForm.website || '',
         address_street: companyForm.address_street || '',
@@ -307,7 +310,11 @@ export default function ProfilePage() {
           return parsed
         })(),
       })
-      setCompany((updated as any)?.data ?? (updated as Record<string, any>))
+      const data = (updated as any)?.data ?? updated
+      setCompany(data)
+      if (data && typeof (data as any).name === 'string') {
+        setCompanyForm((f) => ({ ...f, name: (data as any).name }))
+      }
       showSuccess('Business profile updated')
     } catch (error: any) {
       showError(error.message || 'Failed to update business profile')
@@ -688,6 +695,18 @@ export default function ProfilePage() {
                 Business Profile
               </h3>
               <form onSubmit={handleUpdateCompany} className="space-y-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Company Name</label>
+                        <input
+                          type="text"
+                          value={companyForm.name}
+                          onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
+                          className="form-input"
+                          placeholder="Your store name"
+                          required
+                        />
+                        <p className="text-xs text-text-muted">Shown in the website header, footer, browser metadata, and fallback logo monogram.</p>
+                      </div>
                       <div className="space-y-1">
                         <label className="text-xs font-bold uppercase tracking-widest text-text-muted">Company Logo</label>
                         <div className="flex items-center gap-4">
