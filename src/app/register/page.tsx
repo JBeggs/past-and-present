@@ -33,18 +33,21 @@ export default function RegisterPage() {
       return
     }
 
-    setIsLoading(true)
-
     if (!phone.trim()) {
       showError('Cellphone is required for delivery')
       return
     }
 
+    setIsLoading(true)
+
     try {
-      const { error } = await signUp(email, password, fullName, phone.trim())
-      
-      if (error) {
-        showError(error)
+      const result = await signUp(email, password, fullName, phone.trim())
+
+      if (result.error) {
+        showError(result.error)
+      } else if (result.verificationRequired) {
+        showSuccess('Check your email to verify your account, then sign in.')
+        router.push(`/auth/verify-email?email=${encodeURIComponent(email.trim())}`)
       } else {
         showSuccess('Account created! Syncing your cart...')
         try {

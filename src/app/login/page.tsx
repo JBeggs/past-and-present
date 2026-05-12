@@ -19,15 +19,22 @@ export default function LoginPage() {
   const searchParams = useSearchParams()
   const returnUrl = searchParams.get('return') || '/'
 
+  const [needsVerifyHint, setNeedsVerifyHint] = useState(false)
+  const [resendBusy, setResendBusy] = useState(false)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setNeedsVerifyHint(false)
 
     try {
-      const { error } = await signIn(username, password)
-      
+      const { error, code } = await signIn(username, password)
+
       if (error) {
-        showError(error)
+        showError(typeof error === 'string' ? error : 'Login failed')
+        if (code === 'email_not_verified') {
+          setNeedsVerifyHint(true)
+        }
       } else {
         showSuccess('Login successful! Syncing your cart...')
         try {
@@ -61,7 +68,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <label htmlFor="username" className="form-label text-sm font-semibold uppercase tracking-wider text-text-light">
-                Username
+                Username or email
               </label>
               <div className="relative group">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none transition-colors group-focus-within:text-vintage-primary z-20">
@@ -74,7 +81,7 @@ export default function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-md hover:border-vintage-primary/50 transition-all focus:bg-white focus:ring-4 focus:ring-vintage-primary/10 focus:outline-none focus:border-transparent relative z-10"
-                  placeholder="Enter your username"
+                  placeholder="Username or email"
                   required
                 />
               </div>
@@ -85,7 +92,10 @@ export default function LoginPage() {
                 <label htmlFor="password" className="form-label text-sm font-semibold uppercase tracking-wider text-text-light">
                   Password
                 </label>
-                <Link href="#" className="text-xs font-semibold text-vintage-primary hover:text-vintage-primary-dark transition-colors">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-semibold text-vintage-primary hover:text-vintage-primary-dark transition-colors"
+                >
                   Forgot password?
                 </Link>
               </div>
@@ -140,6 +150,41 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          {needsVerifyHint ? (
+            <div className="mt-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-sm space-y-3">
+              <p className="text-text">Verify your email to sign in.</p>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={`/auth/verify-email?email=${encodeURIComponent(username.trim())}`}
+                  className="btn btn-secondary text-sm py-2"
+                >
+                  Open verification help
+                </Link>
+                <button
+                  type="button"
+                  disabled={resendBusy}
+                  onClick={async () => {
+                    try {
+                      setResendBusy(true)
+                      const { authApi } = await import('@/lib/api')
+                      await authApi.resendVerificationEmail(username.trim())
+                      showSuccess(
+                        'If your account exists and still needs verification, we sent another email.',
+                      )
+                    } catch {
+                      showError('Could not resend. Try again shortly.')
+                    } finally {
+                      setResendBusy(false)
+                    }
+                  }}
+                  className="btn btn-primary text-sm py-2"
+                >
+                  {resendBusy ? 'Sending…' : 'Resend email'}
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-10 pt-8 border-t border-gray-100 text-center">
             <p className="text-text-muted">

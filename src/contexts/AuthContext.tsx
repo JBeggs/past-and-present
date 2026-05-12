@@ -21,6 +21,9 @@ interface Profile {
   phone?: string
   role: 'user' | 'admin' | 'editor' | 'author' | 'business_owner' | 'subscriber'
   is_verified: boolean
+  /** From django-crm Profile.email_verified_at — account can sign in when set */
+  email_verified_at?: string | null
+  pending_email?: string
   social_links: Record<string, string>
   preferences: Record<string, any>
   last_seen_at?: string
@@ -33,8 +36,16 @@ interface AuthContextType {
   profile: Profile | null
   companyId: string | null
   loading: boolean
-  signIn: (username: string, password: string) => Promise<{ error: any }>
-  signUp: (email: string, password: string, fullName: string, phone: string) => Promise<{ error: any }>
+  signIn: (
+    username: string,
+    password: string,
+  ) => Promise<{ error: unknown; code?: string }>
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    phone: string,
+  ) => Promise<{ error: unknown | null; verificationRequired?: boolean; email?: string }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -194,28 +205,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await authApi.login(username, password)
       console.log('AuthProvider: signIn response', { companyId: response.company?.id, user: response.user?.id })
-      
+
       setUser(response.user)
       setCompanyId(response.company?.id || null)
-      
+
       await fetchProfile()
-      
-      return { error: null }
+
+      return { error: null as unknown }
     } catch (error: any) {
       const errDetail = error?.details?.error
-      const errFromDetails = typeof error?.details === 'object' && error?.details !== null
-        ? (typeof error.details.error === 'string' ? error.details.error : error.details.message)
-        : null
+      const errFromDetails =
+        typeof error?.details === 'object' && error?.details !== null
+          ? typeof error.details.error === 'string'
+            ? error.details.error
+            : error.details.message
+          : null
       const errorMessage =
         error?.message ||
         (typeof errDetail === 'string' ? errDetail : null) ||
         errFromDetails ||
         error?.response?.data?.error ||
         'Login failed. Please check your credentials.'
+      const apiCode =
+        error?.details && typeof error.details === 'object' && error.details !== null && 'code' in error.details
+          ? String((error.details as { code?: string }).code || '')
+          : ''
+      const code =
+        apiCode ||
+        (typeof error?.code === 'string' && !String(error.code).startsWith('HTTP_') ? error.code : '')
       if (process.env.NODE_ENV === 'development') {
         console.error('Login error:', errorMessage, error)
       }
-      return { error: String(errorMessage || 'Login failed. Please check your credentials.') }
+      return {
+        error: String(errorMessage || 'Login failed. Please check your credentials.'),
+        code: code === 'email_not_verified' ? 'email_not_verified' : undefined,
+      }
     } finally {
       setLoading(false)
     }
@@ -231,12 +255,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         full_name: fullName,
         phone,
       })
-      
+
+      if (response.email_verification_required) {
+        authApi.logout()
+        setUser(null)
+        setProfile(null)
+        setCompanyId(null)
+        return { error: null, verificationRequired: true as const, email }
+      }
+
       setUser(response.user)
       setCompanyId(response.company?.id || null)
-      
+
       await fetchProfile()
-      
+
       return { error: null }
     } catch (error: any) {
       console.error('Registration error:', error)
