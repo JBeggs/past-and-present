@@ -4,16 +4,13 @@ import { serverEcommerceApi, serverNewsApi } from '@/lib/api-server'
 import { mergeArticleListParams, isArticleAllowedForStorefront } from '@/lib/article-author'
 import { getShareImage } from '@/lib/share-image'
 import { Product, Article } from '@/lib/types'
-import { ArrowRight, Sparkles, Clock, Rocket, Package, TimerReset, ShoppingBasket, Wrench } from 'lucide-react'
+import { ArrowRight, Sparkles, Clock, Rocket, Package, TimerReset } from 'lucide-react'
 import ProductCard from '@/components/products/ProductCard'
 import PageHero from '@/components/hero/PageHero'
 import {
-  CATEGORY_SHELF_EXCLUDE_TAGS,
-  CONSUMABLES_CATEGORY_SLUG,
-  HARDWARE_CATEGORY_SLUG,
   NEW_LISTING_EXCLUDED_CATEGORY_SLUGS,
-  consumablesListingHref,
-  hardwareListingHref,
+  categoryViewAllHref,
+  homeCategoryProductListParams,
 } from '@/lib/store-shelves'
 
 export const dynamic = 'force-dynamic'
@@ -31,6 +28,12 @@ function sortProductsByName(products: Product[]): Product[] {
   return [...products].sort((a, b) =>
     (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
   )
+}
+
+export type HomeCategoryShelf = {
+  name: string
+  slug: string
+  products: Product[]
 }
 
 async function getHomeData() {
@@ -73,22 +76,6 @@ async function getHomeData() {
         timed_only: 'true',
         ordering: 'name',
       }),
-      serverEcommerceApi.products.list({
-        is_active: true,
-        category: HARDWARE_CATEGORY_SLUG,
-        exclude_tags: CATEGORY_SHELF_EXCLUDE_TAGS,
-        exclude_bundles: 'true',
-        page_size: 20,
-        ordering: 'name',
-      }),
-      serverEcommerceApi.products.list({
-        is_active: true,
-        category: CONSUMABLES_CATEGORY_SLUG,
-        exclude_tags: CATEGORY_SHELF_EXCLUDE_TAGS,
-        exclude_bundles: 'true',
-        page_size: 20,
-        ordering: 'name',
-      }),
       serverNewsApi.articles.list(mergeArticleListParams({ status: 'published' })),
       serverNewsApi.articles.list(
         mergeArticleListParams({ status: 'published', category__slug: 'future' }),
@@ -101,8 +88,6 @@ async function getHomeData() {
       'new',
       'bundles',
       'timed',
-      'hardware',
-      'consumables',
       'articles',
       'futureArticles',
     ] as const
@@ -123,29 +108,14 @@ async function getHomeData() {
       console.error('[home] some SSR fetches failed; rendering remaining shelves', failures)
     }
 
-    const [
-      featuredRes,
-      vintageRes,
-      newRes,
-      bundlesRes,
-      timedRes,
-      hardwareRes,
-      consumablesRes,
-      articlesData,
-      futureArticlesData,
-    ] = settled.map((_, i) => valueOrEmpty(i))
+    const [featuredRes, vintageRes, newRes, bundlesRes, timedRes, articlesData, futureArticlesData] =
+      settled.map((_, i) => valueOrEmpty(i))
 
     const featuredRaw = Array.isArray(featuredRes) ? featuredRes : (featuredRes as any)?.data || (featuredRes as any)?.results || []
     const vintageRaw = Array.isArray(vintageRes) ? vintageRes : (vintageRes as any)?.data || (vintageRes as any)?.results || []
     const newRaw = Array.isArray(newRes) ? newRes : (newRes as any)?.data || (newRes as any)?.results || []
     const bundlesRaw = Array.isArray(bundlesRes) ? bundlesRes : (bundlesRes as any)?.data || (bundlesRes as any)?.results || []
     const timedRaw = Array.isArray(timedRes) ? timedRes : (timedRes as any)?.data || (timedRes as any)?.results || []
-    const hardwareRaw = Array.isArray(hardwareRes)
-      ? hardwareRes
-      : (hardwareRes as any)?.data || (hardwareRes as any)?.results || []
-    const consumablesRaw = Array.isArray(consumablesRes)
-      ? consumablesRes
-      : (consumablesRes as any)?.data || (consumablesRes as any)?.results || []
     const articlesRaw = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.data || (articlesData as any)?.results || []
     const futureArticlesRaw = Array.isArray(futureArticlesData)
       ? futureArticlesData
@@ -178,12 +148,54 @@ async function getHomeData() {
     const timedProducts: Product[] = sortProductsByName(
       timedRaw.filter((p: Product) => p.status !== 'archived').slice(0, 20)
     )
-    const hardwareProducts: Product[] = sortProductsByName(
-      hardwareRaw.filter((p: Product) => p.status !== 'archived').slice(0, 20)
-    )
-    const consumablesProducts: Product[] = sortProductsByName(
-      consumablesRaw.filter((p: Product) => p.status !== 'archived').slice(0, 20)
-    )
+
+    let categoryShelves: HomeCategoryShelf[] = []
+    try {
+      const catRes = await serverEcommerceApi.categories.list()
+      const catRaw = Array.isArray(catRes) ? catRes : (catRes as any)?.results || (catRes as any)?.data || []
+      const categoryRows = (catRaw as { name?: string; slug?: string }[])
+        .filter((c) => String(c?.name || '').trim() && String(c?.slug || '').trim())
+        .sort((a, b) =>
+          String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' }),
+        )
+
+      const catSettled = await Promise.allSettled(
+        categoryRows.map((c) =>
+          serverEcommerceApi.products.list(homeCategoryProductListParams(String(c.slug).trim())),
+        ),
+      )
+
+      const catFailures = catSettled
+        .map((s, i) =>
+          s.status === 'rejected'
+            ? { shelf: `category:${String(categoryRows[i]?.slug)}`, reason: (s as PromiseRejectedResult).reason }
+            : null,
+        )
+        .filter(Boolean)
+      if (catFailures.length) {
+        console.error('[home] some category shelf fetches failed; rendering remaining category shelves', catFailures)
+      }
+
+      categoryShelves = categoryRows
+        .map((cat, i) => {
+          const res = catSettled[i]
+          if (res.status !== 'fulfilled') return null
+          const val = (res as PromiseFulfilledResult<unknown>).value
+          const raw = Array.isArray(val) ? val : (val as any)?.data || (val as any)?.results || []
+          const products = sortProductsByName(
+            raw.filter((p: Product) => p.status !== 'archived').slice(0, 20),
+          )
+          if (products.length === 0) return null
+          return {
+            name: String(cat.name).trim(),
+            slug: String(cat.slug).trim(),
+            products,
+          }
+        })
+        .filter((s): s is HomeCategoryShelf => s != null)
+    } catch (catErr) {
+      console.error('[home] categories or dynamic shelves failed', catErr)
+    }
 
     return {
       featuredProducts,
@@ -191,8 +203,7 @@ async function getHomeData() {
       newProducts,
       bundlesProducts,
       timedProducts,
-      hardwareProducts,
-      consumablesProducts,
+      categoryShelves,
       latestArticles: articles.slice(0, 3),
       futureArticles: futureArticles.slice(0, 3),
     }
@@ -204,8 +215,7 @@ async function getHomeData() {
       newProducts: [],
       bundlesProducts: [],
       timedProducts: [],
-      hardwareProducts: [],
-      consumablesProducts: [],
+      categoryShelves: [],
       latestArticles: [],
       futureArticles: [],
     }
@@ -251,8 +261,7 @@ export default async function HomePage() {
     newProducts,
     bundlesProducts,
     timedProducts,
-    hardwareProducts,
-    consumablesProducts,
+    categoryShelves,
     latestArticles,
     futureArticles,
   } = await getHomeData()
@@ -284,7 +293,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Bundles — always on home (after Featured); hardware / consumables / new rails exclude bundles */}
+      {/* Bundles — always on home (after Featured); New Arrivals and category shelves exclude bundles where configured */}
       <section className="py-16 bg-slate-50">
         <div className="container-wide">
           <div className="section-header">
@@ -308,8 +317,8 @@ export default async function HomePage() {
               <Package className="w-16 h-16 mx-auto mb-4 opacity-30" />
               <p className="font-medium text-text">No bundles to show yet</p>
               <p className="text-sm mt-2 max-w-md mx-auto">
-                When bundle products are published in the CRM, they will appear here. They stay out of New Arrivals,
-                Hardware, and Consumables by design.
+                When bundle products are published in the CRM, they will appear here. They stay out of New Arrivals and
+                dedicated category shelves by design.
               </p>
               <Link href="/products?bundle_only=true" className="btn btn-secondary mt-6 inline-flex">
                 Browse bundles
@@ -319,55 +328,31 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Hardware: before consumables; same tag exclusions as consumables shelf */}
-      {hardwareProducts.length > 0 && (
-        <section className="py-16 bg-zinc-100">
+      {/* Category shelves (A–Z); only categories with at least one product */}
+      {categoryShelves.map((shelf, index) => (
+        <section
+          key={shelf.slug}
+          className={`py-16 ${index % 2 === 0 ? 'bg-zinc-100' : 'bg-emerald-50/80'}`}
+        >
           <div className="container-wide">
             <div className="section-header">
               <div>
-                <h2 className="section-title">Hardware</h2>
-                <p className="text-text-muted mt-1">
-                  Tools and hardware in the hardware category (excludes bundles, vintage, new, and other tagged specials)
-                </p>
+                <h2 className="section-title">{shelf.name}</h2>
+                <p className="text-text-muted mt-1">Products in this category</p>
               </div>
-              <Link href={hardwareListingHref()} className="btn btn-secondary">
-                <Wrench className="w-4 h-4 mr-2" />
+              <Link href={categoryViewAllHref(shelf.slug)} className="btn btn-secondary">
+                <Package className="w-4 h-4 mr-2" />
                 View All
               </Link>
             </div>
             <div className="product-grid">
-              {hardwareProducts.map((product: Product) => (
+              {shelf.products.map((product: Product) => (
                 <ProductCard key={product.id} product={product} homeQuickView />
               ))}
             </div>
           </div>
         </section>
-      )}
-
-      {/* Consumables: category shelf excluding vintage / new / others tags */}
-      {consumablesProducts.length > 0 && (
-        <section className="py-16 bg-emerald-50/80">
-          <div className="container-wide">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Consumables</h2>
-                <p className="text-text-muted mt-1">
-                  Everyday essentials in the consumables category (excludes bundles, vintage, new, and other tagged specials)
-                </p>
-              </div>
-              <Link href={consumablesListingHref()} className="btn btn-secondary">
-                <ShoppingBasket className="w-4 h-4 mr-2" />
-                View All
-              </Link>
-            </div>
-            <div className="product-grid">
-              {consumablesProducts.map((product: Product) => (
-                <ProductCard key={product.id} product={product} homeQuickView />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      ))}
 
       {/* Timed Section */}
       {timedProducts.length > 0 && (

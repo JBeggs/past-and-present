@@ -13,8 +13,6 @@ import {
   Package,
   TimerReset,
   Truck,
-  Wrench,
-  ShoppingBasket,
 } from 'lucide-react'
 import { Suspense } from 'react'
 import ProductsSortSelect from '@/components/products/ProductsSortSelect'
@@ -26,6 +24,7 @@ import {
   CONSUMABLES_CATEGORY_SLUG,
   HARDWARE_CATEGORY_SLUG,
   NEW_LISTING_EXCLUDED_CATEGORY_SLUGS,
+  homeCategoryProductListParams,
 } from '@/lib/store-shelves'
 
 export const dynamic = 'force-dynamic'
@@ -129,9 +128,50 @@ async function getProducts(params: {
   }
 }
 
+/** Categories A–Z that have at least one active, listable product (matches home shelf rules per slug). */
+async function getProductFilterCategories(): Promise<{ name: string; slug: string }[]> {
+  try {
+    const catRes = await serverEcommerceApi.categories.list()
+    const catRaw = Array.isArray(catRes) ? catRes : (catRes as any)?.results || (catRes as any)?.data || []
+    const rows = (catRaw as { name?: string; slug?: string }[])
+      .filter((c) => String(c?.name || '').trim() && String(c?.slug || '').trim())
+      .sort((a, b) =>
+        String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' }),
+      )
+
+    const settled = await Promise.allSettled(
+      rows.map((c) =>
+        serverEcommerceApi.products.list({
+          ...homeCategoryProductListParams(String(c.slug).trim()),
+          page_size: 1,
+        }),
+      ),
+    )
+
+    const out: { name: string; slug: string }[] = []
+    rows.forEach((cat, i) => {
+      const res = settled[i]
+      if (res.status !== 'fulfilled') return
+      const val = (res as PromiseFulfilledResult<unknown>).value
+      const raw = Array.isArray(val) ? val : (val as any)?.data || (val as any)?.results || []
+      const has = raw.some((p: Product) => p.status !== 'archived')
+      if (has) {
+        out.push({ name: String(cat.name).trim(), slug: String(cat.slug).trim() })
+      }
+    })
+    return out
+  } catch (e) {
+    console.error('[products] category filter list failed', e)
+    return []
+  }
+}
+
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const params = await searchParams
-  const { products, pagination } = await getProducts(params)
+  const [{ products, pagination }, filterCategories] = await Promise.all([
+    getProducts(params),
+    getProductFilterCategories(),
+  ])
   const isVintage = params.condition === 'vintage'
   const isNew = params.condition === 'new'
   const isFeatured = params.featured === 'true'
@@ -140,6 +180,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const isSupplierGroup = !!params.supplier_slug
   const isHardwareCategory = params.category === HARDWARE_CATEGORY_SLUG
   const isConsumablesCategory = params.category === CONSUMABLES_CATEGORY_SLUG
+  const isOtherProductCategory =
+    !!params.category && !isHardwareCategory && !isConsumablesCategory
+
+  const selectedCategoryLabel = params.category
+    ? filterCategories.find((c) => c.slug === params.category)?.name
+    : undefined
 
   const searchParamsForNav: Record<string, string> = {}
   if (params.condition) searchParamsForNav.condition = params.condition
@@ -172,9 +218,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       : isTimed
         ? 'Timed Products'
         : isHardwareCategory
-          ? 'Hardware'
+          ? selectedCategoryLabel || 'Hardware'
           : isConsumablesCategory
-            ? 'Consumables'
+            ? selectedCategoryLabel || 'Consumables'
+            : isOtherProductCategory
+              ? selectedCategoryLabel || params.category || 'Products'
             : isVintage
               ? 'Vintage Treasures'
               : isNew
@@ -209,10 +257,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 params.exclude_tags.replace(/,/g, ', ') +
                 '.'
               : 'Products in the consumables category. Bundles are excluded.'
+            : isOtherProductCategory
+              ? 'Products in this category.'
             : isVintage
               ? 'Unique second-hand finds with character and history'
               : isNew
-                ? 'Fresh finds and modern essentials. Bundles, hardware, and consumables use their own pages.'
+                ? 'Fresh finds and modern essentials. Bundles and dedicated category shelves use their own filters.'
                 : isFeatured
                   ? 'Hand-picked favorites and standout items'
                   : 'Browse our complete collection of products'
@@ -262,6 +312,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 ? 'bg-zinc-700'
                 : isConsumablesCategory
                   ? 'bg-emerald-700'
+                  : isOtherProductCategory
+                    ? 'bg-slate-600'
                   : isVintage
                   ? 'bg-vintage-primary'
                   : isNew
@@ -342,8 +394,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               <div className="flex items-center gap-2 text-sm text-text-muted">
                 <Filter className="w-5 h-5 flex-shrink-0" />
                 <span>
-                  Shelves match the home page: vintage and new omit featured listings; hardware and consumables omit
-                  bundles and the vintage / new / others tags.
+                  Category chips list every storefront category that currently has active products (A–Z). Vintage and
+                  new omit featured listings; hardware and consumables omit bundles and the vintage / new / others tags.
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -445,44 +497,40 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   <Package className="w-4 h-4" />
                   Bundles
                 </Link>
-                <Link
-                  href={makeHref({
-                    featured: null,
-                    condition: null,
-                    category: HARDWARE_CATEGORY_SLUG,
-                    exclude_tags: CATEGORY_SHELF_EXCLUDE_TAGS,
-                    exclude_bundles: 'true',
-                    bundle_only: null,
-                    timed_only: null,
-                    supplier_slug: null,
-                    delivery_group: null,
-                  })}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
-                    isHardwareCategory ? 'bg-zinc-700 text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
-                  }`}
-                >
-                  <Wrench className="w-4 h-4" />
-                  Hardware
-                </Link>
-                <Link
-                  href={makeHref({
-                    featured: null,
-                    condition: null,
-                    category: CONSUMABLES_CATEGORY_SLUG,
-                    exclude_tags: CATEGORY_SHELF_EXCLUDE_TAGS,
-                    exclude_bundles: 'true',
-                    bundle_only: null,
-                    timed_only: null,
-                    supplier_slug: null,
-                    delivery_group: null,
-                  })}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
-                    isConsumablesCategory ? 'bg-emerald-700 text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
-                  }`}
-                >
-                  <ShoppingBasket className="w-4 h-4" />
-                  Consumables
-                </Link>
+                {filterCategories.map((cat) => {
+                  const isHardware = cat.slug === HARDWARE_CATEGORY_SLUG
+                  const isConsumables = cat.slug === CONSUMABLES_CATEGORY_SLUG
+                  const isActive = params.category === cat.slug
+                  const chipClass =
+                    isHardware && isActive
+                      ? 'bg-zinc-700 text-white'
+                      : isConsumables && isActive
+                        ? 'bg-emerald-700 text-white'
+                        : isActive && !isHardware && !isConsumables
+                          ? 'bg-slate-600 text-white'
+                          : 'bg-gray-100 text-text hover:bg-gray-200'
+                  return (
+                    <Link
+                      key={cat.slug}
+                      href={makeHref({
+                        featured: null,
+                        condition: null,
+                        category: cat.slug,
+                        exclude_tags:
+                          isHardware || isConsumables ? CATEGORY_SHELF_EXCLUDE_TAGS : null,
+                        exclude_bundles: isHardware || isConsumables ? 'true' : null,
+                        bundle_only: null,
+                        timed_only: null,
+                        supplier_slug: null,
+                        delivery_group: null,
+                      })}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${chipClass}`}
+                    >
+                      <Package className="w-4 h-4" />
+                      {cat.name}
+                    </Link>
+                  )
+                })}
                 <Link
                   href={makeHref({
                     featured: null,
