@@ -7,18 +7,23 @@ import { Loader2 } from 'lucide-react'
 import { authApi } from '@/lib/api'
 import { useToast } from '@/contexts/ToastContext'
 
-function MagicLinkInner() {
-  const sp = useSearchParams()
+function MissingTokenFallback() {
+  return (
+    <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-xl border border-vintage-primary/10 text-center">
+      <p className="text-text-muted text-sm mb-4">Could not complete sign-in from this link.</p>
+      <Link href="/login" className="btn btn-primary w-full py-3">
+        Go to login
+      </Link>
+    </div>
+  )
+}
+
+function MagicConsume({ token }: { token: string }) {
   const router = useRouter()
   const { showSuccess, showError } = useToast()
-  const token = sp.get('token')
   const [phase, setPhase] = useState<'loading' | 'err'>('loading')
 
   useEffect(() => {
-    if (!token) {
-      setPhase('err')
-      return undefined
-    }
     let cancelled = false
     ;(async () => {
       try {
@@ -57,6 +62,15 @@ function MagicLinkInner() {
       )}
     </div>
   )
+}
+
+function MagicLinkInner() {
+  const sp = useSearchParams()
+  const token = sp.get('token')
+  if (!token) {
+    return <MissingTokenFallback />
+  }
+  return <MagicConsume token={token} />
 }
 
 export default function MagicLinkPage() {

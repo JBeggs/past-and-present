@@ -7,18 +7,23 @@ import { Loader2 } from 'lucide-react'
 import { authApi } from '@/lib/api'
 import { useToast } from '@/contexts/ToastContext'
 
-function ConfirmEmailChangeInner() {
-  const sp = useSearchParams()
+function MissingTokenFallback() {
+  return (
+    <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-xl border border-vintage-primary/10 text-center">
+      <p className="text-text-muted text-sm mb-4">We could not confirm the change.</p>
+      <Link href="/profile" className="btn btn-primary w-full py-3">
+        Back to profile
+      </Link>
+    </div>
+  )
+}
+
+function ConfirmEmailConsume({ token }: { token: string }) {
   const router = useRouter()
   const { showSuccess, showError } = useToast()
-  const token = sp.get('token')
   const [phase, setPhase] = useState<'loading' | 'err'>('loading')
 
   useEffect(() => {
-    if (!token) {
-      setPhase('err')
-      return undefined
-    }
     let cancelled = false
     ;(async () => {
       try {
@@ -57,6 +62,15 @@ function ConfirmEmailChangeInner() {
       )}
     </div>
   )
+}
+
+function ConfirmEmailChangeInner() {
+  const sp = useSearchParams()
+  const token = sp.get('token')
+  if (!token) {
+    return <MissingTokenFallback />
+  }
+  return <ConfirmEmailConsume token={token} />
 }
 
 export default function ConfirmEmailChangePage() {
