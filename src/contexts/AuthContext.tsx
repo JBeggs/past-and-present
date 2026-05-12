@@ -39,13 +39,13 @@ interface AuthContextType {
   signIn: (
     username: string,
     password: string,
-  ) => Promise<{ error: unknown; code?: string }>
+  ) => Promise<{ error: string | null; code?: string }>
   signUp: (
     email: string,
     password: string,
     fullName: string,
     phone: string,
-  ) => Promise<{ error: unknown | null; verificationRequired?: boolean; email?: string }>
+  ) => Promise<{ error: string | null; verificationRequired?: boolean; email?: string }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -211,7 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       await fetchProfile()
 
-      return { error: null as unknown }
+      return { error: null }
     } catch (error: any) {
       const errDetail = error?.details?.error
       const errFromDetails =
