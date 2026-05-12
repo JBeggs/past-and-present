@@ -8,6 +8,7 @@ import { ArrowRight, Sparkles, Clock, Rocket, Package, TimerReset } from 'lucide
 import ProductCard from '@/components/products/ProductCard'
 import PageHero from '@/components/hero/PageHero'
 import {
+  HOME_DYNAMIC_CATEGORY_SHELF_EXCLUDED_SLUGS,
   NEW_LISTING_EXCLUDED_CATEGORY_SLUGS,
   categoryViewAllHref,
   homeCategoryProductListParams,
@@ -52,13 +53,6 @@ async function getHomeData() {
       serverEcommerceApi.products.list({
         is_active: true,
         exclude_featured: true,
-        tags: 'vintage',
-        page_size: 20,
-        ordering: 'name',
-      }),
-      serverEcommerceApi.products.list({
-        is_active: true,
-        exclude_featured: true,
         exclude_category: NEW_LISTING_EXCLUDED_CATEGORY_SLUGS,
         exclude_bundles: 'true',
         page_size: 100,
@@ -84,7 +78,6 @@ async function getHomeData() {
 
     const SHELF_LABELS = [
       'featured',
-      'vintage',
       'new',
       'bundles',
       'timed',
@@ -108,11 +101,10 @@ async function getHomeData() {
       console.error('[home] some SSR fetches failed; rendering remaining shelves', failures)
     }
 
-    const [featuredRes, vintageRes, newRes, bundlesRes, timedRes, articlesData, futureArticlesData] =
+    const [featuredRes, newRes, bundlesRes, timedRes, articlesData, futureArticlesData] =
       settled.map((_, i) => valueOrEmpty(i))
 
     const featuredRaw = Array.isArray(featuredRes) ? featuredRes : (featuredRes as any)?.data || (featuredRes as any)?.results || []
-    const vintageRaw = Array.isArray(vintageRes) ? vintageRes : (vintageRes as any)?.data || (vintageRes as any)?.results || []
     const newRaw = Array.isArray(newRes) ? newRes : (newRes as any)?.data || (newRes as any)?.results || []
     const bundlesRaw = Array.isArray(bundlesRes) ? bundlesRes : (bundlesRes as any)?.data || (bundlesRes as any)?.results || []
     const timedRaw = Array.isArray(timedRes) ? timedRes : (timedRes as any)?.data || (timedRes as any)?.results || []
@@ -132,10 +124,6 @@ async function getHomeData() {
         }))
     )
 
-    const vintageProducts: Product[] = sortProductsByName(
-      vintageRaw.filter((p: Product) => p.status !== 'archived').slice(0, 20)
-    )
-
     const newNonVintage: Product[] = newRaw.filter((p: Product) => {
       if (p.status === 'archived') return false
       const tags = Array.isArray(p.tags) ? p.tags.map((t: string | { name: string }) => typeof t === 'string' ? t : t.name) : []
@@ -153,11 +141,22 @@ async function getHomeData() {
     try {
       const catRes = await serverEcommerceApi.categories.list()
       const catRaw = Array.isArray(catRes) ? catRes : (catRes as any)?.results || (catRes as any)?.data || []
-      const categoryRows = (catRaw as { name?: string; slug?: string }[])
+      const excludedHomeShelfSlugs = new Set(
+        HOME_DYNAMIC_CATEGORY_SHELF_EXCLUDED_SLUGS.map((s) => s.toLowerCase()),
+      )
+      const sortedCategories = (catRaw as { name?: string; slug?: string }[])
         .filter((c) => String(c?.name || '').trim() && String(c?.slug || '').trim())
         .sort((a, b) =>
           String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' }),
         )
+      const seenCategorySlugs = new Set<string>()
+      const categoryRows = sortedCategories.filter((c) => {
+        const slug = String(c.slug).trim().toLowerCase()
+        if (seenCategorySlugs.has(slug)) return false
+        seenCategorySlugs.add(slug)
+        if (excludedHomeShelfSlugs.has(slug)) return false
+        return true
+      })
 
       const catSettled = await Promise.allSettled(
         categoryRows.map((c) =>
@@ -199,7 +198,6 @@ async function getHomeData() {
 
     return {
       featuredProducts,
-      vintageProducts,
       newProducts,
       bundlesProducts,
       timedProducts,
@@ -211,7 +209,6 @@ async function getHomeData() {
     console.error('Error fetching home data:', error)
     return {
       featuredProducts: [],
-      vintageProducts: [],
       newProducts: [],
       bundlesProducts: [],
       timedProducts: [],
@@ -257,7 +254,6 @@ function DefaultHomeHero() {
 export default async function HomePage() {
   const {
     featuredProducts,
-    vintageProducts,
     newProducts,
     bundlesProducts,
     timedProducts,
@@ -376,34 +372,6 @@ export default async function HomePage() {
           </div>
         </section>
       )}
-
-      {/* Vintage Section */}
-      <section className="py-16 bg-vintage-background">
-        <div className="container-wide">
-          <div className="section-header">
-            <div>
-              <h2 className="section-title">Vintage Treasures</h2>
-              <p className="text-text-muted mt-1">Unique second-hand finds with character</p>
-            </div>
-            <Link href="/products?condition=vintage" className="btn btn-primary">
-              View All <ArrowRight className="w-4 h-4 ml-2" />
-            </Link>
-          </div>
-          
-          {vintageProducts.length > 0 ? (
-            <div className="product-grid">
-              {vintageProducts.map((product: Product) => (
-                <ProductCard key={product.id} product={product} homeQuickView />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 text-text-muted">
-              <Clock className="w-16 h-16 mx-auto mb-4 opacity-30" />
-              <p>Vintage items coming soon!</p>
-            </div>
-          )}
-        </div>
-      </section>
 
       {/* New Products Section */}
       <section className="py-16 bg-modern-background">
