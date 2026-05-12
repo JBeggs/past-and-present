@@ -342,7 +342,7 @@ export class ApiClient {
     })
 
     const response = await makeRequest()
-    return this.handleResponse<T>(response, makeRequest)
+    return this.handleResponse<T>(response, includeAuth ? makeRequest : undefined)
   }
 
   async put<T>(endpoint: string, data?: any): Promise<T> {

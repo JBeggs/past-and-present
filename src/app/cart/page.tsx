@@ -364,16 +364,23 @@ export default function CartPage() {
                 const weightBasedEntry = groupBreakdown.find((e) => e.weight_based === true)
                 const primaryDeliveryEntry = groupBreakdown.find((e) => Number(e.delivery_cost ?? 0) > 0)
                 const deliveryCost = getDeliveryCostFromBreakdown(group.slug)
+                const hasBreakdownEntries = groupBreakdown.length > 0
                 const breakdownThresholdMet = groupBreakdown.some((e) => e.threshold_met === true)
-                const breakdownAmountToFree = groupBreakdown.find((e) => (e.amount_to_free_delivery ?? 0) > 0)?.amount_to_free_delivery
-                const thresholdMet = breakdownThresholdMet || (group.threshold != null && !group.belowThreshold)
-                const amountToFree = breakdownAmountToFree ?? group.amountToFreeDelivery ?? 0
-                const showBelowThreshold = !thresholdMet && (amountToFree > 0 || group.belowThreshold)
+                const breakdownAmountToFreePositive = groupBreakdown.find(
+                  (e) => (e.amount_to_free_delivery ?? 0) > 0,
+                )?.amount_to_free_delivery
+                const thresholdMet =
+                  breakdownThresholdMet ||
+                  (!hasBreakdownEntries && group.threshold != null && !group.belowThreshold)
+                const amountToFree = hasBreakdownEntries
+                  ? Number(breakdownAmountToFreePositive ?? 0)
+                  : Number(group.amountToFreeDelivery ?? 0)
+                const showBelowThreshold = !thresholdMet && amountToFree > 0
                 const thresholdUnavailable = (group as { thresholdUnavailable?: boolean }).thresholdUnavailable === true
                 const hasWeightCost = weightBasedEntry && (weightBasedEntry.total_weight_kg ?? 0) > 0 && (weightBasedEntry.delivery_cost ?? 0) > 0
                 const showGroupHeader = group.isImport || deliveryCost > 0 || showBelowThreshold || hasWeightCost
                 const headerLabel = deliveryCost > 0
-                  ? `Our supplier has a flat delivery rate for these products (R${deliveryCost.toFixed(2)})`
+                  ? `We have a flat delivery rate for these products (R${deliveryCost.toFixed(2)})`
                   : 'This delivery group has a free-delivery threshold'
 
                 return (
@@ -388,7 +395,7 @@ export default function CartPage() {
                       ) : (
                         <>
                           <h3 className="cart-supplier-header">{headerLabel}</h3>
-                          {showBelowThreshold && group.threshold != null && (
+                          {showBelowThreshold && (
                             <>
                               {thresholdUnavailable ? (
                                 <p className="supplier-threshold-note text-amber-700">
@@ -406,7 +413,7 @@ export default function CartPage() {
                           )}
                           {deliveryCost > 0 && group.slug !== OTHER_GROUP && !showBelowThreshold && (
                             <Link href={getDeliveryGroupUrl(group.slug)} className="supplier-group-link">
-                              Browse more products from this supplier
+                              Browse more products in this delivery group
                             </Link>
                           )}
                         </>

@@ -902,10 +902,10 @@ export default function CheckoutPage() {
                       {belowThresholdGroups.map((group) => (
                         <div key={`${group.supplier_slug}-threshold`} className="py-1">
                           <p>
-                            Add <strong>R{Number(group.amount_to_free_delivery || 0).toFixed(2)}</strong> more from this supplier to unlock free delivery.
+                            Add <strong>R{Number(group.amount_to_free_delivery || 0).toFixed(2)}</strong> more to unlock free delivery for this delivery group.
                           </p>
                           <Link href={`/products?supplier_slug=${encodeURIComponent(group.supplier_slug)}`} className="text-vintage-primary hover:underline">
-                            Browse this supplier&apos;s products
+                            Browse products in this delivery group
                           </Link>
                         </div>
                       ))}
