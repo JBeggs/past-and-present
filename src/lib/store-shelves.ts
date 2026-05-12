@@ -6,22 +6,9 @@ export const CONSUMABLES_CATEGORY_SLUG = 'consumables'
 export const CATEGORY_SHELF_EXCLUDE_TAGS = 'vintage,new,others'
 
 /**
- * Comma-separated slugs for API `exclude_category` on the “new” pool
- * (home New Arrivals + `/products?condition=new`).
+ * Comma-separated slugs for API `exclude_category` on `/products?condition=new`.
  */
 export const NEW_LISTING_EXCLUDED_CATEGORY_SLUGS = `${HARDWARE_CATEGORY_SLUG},${CONSUMABLES_CATEGORY_SLUG}`
-
-/**
- * CRM categories that must not get an extra home shelf — they duplicate a dedicated section.
- * `new-arrivals` matches the fixed “New Arrivals” block (`condition=new` pool on `page.tsx`).
- */
-export const HOME_CATEGORY_SHELF_EXCLUDED_SLUGS: ReadonlySet<string> = new Set(['new-arrivals'])
-
-/**
- * Category slugs omitted from home dynamic category shelves — already covered by a fixed home section
- * (e.g. “New Arrivals” uses product filters, not the category titled New Arrivals).
- */
-export const HOME_DYNAMIC_CATEGORY_SHELF_EXCLUDED_SLUGS = ['new-arrivals'] as const
 
 export function categoryShelfListingHref(categorySlug: string): string {
   return `/products?category=${categorySlug}&exclude_tags=${encodeURIComponent(CATEGORY_SHELF_EXCLUDE_TAGS)}`

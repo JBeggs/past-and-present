@@ -152,6 +152,9 @@ export interface Product {
   updated_at: string
   published_at?: string
   category?: Category
+  /** Flattened from API when nested category is omitted */
+  category_name?: string
+  category_slug?: string
   featured_image?: Media
    images?: ProductImage[]
    tags?: string[] | Tag[]

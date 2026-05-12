@@ -71,7 +71,7 @@ export default function FooterClient({ siteName, description, logoUrl, contact, 
             <ul className="space-y-2">
               <li><Link href="/products" className="text-green-100 hover:text-modern-accent transition-colors">All Products</Link></li>
               <li><Link href="/products?condition=vintage" className="text-green-100 hover:text-modern-accent transition-colors">Vintage Items</Link></li>
-              <li><Link href="/products?condition=new" className="text-green-100 hover:text-modern-accent transition-colors">New Arrivals</Link></li>
+              <li><Link href="/products?category=new-arrivals" className="text-green-100 hover:text-modern-accent transition-colors">New Arrivals</Link></li>
               {menuItems.slice(0, 3).map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className="text-green-100 hover:text-modern-accent transition-colors">

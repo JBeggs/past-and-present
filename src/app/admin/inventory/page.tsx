@@ -198,7 +198,7 @@ export default function InventoryPage() {
     }
     const header = cols.join(',')
     const rows = products.map(p => cols.map(c => {
-      if (c === 'category') return escape((p.category as { name?: string })?.name ?? '')
+      if (c === 'category') return escape(p.category?.name?.trim() || p.category_name?.trim() || '')
       const v = (p as unknown as Record<string, unknown>)[c]
       return escape(v)
     }).join(','))
@@ -468,6 +468,21 @@ export default function InventoryPage() {
                       <span className="text-text-muted font-bold text-[8px] uppercase tracking-wider">Stock</span>
                       <span className={`font-bold ${(product.stock_quantity || 0) <= 5 ? 'text-vintage-accent' : 'text-text-light'}`}>
                         {product.stock_quantity ?? 0} <span className="hidden sm:inline">units</span>
+                      </span>
+                    </div>
+                    <div className="flex flex-col min-w-0 max-w-[7rem] sm:max-w-[10rem]">
+                      <span className="text-text-muted font-bold text-[8px] uppercase tracking-wider">Category</span>
+                      <span
+                        className="font-medium text-text-light truncate"
+                        title={
+                          product.category?.name?.trim() ||
+                          product.category_name?.trim() ||
+                          undefined
+                        }
+                      >
+                        {product.category?.name?.trim() ||
+                          product.category_name?.trim() ||
+                          '—'}
                       </span>
                     </div>
                     <div className="flex flex-col">

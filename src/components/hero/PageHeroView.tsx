@@ -68,7 +68,7 @@ export default function PageHeroView({
                 <Clock className="w-5 h-5 mr-2" />
                 Shop Vintage
               </Link>
-              <Link href="/products?condition=new" className="btn bg-white text-vintage-primary hover:bg-gray-100 text-base px-6 py-3">
+              <Link href="/products?category=new-arrivals" className="btn bg-white text-vintage-primary hover:bg-gray-100 text-base px-6 py-3">
                 <Sparkles className="w-5 h-5 mr-2" />
                 Shop New
               </Link>

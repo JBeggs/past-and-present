@@ -7,12 +7,7 @@ import { Product, Article } from '@/lib/types'
 import { ArrowRight, Sparkles, Clock, Rocket, Package, TimerReset } from 'lucide-react'
 import ProductCard from '@/components/products/ProductCard'
 import PageHero from '@/components/hero/PageHero'
-import {
-  HOME_DYNAMIC_CATEGORY_SHELF_EXCLUDED_SLUGS,
-  NEW_LISTING_EXCLUDED_CATEGORY_SLUGS,
-  categoryViewAllHref,
-  homeCategoryProductListParams,
-} from '@/lib/store-shelves'
+import { categoryViewAllHref, homeCategoryProductListParams } from '@/lib/store-shelves'
 
 export const dynamic = 'force-dynamic'
 
@@ -52,14 +47,6 @@ async function getHomeData() {
       }),
       serverEcommerceApi.products.list({
         is_active: true,
-        exclude_featured: true,
-        exclude_category: NEW_LISTING_EXCLUDED_CATEGORY_SLUGS,
-        exclude_bundles: 'true',
-        page_size: 100,
-        ordering: 'name',
-      }),
-      serverEcommerceApi.products.list({
-        is_active: true,
         page_size: 20,
         bundle_only: 'true',
         ordering: 'name',
@@ -76,14 +63,7 @@ async function getHomeData() {
       ),
     ])
 
-    const SHELF_LABELS = [
-      'featured',
-      'new',
-      'bundles',
-      'timed',
-      'articles',
-      'futureArticles',
-    ] as const
+    const SHELF_LABELS = ['featured', 'bundles', 'timed', 'articles', 'futureArticles'] as const
 
     const valueOrEmpty = (i: number): unknown =>
       settled[i].status === 'fulfilled'
@@ -101,11 +81,11 @@ async function getHomeData() {
       console.error('[home] some SSR fetches failed; rendering remaining shelves', failures)
     }
 
-    const [featuredRes, newRes, bundlesRes, timedRes, articlesData, futureArticlesData] =
-      settled.map((_, i) => valueOrEmpty(i))
+    const [featuredRes, bundlesRes, timedRes, articlesData, futureArticlesData] = settled.map((_, i) =>
+      valueOrEmpty(i),
+    )
 
     const featuredRaw = Array.isArray(featuredRes) ? featuredRes : (featuredRes as any)?.data || (featuredRes as any)?.results || []
-    const newRaw = Array.isArray(newRes) ? newRes : (newRes as any)?.data || (newRes as any)?.results || []
     const bundlesRaw = Array.isArray(bundlesRes) ? bundlesRes : (bundlesRes as any)?.data || (bundlesRes as any)?.results || []
     const timedRaw = Array.isArray(timedRes) ? timedRes : (timedRes as any)?.data || (timedRes as any)?.results || []
     const articlesRaw = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.data || (articlesData as any)?.results || []
@@ -124,12 +104,6 @@ async function getHomeData() {
         }))
     )
 
-    const newNonVintage: Product[] = newRaw.filter((p: Product) => {
-      if (p.status === 'archived') return false
-      const tags = Array.isArray(p.tags) ? p.tags.map((t: string | { name: string }) => typeof t === 'string' ? t : t.name) : []
-      return !tags.includes('vintage')
-    })
-    const newProducts: Product[] = sortProductsByName(newNonVintage).slice(0, 20)
     const bundlesProducts: Product[] = sortProductsByName(
       bundlesRaw.filter((p: Product) => p.status !== 'archived').slice(0, 20)
     )
@@ -141,20 +115,19 @@ async function getHomeData() {
     try {
       const catRes = await serverEcommerceApi.categories.list()
       const catRaw = Array.isArray(catRes) ? catRes : (catRes as any)?.results || (catRes as any)?.data || []
-      const excludedHomeShelfSlugs = new Set(
-        HOME_DYNAMIC_CATEGORY_SHELF_EXCLUDED_SLUGS.map((s) => s.toLowerCase()),
-      )
-      const sortedCategories = (catRaw as { name?: string; slug?: string }[])
+      const sortedCategories = (catRaw as { name?: string; slug?: string; created_at?: string }[])
         .filter((c) => String(c?.name || '').trim() && String(c?.slug || '').trim())
-        .sort((a, b) =>
-          String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' }),
-        )
+        .sort((a, b) => {
+          const ta = a.created_at ? new Date(a.created_at).getTime() : 0
+          const tb = b.created_at ? new Date(b.created_at).getTime() : 0
+          if (ta !== tb) return ta - tb
+          return String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' })
+        })
       const seenCategorySlugs = new Set<string>()
       const categoryRows = sortedCategories.filter((c) => {
         const slug = String(c.slug).trim().toLowerCase()
         if (seenCategorySlugs.has(slug)) return false
         seenCategorySlugs.add(slug)
-        if (excludedHomeShelfSlugs.has(slug)) return false
         return true
       })
 
@@ -198,7 +171,6 @@ async function getHomeData() {
 
     return {
       featuredProducts,
-      newProducts,
       bundlesProducts,
       timedProducts,
       categoryShelves,
@@ -209,7 +181,6 @@ async function getHomeData() {
     console.error('Error fetching home data:', error)
     return {
       featuredProducts: [],
-      newProducts: [],
       bundlesProducts: [],
       timedProducts: [],
       categoryShelves: [],
@@ -236,7 +207,7 @@ function DefaultHomeHero() {
               <Clock className="w-5 h-5 mr-2" />
               Shop Vintage
             </Link>
-            <Link href="/products?condition=new" className="btn bg-white text-vintage-primary hover:bg-gray-100">
+            <Link href="/products?category=new-arrivals" className="btn bg-white text-vintage-primary hover:bg-gray-100">
               <Sparkles className="w-5 h-5 mr-2" />
               Shop New
             </Link>
@@ -254,7 +225,6 @@ function DefaultHomeHero() {
 export default async function HomePage() {
   const {
     featuredProducts,
-    newProducts,
     bundlesProducts,
     timedProducts,
     categoryShelves,
@@ -289,7 +259,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Bundles — always on home (after Featured); New Arrivals and category shelves exclude bundles where configured */}
+      {/* Bundles — always on home (after Featured); category shelves exclude bundles where configured */}
       <section className="py-16 bg-slate-50">
         <div className="container-wide">
           <div className="section-header">
@@ -313,8 +283,8 @@ export default async function HomePage() {
               <Package className="w-16 h-16 mx-auto mb-4 opacity-30" />
               <p className="font-medium text-text">No bundles to show yet</p>
               <p className="text-sm mt-2 max-w-md mx-auto">
-                When bundle products are published in the CRM, they will appear here. They stay out of New Arrivals and
-                dedicated category shelves by design.
+                When bundle products are published in the CRM, they will appear here. Dedicated category shelves omit
+                bundles where configured.
               </p>
               <Link href="/products?bundle_only=true" className="btn btn-secondary mt-6 inline-flex">
                 Browse bundles
@@ -324,7 +294,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Category shelves (A–Z); only categories with at least one product */}
+      {/* Category shelves (CRM creation order); only categories with at least one product */}
       {categoryShelves.map((shelf, index) => (
         <section
           key={shelf.slug}
@@ -372,34 +342,6 @@ export default async function HomePage() {
           </div>
         </section>
       )}
-
-      {/* New Products Section */}
-      <section className="py-16 bg-modern-background">
-        <div className="container-wide">
-          <div className="section-header-modern">
-            <div>
-              <h2 className="section-title">New Arrivals</h2>
-              <p className="text-text-muted mt-1">Fresh finds and modern essentials</p>
-            </div>
-            <Link href="/products?condition=new" className="btn btn-modern">
-              View All <ArrowRight className="w-4 h-4 ml-2" />
-            </Link>
-          </div>
-          
-          {newProducts.length > 0 ? (
-            <div className="product-grid">
-              {newProducts.map((product: Product) => (
-                <ProductCard key={product.id} product={product} homeQuickView />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 text-text-muted">
-              <Sparkles className="w-16 h-16 mx-auto mb-4 opacity-30" />
-              <p>New products coming soon!</p>
-            </div>
-          )}
-        </div>
-      </section>
 
       {/* Future Plans Section */}
       {futureArticles.length > 0 && (

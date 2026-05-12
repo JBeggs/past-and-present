@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import PageHero from '@/components/hero/PageHero'
 import { serverEcommerceApi } from '@/lib/api-server'
 import { getShareImage } from '@/lib/share-image'
 import { Product } from '@/lib/types'
 import {
-  Clock,
   Sparkles,
   Filter,
   Search,
@@ -83,8 +83,7 @@ async function getProducts(params: {
       condition: params.condition,
       featured: params.featured === 'true' ? true : undefined,
       /** Matches home rails: vintage & new pools exclude already-featured items. */
-      exclude_featured:
-        params.condition === 'vintage' || params.condition === 'new' ? true : undefined,
+      exclude_featured: params.condition === 'new' ? true : undefined,
       page: params.page ? parseInt(params.page) : 1,
       page_size: 24,
       ordering: params.sort || undefined,
@@ -168,11 +167,22 @@ async function getProductFilterCategories(): Promise<{ name: string; slug: strin
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const params = await searchParams
+
+  if (params.condition === 'vintage') {
+    const q = new URLSearchParams()
+    ;(Object.keys(params) as (keyof typeof params)[]).forEach((key) => {
+      if (key === 'condition') return
+      const val = params[key]
+      if (val !== undefined && val !== '') q.set(key, String(val))
+    })
+    if (!q.has('category')) q.set('category', 'vintage')
+    redirect(`/products?${q.toString()}`)
+  }
+
   const [{ products, pagination }, filterCategories] = await Promise.all([
     getProducts(params),
     getProductFilterCategories(),
   ])
-  const isVintage = params.condition === 'vintage'
   const isNew = params.condition === 'new'
   const isFeatured = params.featured === 'true'
   const isBundles = params.bundle_only === 'true'
@@ -223,8 +233,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             ? selectedCategoryLabel || 'Consumables'
             : isOtherProductCategory
               ? selectedCategoryLabel || params.category || 'Products'
-            : isVintage
-              ? 'Vintage Treasures'
               : isNew
                 ? 'New Arrivals'
                 : isFeatured
@@ -259,8 +267,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               : 'Products in the consumables category. Bundles are excluded.'
             : isOtherProductCategory
               ? 'Products in this category.'
-            : isVintage
-              ? 'Unique second-hand finds with character and history'
               : isNew
                 ? 'Fresh finds and modern essentials. Bundles and dedicated category shelves use their own filters.'
                 : isFeatured
@@ -314,15 +320,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   ? 'bg-emerald-700'
                   : isOtherProductCategory
                     ? 'bg-slate-600'
-                  : isVintage
-                  ? 'bg-vintage-primary'
-                  : isNew
-                    ? 'bg-modern-primary'
-                    : isFeatured
-                      ? 'bg-purple-600'
-                      : isSupplierGroup
-                        ? 'bg-slate-700'
-                        : 'bg-gradient-to-r from-vintage-primary to-modern-primary'
+                    : isNew
+                      ? 'bg-modern-primary'
+                      : isFeatured
+                        ? 'bg-purple-600'
+                        : isSupplierGroup
+                          ? 'bg-slate-700'
+                          : 'bg-gradient-to-r from-vintage-primary to-modern-primary'
         } text-white`}
       >
         <div className="container-wide">
@@ -394,8 +398,8 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               <div className="flex items-center gap-2 text-sm text-text-muted">
                 <Filter className="w-5 h-5 flex-shrink-0" />
                 <span>
-                  Category chips list every storefront category that currently has active products (A–Z). Vintage and
-                  new omit featured listings; hardware and consumables omit bundles and the vintage / new / others tags.
+                  Category chips list every storefront category that currently has active products (A–Z). The New filter
+                  omits featured listings; hardware and consumables omit bundles and the vintage / new / others tags.
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -439,25 +443,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 >
                   <Star className="w-4 h-4" />
                   Featured
-                </Link>
-                <Link
-                  href={makeHref({
-                    featured: null,
-                    condition: 'vintage',
-                    category: null,
-                    exclude_tags: null,
-                    exclude_bundles: null,
-                    bundle_only: null,
-                    timed_only: null,
-                    supplier_slug: null,
-                    delivery_group: null,
-                  })}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
-                    isVintage ? 'bg-vintage-primary text-white' : 'bg-gray-100 text-text hover:bg-gray-200'
-                  }`}
-                >
-                  <Clock className="w-4 h-4" />
-                  Vintage
                 </Link>
                 <Link
                   href={makeHref({
