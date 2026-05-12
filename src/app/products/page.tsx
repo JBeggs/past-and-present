@@ -134,9 +134,11 @@ async function getProductFilterCategories(): Promise<{ name: string; slug: strin
     const catRaw = Array.isArray(catRes) ? catRes : (catRes as any)?.results || (catRes as any)?.data || []
     const rows = (catRaw as { name?: string; slug?: string }[])
       .filter((c) => String(c?.name || '').trim() && String(c?.slug || '').trim())
-      .sort((a, b) =>
-        String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' }),
-      )
+      .sort((a, b) => {
+        const byName = String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' })
+        if (byName !== 0) return byName
+        return String(a.slug || '').localeCompare(String(b.slug || ''), undefined, { sensitivity: 'base' })
+      })
 
     const settled = await Promise.allSettled(
       rows.map((c) =>

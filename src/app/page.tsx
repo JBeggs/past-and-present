@@ -41,12 +41,6 @@ async function getHomeData() {
     const settled = await Promise.allSettled([
       serverEcommerceApi.products.list({
         is_active: true,
-        featured: true,
-        page_size: 100,
-        ordering: 'name',
-      }),
-      serverEcommerceApi.products.list({
-        is_active: true,
         page_size: 20,
         bundle_only: 'true',
         ordering: 'name',
@@ -63,7 +57,7 @@ async function getHomeData() {
       ),
     ])
 
-    const SHELF_LABELS = ['featured', 'bundles', 'timed', 'articles', 'futureArticles'] as const
+    const SHELF_LABELS = ['bundles', 'timed', 'articles', 'futureArticles'] as const
 
     const valueOrEmpty = (i: number): unknown =>
       settled[i].status === 'fulfilled'
@@ -81,11 +75,8 @@ async function getHomeData() {
       console.error('[home] some SSR fetches failed; rendering remaining shelves', failures)
     }
 
-    const [featuredRes, bundlesRes, timedRes, articlesData, futureArticlesData] = settled.map((_, i) =>
-      valueOrEmpty(i),
-    )
+    const [bundlesRes, timedRes, articlesData, futureArticlesData] = settled.map((_, i) => valueOrEmpty(i))
 
-    const featuredRaw = Array.isArray(featuredRes) ? featuredRes : (featuredRes as any)?.data || (featuredRes as any)?.results || []
     const bundlesRaw = Array.isArray(bundlesRes) ? bundlesRes : (bundlesRes as any)?.data || (bundlesRes as any)?.results || []
     const timedRaw = Array.isArray(timedRes) ? timedRes : (timedRes as any)?.data || (timedRes as any)?.results || []
     const articlesRaw = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.data || (articlesData as any)?.results || []
@@ -94,15 +85,6 @@ async function getHomeData() {
       : (futureArticlesData as any)?.data || (futureArticlesData as any)?.results || []
     const articles = articlesRaw.filter(isArticleAllowedForStorefront)
     const futureArticles = futureArticlesRaw.filter(isArticleAllowedForStorefront)
-
-    const featuredProducts = sortProductsByName(
-      featuredRaw
-        .filter((p: Product) => p.status !== 'archived')
-        .map((p: Product) => ({
-          ...p,
-          is_vintage: Array.isArray(p.tags) && p.tags.some((t: string | { name: string }) => (typeof t === 'string' ? t : t.name) === 'vintage'),
-        }))
-    )
 
     const bundlesProducts: Product[] = sortProductsByName(
       bundlesRaw.filter((p: Product) => p.status !== 'archived').slice(0, 20)
@@ -115,13 +97,12 @@ async function getHomeData() {
     try {
       const catRes = await serverEcommerceApi.categories.list()
       const catRaw = Array.isArray(catRes) ? catRes : (catRes as any)?.results || (catRes as any)?.data || []
-      const sortedCategories = (catRaw as { name?: string; slug?: string; created_at?: string }[])
+      const sortedCategories = (catRaw as { name?: string; slug?: string }[])
         .filter((c) => String(c?.name || '').trim() && String(c?.slug || '').trim())
         .sort((a, b) => {
-          const ta = a.created_at ? new Date(a.created_at).getTime() : 0
-          const tb = b.created_at ? new Date(b.created_at).getTime() : 0
-          if (ta !== tb) return ta - tb
-          return String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' })
+          const byName = String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' })
+          if (byName !== 0) return byName
+          return String(a.slug || '').localeCompare(String(b.slug || ''), undefined, { sensitivity: 'base' })
         })
       const seenCategorySlugs = new Set<string>()
       const categoryRows = sortedCategories.filter((c) => {
@@ -170,7 +151,6 @@ async function getHomeData() {
     }
 
     return {
-      featuredProducts,
       bundlesProducts,
       timedProducts,
       categoryShelves,
@@ -180,7 +160,6 @@ async function getHomeData() {
   } catch (error) {
     console.error('Error fetching home data:', error)
     return {
-      featuredProducts: [],
       bundlesProducts: [],
       timedProducts: [],
       categoryShelves: [],
@@ -224,7 +203,6 @@ function DefaultHomeHero() {
 
 export default async function HomePage() {
   const {
-    featuredProducts,
     bundlesProducts,
     timedProducts,
     categoryShelves,
@@ -236,30 +214,7 @@ export default async function HomePage() {
     <div className="min-h-screen">
       <PageHero pageSlug="home" fallback={<DefaultHomeHero />} />
 
-      {/* Featured Section */}
-      {featuredProducts.length > 0 && (
-        <section className="py-16 bg-white">
-          <div className="container-wide">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">Featured Treasures</h2>
-                <p className="text-text-muted mt-1">Our most special and unique items</p>
-              </div>
-              <Link href="/products" className="btn btn-secondary">
-                View All <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </div>
-            
-            <div className="product-grid">
-              {featuredProducts.map((product: Product) => (
-                <ProductCard key={product.id} product={product} homeQuickView />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Bundles — always on home (after Featured); category shelves exclude bundles where configured */}
+      {/* Bundles — always on home; category shelves exclude bundles where configured */}
       <section className="py-16 bg-slate-50">
         <div className="container-wide">
           <div className="section-header">
@@ -294,7 +249,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Category shelves (CRM creation order); only categories with at least one product */}
+      {/* Category shelves — A–Z by category name (then slug); only categories with at least one product */}
       {categoryShelves.map((shelf, index) => (
         <section
           key={shelf.slug}
