@@ -28,12 +28,29 @@ export default function LoginPage() {
     setNeedsVerifyHint(false)
 
     try {
-      const { error, code } = await signIn(username, password)
+      const {
+        error,
+        code,
+        verificationEmailSent,
+        verificationEmailCooldown,
+      } = await signIn(username, password)
 
       if (error) {
-        showError(typeof error === 'string' ? error : 'Login failed')
         if (code === 'email_not_verified') {
+          const base =
+            'Your account is not verified yet. Please check your email (including spam or junk) for a message from us with a verification link. Open that link, then return here to sign in.'
+          let detail = base
+          if (verificationEmailSent) {
+            detail +=
+              ' We have sent another verification email—please look for it in your inbox.'
+          } else if (verificationEmailCooldown) {
+            detail +=
+              ' If you already have our earlier email, use the link there. Need a new message? Try again after 24 hours or use “Resend email” below when eligible.'
+          }
+          showError(detail)
           setNeedsVerifyHint(true)
+        } else {
+          showError(typeof error === 'string' ? error : 'Login failed')
         }
       } else {
         showSuccess('Login successful! Syncing your cart...')
@@ -153,7 +170,10 @@ export default function LoginPage() {
 
           {needsVerifyHint ? (
             <div className="mt-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-sm space-y-3">
-              <p className="text-text">Verify your email to sign in.</p>
+              <p className="text-text font-medium">
+                Email verification required — check your inbox (and spam) for the link we sent. After you click it,
+                you can sign in here.
+              </p>
               <div className="flex flex-wrap gap-2">
                 <Link
                   href={`/auth/verify-email?email=${encodeURIComponent(username.trim())}`}

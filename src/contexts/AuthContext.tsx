@@ -39,7 +39,12 @@ interface AuthContextType {
   signIn: (
     username: string,
     password: string,
-  ) => Promise<{ error: string | null; code?: string }>
+  ) => Promise<{
+    error: string | null
+    code?: string
+    verificationEmailSent?: boolean
+    verificationEmailCooldown?: boolean
+  }>
   signUp: (
     email: string,
     password: string,
@@ -226,19 +231,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         errFromDetails ||
         error?.response?.data?.error ||
         'Login failed. Please check your credentials.'
+
+      const details = error?.details as
+        | {
+            code?: string
+            verification_email_sent?: boolean
+            verification_email_cooldown?: boolean
+          }
+        | undefined
+      const apiCodeFromDetails =
+        details && typeof details.code === 'string' ? details.code : ''
       const apiCode =
-        error?.details && typeof error.details === 'object' && error.details !== null && 'code' in error.details
+        apiCodeFromDetails ||
+        (error?.details && typeof error.details === 'object' && error.details !== null && 'code' in error.details
           ? String((error.details as { code?: string }).code || '')
-          : ''
+          : '')
+      const codeFromError =
+        typeof error?.code === 'string' && !String(error.code).startsWith('HTTP_') ? error.code : ''
       const code =
         apiCode ||
-        (typeof error?.code === 'string' && !String(error.code).startsWith('HTTP_') ? error.code : '')
+        (typeof codeFromError === 'string' && codeFromError ? codeFromError : '')
+
       if (process.env.NODE_ENV === 'development') {
         console.error('Login error:', errorMessage, error)
       }
       return {
         error: String(errorMessage || 'Login failed. Please check your credentials.'),
         code: code === 'email_not_verified' ? 'email_not_verified' : undefined,
+        verificationEmailSent: details?.verification_email_sent === true,
+        verificationEmailCooldown: details?.verification_email_cooldown === true,
       }
     } finally {
       setLoading(false)
