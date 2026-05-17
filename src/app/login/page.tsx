@@ -20,12 +20,14 @@ export default function LoginPage() {
   const returnUrl = searchParams.get('return') || '/'
 
   const [needsVerifyHint, setNeedsVerifyHint] = useState(false)
+  const [needsPhoneVerifyHint, setNeedsPhoneVerifyHint] = useState(false)
   const [resendBusy, setResendBusy] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setNeedsVerifyHint(false)
+    setNeedsPhoneVerifyHint(false)
 
     try {
       const {
@@ -49,6 +51,13 @@ export default function LoginPage() {
           }
           showError(detail)
           setNeedsVerifyHint(true)
+        } else if (code === 'phone_not_verified') {
+          const detail =
+            typeof error === 'string' && error.trim()
+              ? error
+              : 'Your cellphone number must be verified before you can sign in. Open your profile to complete verification.'
+          showError(detail)
+          setNeedsPhoneVerifyHint(true)
         } else {
           showError(typeof error === 'string' ? error : 'Login failed')
         }
@@ -203,6 +212,17 @@ export default function LoginPage() {
                   {resendBusy ? 'Sending…' : 'Resend email'}
                 </button>
               </div>
+            </div>
+          ) : null}
+
+          {needsPhoneVerifyHint ? (
+            <div className="mt-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-sm space-y-3">
+              <p className="text-text font-medium">
+                Phone verification is required. Complete verification from your profile, then sign in again.
+              </p>
+              <Link href="/profile" className="btn btn-secondary text-sm py-2 inline-flex">
+                Go to profile
+              </Link>
             </div>
           ) : null}
 

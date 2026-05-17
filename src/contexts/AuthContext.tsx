@@ -257,7 +257,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return {
         error: String(errorMessage || 'Login failed. Please check your credentials.'),
-        code: code === 'email_not_verified' ? 'email_not_verified' : undefined,
+        code:
+          code === 'email_not_verified'
+            ? 'email_not_verified'
+            : code === 'phone_not_verified'
+              ? 'phone_not_verified'
+              : undefined,
         verificationEmailSent: details?.verification_email_sent === true,
         verificationEmailCooldown: details?.verification_email_cooldown === true,
       }
