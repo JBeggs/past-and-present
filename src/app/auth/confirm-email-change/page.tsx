@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
-import { authApi } from '@/lib/api'
+import { authApi, getApiErrorMessage } from '@/lib/api'
 import { useToast } from '@/contexts/ToastContext'
 
 function MissingTokenFallback() {
@@ -36,7 +36,7 @@ function ConfirmEmailConsume({ token }: { token: string }) {
       } catch (err: any) {
         if (!cancelled) {
           setPhase('err')
-          showError(err?.message || 'Invalid or expired link.')
+          showError(getApiErrorMessage(err, 'Invalid or expired link.'))
         }
       }
     })()

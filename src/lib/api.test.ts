@@ -83,16 +83,24 @@ describe('authApi', () => {
         email: 'new@test.com',
         password: 'pass123',
         password_confirm: 'pass123',
-        full_name: 'Test User',
+        first_name: 'Test',
+        last_name: 'User',
+        phone: '+27821234567',
       });
 
       expect(fetchMock).toHaveBeenCalledWith(
         `${API_BASE}/auth/register/`,
         expect.objectContaining({
           method: 'POST',
-          body: expect.stringContaining('"email":"new@test.com"'),
-        })
-      );
+        }),
+      )
+      const postInit = fetchMock.mock.calls[0]?.[1] as RequestInit
+      const parsed = JSON.parse(String(postInit.body)) as Record<string, string>
+      expect(parsed.email).toBe('new@test.com')
+      expect(parsed.first_name).toBe('Test')
+      expect(parsed.last_name).toBe('User')
+      expect(parsed.phone).toBe('+27821234567')
+      expect(parsed.company_slug).toBe(COMPANY_SLUG)
       expect(apiClient.getToken()).toBe('reg-access');
       expect(apiClient.getCompanyId()).toBe('company-1');
     });

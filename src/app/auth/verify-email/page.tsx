@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
-import { authApi } from '@/lib/api'
+import { authApi, getApiErrorMessage } from '@/lib/api'
 import { useToast } from '@/contexts/ToastContext'
 
 function VerifyEmailInner() {
@@ -33,7 +33,7 @@ function VerifyEmailInner() {
       } catch (err: any) {
         if (!cancelled) {
           setStatus('error')
-          showError(err?.message || 'Invalid or expired link.')
+          showError(getApiErrorMessage(err, 'Invalid or expired link.'))
         }
       }
     })()
@@ -52,7 +52,7 @@ function VerifyEmailInner() {
       await authApi.resendVerificationEmail(emailHint)
       showSuccess('If the account exists and needs verification, a new email was sent.')
     } catch (err: any) {
-      showError(err?.message || 'Could not send email.')
+      showError(getApiErrorMessage(err, 'Could not send email.'))
     } finally {
       setResendBusy(false)
     }

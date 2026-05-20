@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Mail, ArrowLeft } from 'lucide-react'
-import { authApi } from '@/lib/api'
+import { authApi, getApiErrorMessage } from '@/lib/api'
 import { useToast } from '@/contexts/ToastContext'
 
 export default function ForgotPasswordPage() {
@@ -18,7 +18,7 @@ export default function ForgotPasswordPage() {
       const res = await authApi.requestPasswordReset(email)
       showSuccess(res.detail || 'Check your inbox for reset instructions.')
     } catch (err: any) {
-      showError(err?.message || 'Something went wrong. Try again later.')
+      showError(getApiErrorMessage(err, 'Something went wrong. Try again later.'))
     } finally {
       setBusy(false)
     }
