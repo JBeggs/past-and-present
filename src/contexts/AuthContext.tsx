@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { authApi, apiClient, newsApi } from '@/lib/api'
+import { authApi, apiClient, newsApi, getApiErrorMessage } from '@/lib/api'
 
 interface User {
   id: string
@@ -306,40 +306,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await fetchProfile()
 
       return { error: null }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Registration error:', error)
-      
-      let errorMessage = 'Registration failed. Please try again.'
-      
-      if (error?.details?.error) {
-        const errorDetails = error.details.error
-        if (typeof errorDetails === 'string') {
-          errorMessage = errorDetails
-        } else if (typeof errorDetails === 'object' && errorDetails !== null) {
-          const fieldLabels: Record<string, string> = {
-            email: 'Email',
-            username: 'Username',
-            password: 'Password',
-            password_confirm: 'Password confirmation',
-            first_name: 'First name',
-            last_name: 'Last name',
-            full_name: 'Full name',
-            phone: 'Cellphone',
-          }
-          
-          const errorMessages = Object.entries(errorDetails).map(([field, messages]: [string, any]) => {
-            const fieldLabel = fieldLabels[field] || field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, ' ')
-            const messageArray = Array.isArray(messages) ? messages : [messages]
-            const messageText = messageArray.join(', ')
-            return `${fieldLabel}: ${messageText}`
-          })
-          errorMessage = errorMessages.join('. ')
-        }
-      } else if (error?.message) {
-        errorMessage = error.message
+      return {
+        error: getApiErrorMessage(error, 'Registration failed. Please try again.'),
       }
-      
-      return { error: errorMessage }
     } finally {
       setLoading(false)
     }

@@ -38,17 +38,23 @@ function drfErrorToMessage(value: unknown, fallback: string): string {
 
 /** Use in catch blocks so API/network errors always produce a visible toast message. */
 export function getApiErrorMessage(error: unknown, fallback = 'Something went wrong'): string {
+  if (typeof error === 'string' && error.trim()) return error.trim()
   if (error instanceof Error && error.message) return error.message
   if (error && typeof error === 'object') {
-    const o = error as { message?: unknown; details?: unknown }
+    const o = error as { message?: unknown; details?: Record<string, unknown> }
     const fromMsg = drfErrorToMessage(o.message, '')
     if (fromMsg) return fromMsg
+    const errPayload =
+      o.details && typeof o.details === 'object' && 'error' in o.details ? o.details.error : undefined
+    if (errPayload !== undefined && errPayload !== null) {
+      const fromValidation = drfErrorToMessage(errPayload, '')
+      if (fromValidation) return fromValidation
+    }
     if (o.details && typeof o.details === 'object') {
       const fromDetails = drfErrorToMessage(o.details, '')
       if (fromDetails) return fromDetails
     }
   }
-  if (typeof error === 'string' && error.trim()) return error
   return fallback
 }
 
