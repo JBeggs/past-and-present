@@ -53,7 +53,7 @@ interface AuthContextType {
     firstName: string,
     lastName: string,
     phone: string,
-  ) => Promise<{ error: string | null; verificationRequired?: boolean; email?: string }>
+  ) => Promise<{ error: string | null; verificationRequired?: boolean; email?: string; accountLinked?: boolean }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
