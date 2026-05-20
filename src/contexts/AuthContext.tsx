@@ -53,6 +53,7 @@ interface AuthContextType {
     firstName: string,
     lastName: string,
     phone: string,
+    options?: { linkOnly?: boolean },
   ) => Promise<{ error: string | null; verificationRequired?: boolean; email?: string; accountLinked?: boolean }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -280,17 +281,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, password: string, firstName: string, lastName: string, phone: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string,
+    phone: string,
+    options?: { linkOnly?: boolean },
+  ) => {
     setLoading(true)
     try {
-      const response = await authApi.register({
-        email,
-        password,
-        password_confirm: password,
-        first_name: firstName,
-        last_name: lastName,
-        phone,
-      })
+      const response = options?.linkOnly
+        ? await authApi.linkTenantAccount({ email, password })
+        : await authApi.register({
+            email,
+            password,
+            password_confirm: password,
+            first_name: firstName,
+            last_name: lastName,
+            phone,
+          })
 
       const accountLinked = Boolean(
         (response as { account_linked?: boolean }).account_linked,

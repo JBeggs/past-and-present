@@ -721,12 +721,46 @@ export const authApi = {
       false,
     )
   },
-  async checkRegistrationEmail(email: string) {
+  async checkRegistrationEmail(email: string, options?: { linkable?: boolean }) {
     return apiClient.post<{ status: 'available' | 'existing_can_link' | 'existing_no_link' | 'already_linked' }>(
       '/auth/check-registration-email/',
-      { email: email.trim().toLowerCase(), company_slug: DEFAULT_COMPANY_SLUG, linkable: true },
+      {
+        email: email.trim().toLowerCase(),
+        company_slug: DEFAULT_COMPANY_SLUG,
+        linkable: options?.linkable ?? true,
+      },
       false,
     )
+  },
+  async linkTenantAccount(data: { email: string; password: string }) {
+    const response = await apiClient.post<{
+      user: any
+      company: { id: string; name: string }
+      tokens?: { access: string; refresh: string }
+      profile?: { role: string; is_verified: boolean }
+      account_linked?: boolean
+      email_verification_required?: boolean
+    }>(
+      '/auth/link-tenant/',
+      {
+        email: data.email.trim().toLowerCase(),
+        password: data.password,
+        company_slug: DEFAULT_COMPANY_SLUG,
+      },
+      false,
+    )
+
+    if (response.tokens?.access) {
+      apiClient.setToken(response.tokens.access)
+      if (response.tokens?.refresh) {
+        apiClient.setRefreshToken(response.tokens.refresh)
+      }
+      if (response.company?.id) {
+        apiClient.setCompanyId(response.company.id)
+      }
+    }
+
+    return response
   },
 }
 
