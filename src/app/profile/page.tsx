@@ -333,22 +333,14 @@ export default function ProfilePage() {
     try {
       const uploaded: any = await newsApi.media.upload(file, { media_type: 'image' })
       const url = uploaded?.file_url
-      if (url) {
-        const fullName = [formData.first_name, formData.last_name].filter(Boolean).join(' ')
-        setFormData((f) => ({ ...f, avatar_url: url }))
-        await newsApi.profile.patch({
-          full_name: fullName || undefined,
-          first_name: formData.first_name || undefined,
-          last_name: formData.last_name || undefined,
-          phone: formData.phone || undefined,
-          bio: formData.bio || undefined,
-          avatar_url: url,
-          social_links: formData.social_links,
-          preferences: formData.preferences,
-        })
-        await refreshProfile()
-        showSuccess('Profile picture updated')
+      if (!url) {
+        showError('Upload succeeded but no image URL was returned')
+        return
       }
+      setFormData((f) => ({ ...f, avatar_url: url }))
+      await newsApi.profile.patch({ avatar_url: url })
+      await refreshProfile()
+      showSuccess('Profile picture updated')
     } catch (error: any) {
       showError(getApiErrorMessage(error, 'Failed to upload profile picture'))
     } finally {
