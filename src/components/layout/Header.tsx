@@ -21,8 +21,6 @@ async function getHeaderData() {
 
     const menuItems = [
       { title: 'Products', href: '/products' },
-      { title: 'Vintage', href: '/products?condition=vintage' },
-      { title: 'Future', href: '/future' },
       { title: 'Articles', href: '/articles' },
       { title: 'About', href: '/about' },
     ]
@@ -41,8 +39,6 @@ async function getHeaderData() {
       logo: null,
       menuItems: [
         { title: 'Products', href: '/products' },
-        { title: 'Vintage', href: '/products?condition=vintage' },
-        { title: 'Future', href: '/future' },
         { title: 'Articles', href: '/articles' },
         { title: 'About', href: '/about' },
       ]

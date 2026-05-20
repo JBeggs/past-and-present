@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Clock, Rocket, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import type { PageHero } from '@/lib/page-hero'
 
 /** Matches `DefaultHomeHero` so layout does not jump when an image is uploaded. */
@@ -11,7 +11,7 @@ const HERO_SECTION_LAYOUT =
 /**
  * Renders the uploaded hero markup. Past-and-present uses a native &lt;img&gt; (no next/image).
  *
- * **Home:** Same three CTAs as `DefaultHomeHero` (Shop Vintage / Shop New / Future Plans).
+ * **Home:** Shop New CTA (plus optional CMS cta_label / cta_href when both are set).
  * Optional CMS `cta_label` / `cta_href` renders as an extra control when both are set.
  */
 export default function PageHeroView({
@@ -61,20 +61,12 @@ export default function PageHeroView({
                   {hero.ctaLabel}
                 </Link>
               )}
-              <Link
-                href="/products?condition=vintage"
-                className="btn bg-modern-accent text-modern-primary hover:bg-modern-accent-dark text-base px-6 py-3"
-              >
-                <Clock className="w-5 h-5 mr-2" />
-                Shop Vintage
-              </Link>
               <Link href="/products?category=new-arrivals" className="btn bg-white text-vintage-primary hover:bg-gray-100 text-base px-6 py-3">
                 <Sparkles className="w-5 h-5 mr-2" />
                 Shop New
               </Link>
-              <Link href="/future" className="btn bg-amber-500/90 text-white hover:bg-amber-600 text-base px-6 py-3">
-                <Rocket className="w-5 h-5 mr-2" />
-                Future Plans
+              <Link href="/products" className="btn btn-secondary text-base px-6 py-3">
+                Shop All
               </Link>
             </div>
           )}

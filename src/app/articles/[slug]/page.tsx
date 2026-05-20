@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { serverNewsApi } from '@/lib/api-server'
-import { isArticleAllowedForStorefront } from '@/lib/article-author'
 import { openGraphImageFromMediaUrl, publicSiteOrigin } from '@/lib/product-seo'
 import { Article } from '@/lib/types'
 import { Calendar, User, ArrowLeft, Clock } from 'lucide-react'
@@ -27,7 +26,7 @@ async function getArticle(slug: string): Promise<Article | null> {
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { slug } = await params
   const article = await getArticle(slug)
-  if (!article || !isArticleAllowedForStorefront(article)) {
+  if (!article) {
     return { title: `Article | ${STORE_NAME}` }
   }
 
@@ -71,7 +70,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug } = await params
   const article = await getArticle(slug)
 
-  if (!article || !isArticleAllowedForStorefront(article)) {
+  if (!article) {
     notFound()
   }
 

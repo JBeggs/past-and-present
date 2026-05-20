@@ -7,7 +7,6 @@ import {
   filterArticlesByDisplaySettings,
   getArticleDisplaySettings,
 } from '@/lib/article-display-settings'
-import { mergeArticleListParams, isArticleAllowedForStorefront } from '@/lib/article-author'
 import { Article } from '@/lib/types'
 import { Calendar, User, ArrowRight, Search } from 'lucide-react'
 
@@ -39,15 +38,13 @@ interface ArticlesPageProps {
 
 async function getArticles(params: { search?: string; category?: string }) {
   try {
-    const articlesData = await serverNewsApi.articles.list(
-      mergeArticleListParams({
-        status: 'published',
-        ...(params.search?.trim() ? { search: params.search.trim() } : {}),
-        ...(params.category ? { category: params.category } : {}),
-      }),
-    )
+    const articlesData = await serverNewsApi.articles.list({
+      status: 'published',
+      ...(params.search?.trim() ? { search: params.search.trim() } : {}),
+      ...(params.category ? { category: params.category } : {}),
+    })
     const raw = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.results || []
-    return raw.filter(isArticleAllowedForStorefront)
+    return raw
   } catch (error) {
     console.error('Error fetching articles:', error)
     return []
@@ -56,7 +53,7 @@ async function getArticles(params: { search?: string; category?: string }) {
 
 async function getCategories(): Promise<{ id: string; name: string }[]> {
   try {
-    const data = await serverNewsApi.categories.list()
+    const data = await serverNewsApi.categories.list({ for_articles: true })
     const raw = Array.isArray(data) ? data : (data as any)?.results || []
     return raw.map((c: any) => ({ id: String(c.id), name: c.name || 'Uncategorized' }))
   } catch (error) {

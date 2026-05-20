@@ -1,14 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { serverEcommerceApi, serverNewsApi } from '@/lib/api-server'
-import { mergeArticleListParams, isArticleAllowedForStorefront } from '@/lib/article-author'
 import {
   filterArticlesByDisplaySettings,
   getArticleDisplaySettings,
 } from '@/lib/article-display-settings'
 import { getShareImage } from '@/lib/share-image'
 import { Product, Article } from '@/lib/types'
-import { ArrowRight, Sparkles, Clock, Rocket, Package, TimerReset } from 'lucide-react'
+import { ArrowRight, Sparkles, Package, TimerReset } from 'lucide-react'
 import ProductCard from '@/components/products/ProductCard'
 import PageHero from '@/components/hero/PageHero'
 import { categoryViewAllHref, homeCategoryProductListParams } from '@/lib/store-shelves'
@@ -55,13 +54,10 @@ async function getHomeData(displaySettings: Awaited<ReturnType<typeof getArticle
         timed_only: 'true',
         ordering: 'name',
       }),
-      serverNewsApi.articles.list(mergeArticleListParams({ status: 'published' })),
-      serverNewsApi.articles.list(
-        mergeArticleListParams({ status: 'published', category__slug: 'future' }),
-      ),
+      serverNewsApi.articles.list({ status: 'published' }),
     ])
 
-    const SHELF_LABELS = ['bundles', 'timed', 'articles', 'futureArticles'] as const
+    const SHELF_LABELS = ['bundles', 'timed', 'articles'] as const
 
     const valueOrEmpty = (i: number): unknown =>
       settled[i].status === 'fulfilled'
@@ -79,16 +75,12 @@ async function getHomeData(displaySettings: Awaited<ReturnType<typeof getArticle
       console.error('[home] some SSR fetches failed; rendering remaining shelves', failures)
     }
 
-    const [bundlesRes, timedRes, articlesData, futureArticlesData] = settled.map((_, i) => valueOrEmpty(i))
+    const [bundlesRes, timedRes, articlesData] = settled.map((_, i) => valueOrEmpty(i))
 
     const bundlesRaw = Array.isArray(bundlesRes) ? bundlesRes : (bundlesRes as any)?.data || (bundlesRes as any)?.results || []
     const timedRaw = Array.isArray(timedRes) ? timedRes : (timedRes as any)?.data || (timedRes as any)?.results || []
     const articlesRaw = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.data || (articlesData as any)?.results || []
-    const futureArticlesRaw = Array.isArray(futureArticlesData)
-      ? futureArticlesData
-      : (futureArticlesData as any)?.data || (futureArticlesData as any)?.results || []
-    const articles = articlesRaw.filter(isArticleAllowedForStorefront)
-    const futureArticles = futureArticlesRaw.filter(isArticleAllowedForStorefront)
+    const articles = articlesRaw
     const latestArticles = displaySettings.homeEnabled
       ? filterArticlesByDisplaySettings(articles as Article[], displaySettings, 'home')
       : []
@@ -162,7 +154,6 @@ async function getHomeData(displaySettings: Awaited<ReturnType<typeof getArticle
       timedProducts,
       categoryShelves,
       latestArticles,
-      futureArticles: futureArticles.slice(0, 3),
     }
   } catch (error) {
     console.error('Error fetching home data:', error)
@@ -171,7 +162,6 @@ async function getHomeData(displaySettings: Awaited<ReturnType<typeof getArticle
       timedProducts: [],
       categoryShelves: [],
       latestArticles: [],
-      futureArticles: [],
     }
   }
 }
@@ -189,17 +179,12 @@ function DefaultHomeHero() {
             Every item tells a story, every purchase supports sustainable shopping.
           </p>
           <div className="flex flex-wrap gap-4">
-            <Link href="/products?condition=vintage" className="btn bg-modern-accent text-modern-primary hover:bg-modern-accent-dark">
-              <Clock className="w-5 h-5 mr-2" />
-              Shop Vintage
-            </Link>
             <Link href="/products?category=new-arrivals" className="btn bg-white text-vintage-primary hover:bg-gray-100">
               <Sparkles className="w-5 h-5 mr-2" />
               Shop New
             </Link>
-            <Link href="/future" className="btn bg-amber-500/90 text-white hover:bg-amber-600">
-              <Rocket className="w-5 h-5 mr-2" />
-              Future Plans
+            <Link href="/products" className="btn btn-secondary">
+              Shop All
             </Link>
           </div>
         </div>
@@ -215,7 +200,6 @@ export default async function HomePage() {
     timedProducts,
     categoryShelves,
     latestArticles,
-    futureArticles,
   } = await getHomeData(displaySettings)
 
   return (
@@ -300,48 +284,6 @@ export default async function HomePage() {
             <div className="product-grid">
               {timedProducts.map((product: Product) => (
                 <ProductCard key={product.id} product={product} homeQuickView />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Future Plans Section */}
-      {futureArticles.length > 0 && (
-        <section className="py-16 bg-amber-50/50">
-          <div className="container-wide">
-            <div className="section-header-modern">
-              <div>
-                <h2 className="section-title">Future Plans</h2>
-                <p className="text-text-muted mt-1">IoT development, projects to build, camera setups, home garden monitoring</p>
-              </div>
-              <Link href="/future" className="btn btn-modern">
-                View All <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </div>
-            
-            <div className="article-grid">
-              {futureArticles.map((article: Article) => (
-                <Link key={article.id} href={`/articles/${article.slug}`} className="card group">
-                  {article.featured_media?.file_url && (
-                    <img
-                      src={article.featured_media.file_url}
-                      alt={article.title}
-                      className="w-full h-48 object-cover rounded-t-lg"
-                    />
-                  )}
-                  <div className="p-4">
-                    <h3 className="font-semibold text-text group-hover:text-modern-primary transition-colors">
-                      {article.title}
-                    </h3>
-                    {article.excerpt && (
-                      <p className="text-sm text-text-muted mt-2 line-clamp-2">{article.excerpt}</p>
-                    )}
-                    <div className="mt-3 text-sm text-text-muted">
-                      {article.published_at && new Date(article.published_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                </Link>
               ))}
             </div>
           </div>

@@ -4,9 +4,12 @@
  */
 
 import { cookies } from 'next/headers'
+import { NEWS_CONTENT_COMPANY_SLUG } from '@/lib/article-display-settings-keys'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://3pillars.pythonanywhere.com/api'
 const DEFAULT_COMPANY_SLUG = process.env.NEXT_PUBLIC_COMPANY_SLUG || 'past-and-present'
+
+const NEWS_ARTICLE_HEADERS = { 'X-Company-Slug': NEWS_CONTENT_COMPANY_SLUG }
 
 class ServerApiClient {
   private baseURL: string
@@ -159,14 +162,22 @@ export const serverNewsApi = {
         page?: number
         author?: string
       } & Record<string, string | number | undefined>,
-    ) => serverApiClient.get('/news/articles/', params),
-    get: (id: string) => serverApiClient.get(`/news/articles/${id}/`),
-    getBySlug: (slug: string) => serverApiClient.get(`/news/articles/?slug=${slug}`),
+    ) => serverApiClient.get('/news/articles/', params, NEWS_ARTICLE_HEADERS),
+    get: (id: string) =>
+      serverApiClient.get(`/news/articles/${id}/`, undefined, NEWS_ARTICLE_HEADERS),
+    getBySlug: (slug: string) =>
+      serverApiClient.get(`/news/articles/?slug=${slug}`, undefined, NEWS_ARTICLE_HEADERS),
   },
 
   categories: {
-    list: (params?: Record<string, string | number | undefined>) =>
-      serverApiClient.get('/news/categories/', params),
+    list: (params?: { for_articles?: boolean } & Record<string, string | number | undefined>) => {
+      const { for_articles: forArticles, ...query } = params ?? {}
+      return serverApiClient.get(
+        '/news/categories/',
+        Object.keys(query).length > 0 ? query : undefined,
+        forArticles ? NEWS_ARTICLE_HEADERS : undefined,
+      )
+    },
     get: (id: string) => serverApiClient.get(`/news/categories/${id}/`),
   },
 

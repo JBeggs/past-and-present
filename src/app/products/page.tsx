@@ -170,15 +170,15 @@ async function getProductFilterCategories(): Promise<{ name: string; slug: strin
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const params = await searchParams
 
-  if (params.condition === 'vintage') {
+  if (params.condition === 'vintage' || params.category === 'vintage') {
     const q = new URLSearchParams()
     ;(Object.keys(params) as (keyof typeof params)[]).forEach((key) => {
-      if (key === 'condition') return
+      if (key === 'condition' || key === 'category') return
       const val = params[key]
       if (val !== undefined && val !== '') q.set(key, String(val))
     })
-    if (!q.has('category')) q.set('category', 'vintage')
-    redirect(`/products?${q.toString()}`)
+    const query = q.toString()
+    redirect(query ? `/products?${query}` : '/products')
   }
 
   const [{ products, pagination }, filterCategories] = await Promise.all([
@@ -484,7 +484,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   <Package className="w-4 h-4" />
                   Bundles
                 </Link>
-                {filterCategories.map((cat) => {
+                {filterCategories.filter((cat) => cat.slug !== 'vintage').map((cat) => {
                   const isHardware = cat.slug === HARDWARE_CATEGORY_SLUG
                   const isConsumables = cat.slug === CONSUMABLES_CATEGORY_SLUG
                   const isActive = params.category === cat.slug
