@@ -301,7 +301,7 @@ export default function ArticleDisplaySettingsForm() {
             type="checkbox"
             checked={homeEnabled}
             onChange={(e) => setHomeEnabled(e.target.checked)}
-            className="rounded border-border-default text-forest-primary focus:ring-forest-primary/30"
+            className="rounded border-border-default text-primary focus:ring-primary/30"
           />
           <span>Show article section on the home page</span>
         </label>
