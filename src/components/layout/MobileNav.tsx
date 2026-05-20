@@ -7,6 +7,7 @@ import { Menu, X, User, Truck, ShoppingCart } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMounted } from '@/hooks/useMounted'
 import { useCartSafe } from '@/contexts/CartContext'
+import { getProfileDisplayName, ProfileNavAvatar } from '@/components/layout/ProfileNavAvatar'
 
 interface MobileNavProps {
   menuItems: { title: string; href: string }[]
@@ -20,8 +21,9 @@ function MobileNavInner({ menuItems, logoUrl: _logoUrl = '/logo.png' }: MobileNa
   const [countBump, setCountBump] = useState(false)
   const [showTruck, setShowTruck] = useState(false)
   const [truckCoords, setTruckCoords] = useState<TruckCoords | null>(null)
-  const { user, profile } = useAuth()
+  const { user, profile, signOut } = useAuth()
   const isAdmin = profile?.role === 'admin' || profile?.role === 'business_owner'
+  const displayName = getProfileDisplayName(profile, user)
   const { itemCount } = useCartSafe()
   const mounted = useMounted()
 
@@ -103,6 +105,17 @@ function MobileNavInner({ menuItems, logoUrl: _logoUrl = '/logo.png' }: MobileNa
             </span>
           )}
         </Link>
+        {mounted && user ? (
+          <Link
+            href="/profile"
+            className="relative p-2 text-text hover:text-vintage-primary transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+            aria-label="Profile"
+            data-cy="mobile-header-profile"
+            onClick={() => setIsOpen(false)}
+          >
+            <ProfileNavAvatar profile={profile} user={user} size="sm" />
+          </Link>
+        ) : null}
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
@@ -163,17 +176,41 @@ function MobileNavInner({ menuItems, logoUrl: _logoUrl = '/logo.png' }: MobileNa
                   </Link>
                 </div>
               )}
-              <div className="border-t border-gray-200 pt-4 flex items-center space-x-4">
-                {mounted && (
-                  <Link href="/cart" className="flex items-center space-x-2 nav-link" onClick={() => setIsOpen(false)}>
-                    <span className="font-semibold">Cart{itemCount > 0 ? ` (${itemCount})` : ''}</span>
-                  </Link>
-                )}
+              <div className="border-t border-gray-200 pt-4">
+                <p className="text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Account</p>
                 {mounted && user ? (
-                  <Link href="/profile" className="flex items-center space-x-2 nav-link" onClick={() => setIsOpen(false)}>
-                    <User className="w-5 h-5" />
-                    <span>Profile</span>
-                  </Link>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-vintage-background border border-gray-200">
+                      <ProfileNavAvatar profile={profile} user={user} size="md" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-text truncate">{displayName}</p>
+                        {user.email ? (
+                          <p className="text-xs text-text-muted truncate">{user.email}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                    <Link
+                      href="/profile"
+                      className="nav-link flex items-center gap-2 py-2 block"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <User className="w-5 h-5 shrink-0" />
+                      <span>Profile &amp; settings</span>
+                    </Link>
+                    <Link href="/cart" className="nav-link py-2 block" onClick={() => setIsOpen(false)}>
+                      Cart{itemCount > 0 ? ` (${itemCount})` : ''}
+                    </Link>
+                    <button
+                      type="button"
+                      className="w-full text-left nav-link py-2 text-red-600"
+                      onClick={() => {
+                        void signOut()
+                        setIsOpen(false)
+                      }}
+                    >
+                      Sign out
+                    </button>
+                  </div>
                 ) : mounted ? (
                   <Link href="/login" className="btn btn-primary" onClick={() => setIsOpen(false)}>
                     Sign In

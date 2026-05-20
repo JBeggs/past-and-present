@@ -6,6 +6,7 @@ import { ShoppingCart, User, LogOut, Package, Boxes, ImageIcon } from 'lucide-re
 import { useAuth } from '@/contexts/AuthContext'
 import { useCartSafe } from '@/contexts/CartContext'
 import { useMounted } from '@/hooks/useMounted'
+import { ProfileNavAvatar } from '@/components/layout/ProfileNavAvatar'
 
 export default function ClientHeader() {
   const [countBump, setCountBump] = useState(false)
@@ -92,10 +93,11 @@ export default function ClientHeader() {
           )}
           <Link
             href="/profile"
-            className="p-2 text-text hover:text-vintage-primary transition-colors"
+            className="min-w-[44px] min-h-[44px] inline-flex items-center justify-center p-2 text-text hover:text-vintage-primary transition-colors"
             aria-label="Profile"
+            data-cy="header-profile"
           >
-            <User className="w-5 h-5" />
+            <ProfileNavAvatar profile={profile} user={user} size="sm" />
           </Link>
           <button
             onClick={() => signOut()}
