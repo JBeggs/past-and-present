@@ -170,14 +170,12 @@ export const serverNewsApi = {
   },
 
   categories: {
-    list: (params?: { for_articles?: boolean } & Record<string, string | number | undefined>) => {
-      const { for_articles: forArticles, ...query } = params ?? {}
-      return serverApiClient.get(
+    list: (params?: { for_articles?: boolean }) =>
+      serverApiClient.get(
         '/news/categories/',
-        Object.keys(query).length > 0 ? query : undefined,
-        forArticles ? NEWS_ARTICLE_HEADERS : undefined,
-      )
-    },
+        undefined,
+        params?.for_articles ? NEWS_ARTICLE_HEADERS : undefined,
+      ),
     get: (id: string) => serverApiClient.get(`/news/categories/${id}/`),
   },
 
