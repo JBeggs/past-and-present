@@ -32,11 +32,11 @@ function normalizeToastMessage(raw: unknown, fallback: string): string {
 }
 
 interface ToastContextType {
-  showToast: (message: string, type?: ToastType, duration?: number) => void
-  showError: (message: string, duration?: number) => void
-  showSuccess: (message: string, duration?: number) => void
-  showWarning: (message: string, duration?: number) => void
-  showInfo: (message: string, duration?: number) => void
+  showToast: (message: unknown, type?: ToastType, duration?: number) => void
+  showError: (message: unknown, duration?: number) => void
+  showSuccess: (message: unknown, duration?: number) => void
+  showWarning: (message: unknown, duration?: number) => void
+  showInfo: (message: unknown, duration?: number) => void
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined)
@@ -49,7 +49,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const showToast = useCallback(
-    (message: string, type: ToastType = 'info', duration?: number) => {
+    (message: unknown, type: ToastType = 'info', duration?: number) => {
       const resolved = normalizeToastMessage(message, 'Something went wrong')
       const id = Math.random().toString(36).substring(2, 9)
       const toast: Toast = {
@@ -64,28 +64,28 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   )
 
   const showError = useCallback(
-    (message: string, duration?: number) => {
+    (message: unknown, duration?: number) => {
       showToast(message, 'error', duration || 7000)
     },
     [showToast]
   )
 
   const showSuccess = useCallback(
-    (message: string, duration?: number) => {
+    (message: unknown, duration?: number) => {
       showToast(message, 'success', duration)
     },
     [showToast]
   )
 
   const showWarning = useCallback(
-    (message: string, duration?: number) => {
+    (message: unknown, duration?: number) => {
       showToast(message, 'warning', duration)
     },
     [showToast]
   )
 
   const showInfo = useCallback(
-    (message: string, duration?: number) => {
+    (message: unknown, duration?: number) => {
       showToast(message, 'info', duration)
     },
     [showToast]

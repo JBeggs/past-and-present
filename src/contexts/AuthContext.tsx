@@ -308,9 +308,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: null }
     } catch (error: unknown) {
       console.error('Registration error:', error)
-      return {
-        error: getApiErrorMessage(error, 'Registration failed. Please try again.'),
-      }
+      const fallback = 'Registration failed. Please try again.'
+      const msg = getApiErrorMessage(error, fallback).trim() || fallback
+      return { error: msg }
     } finally {
       setLoading(false)
     }

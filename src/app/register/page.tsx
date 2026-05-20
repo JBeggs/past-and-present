@@ -20,6 +20,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const { signUp } = useAuth()
   const { syncCartAfterLogin } = useCart()
   const { showError, showSuccess } = useToast()
@@ -27,6 +28,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitError('')
 
     if (password !== confirmPassword) {
       showError('Passwords do not match')
@@ -65,7 +67,12 @@ export default function RegisterPage() {
       const result = await signUp(email, password, fn, ln, phoneTrim)
 
       if (result.error) {
-        showError(result.error)
+        const msg =
+          typeof result.error === 'string' && result.error.trim() !== ''
+            ? result.error
+            : 'Registration failed. Please try again.'
+        setSubmitError(msg)
+        showError(msg)
       } else if (result.verificationRequired) {
         showSuccess('Check your email to verify your account, then sign in.')
         router.push(`/auth/verify-email?email=${encodeURIComponent(email.trim())}`)
@@ -79,6 +86,7 @@ export default function RegisterPage() {
         router.push('/')
       }
     } catch {
+      setSubmitError('An unexpected error occurred')
       showError('An unexpected error occurred')
     } finally {
       setIsLoading(false)
@@ -98,6 +106,15 @@ export default function RegisterPage() {
             <h1 className="text-3xl font-bold font-playfair text-text tracking-tight">Create Account</h1>
             <p className="text-text-muted mt-3 text-lg">Join our community of treasure hunters</p>
           </div>
+
+          {submitError ? (
+            <div
+              role="alert"
+              className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+            >
+              {submitError}
+            </div>
+          ) : null}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
