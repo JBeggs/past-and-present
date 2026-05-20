@@ -3,6 +3,10 @@ import Link from 'next/link'
 import { getShareImage } from '@/lib/share-image'
 import PageHero from '@/components/hero/PageHero'
 import { serverNewsApi } from '@/lib/api-server'
+import {
+  filterArticlesByDisplaySettings,
+  getArticleDisplaySettings,
+} from '@/lib/article-display-settings'
 import { mergeArticleListParams, isArticleAllowedForStorefront } from '@/lib/article-author'
 import { Article } from '@/lib/types'
 import { Calendar, User, ArrowRight, Search } from 'lucide-react'
@@ -74,10 +78,16 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   const category = typeof params.category === 'string' ? params.category : undefined
   const search = typeof params.search === 'string' ? params.search : undefined
 
-  const [articles, categories] = await Promise.all([
+  const [rawArticles, categories, displaySettings] = await Promise.all([
     getArticles({ search, category }),
     getCategories(),
+    getArticleDisplaySettings(),
   ])
+  const articles = filterArticlesByDisplaySettings(
+    rawArticles as Article[],
+    displaySettings,
+    'articles',
+  )
 
   return (
     <div className="min-h-screen bg-vintage-background">
