@@ -2,6 +2,10 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { serverEcommerceApi, serverNewsApi } from '@/lib/api-server'
 import { mergeArticleListParams, isArticleAllowedForStorefront } from '@/lib/article-author'
+import {
+  filterArticlesByDisplaySettings,
+  getArticleDisplaySettings,
+} from '@/lib/article-display-settings'
 import { getShareImage } from '@/lib/share-image'
 import { Product, Article } from '@/lib/types'
 import { ArrowRight, Sparkles, Clock, Rocket, Package, TimerReset } from 'lucide-react'
@@ -32,7 +36,7 @@ export type HomeCategoryShelf = {
   products: Product[]
 }
 
-async function getHomeData() {
+async function getHomeData(displaySettings: Awaited<ReturnType<typeof getArticleDisplaySettings>>) {
   try {
     /**
      * One bad fetch should NOT zero every shelf.
@@ -85,6 +89,9 @@ async function getHomeData() {
       : (futureArticlesData as any)?.data || (futureArticlesData as any)?.results || []
     const articles = articlesRaw.filter(isArticleAllowedForStorefront)
     const futureArticles = futureArticlesRaw.filter(isArticleAllowedForStorefront)
+    const latestArticles = displaySettings.homeEnabled
+      ? filterArticlesByDisplaySettings(articles as Article[], displaySettings, 'home')
+      : []
 
     const bundlesProducts: Product[] = sortProductsByName(
       bundlesRaw.filter((p: Product) => p.status !== 'archived').slice(0, 20)
@@ -154,7 +161,7 @@ async function getHomeData() {
       bundlesProducts,
       timedProducts,
       categoryShelves,
-      latestArticles: articles.slice(0, 3),
+      latestArticles,
       futureArticles: futureArticles.slice(0, 3),
     }
   } catch (error) {
@@ -202,13 +209,14 @@ function DefaultHomeHero() {
 }
 
 export default async function HomePage() {
+  const displaySettings = await getArticleDisplaySettings()
   const {
     bundlesProducts,
     timedProducts,
     categoryShelves,
     latestArticles,
     futureArticles,
-  } = await getHomeData()
+  } = await getHomeData(displaySettings)
 
   return (
     <div className="min-h-screen">
