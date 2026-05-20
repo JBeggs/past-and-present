@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCart } from '@/contexts/CartContext'
 import { useToast } from '@/contexts/ToastContext'
+import { authApi } from '@/lib/api'
 import { Lock, User, ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
@@ -22,10 +23,27 @@ export default function LoginPage() {
   const [needsVerifyHint, setNeedsVerifyHint] = useState(false)
   const [needsPhoneVerifyHint, setNeedsPhoneVerifyHint] = useState(false)
   const [resendBusy, setResendBusy] = useState(false)
+  const [loginError, setLoginError] = useState('')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('refresh_token')
+      localStorage.removeItem('company_id')
+      document.cookie = 'auth_token=; path=/; max-age=0'
+      document.cookie = 'refresh_token=; path=/; max-age=0'
+      document.cookie = 'company_id=; path=/; max-age=0'
+      authApi.logout()
+    } catch {
+      /* ignore */
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setLoginError('')
     setNeedsVerifyHint(false)
     setNeedsPhoneVerifyHint(false)
 
@@ -49,6 +67,7 @@ export default function LoginPage() {
             detail +=
               ' If you already have our earlier email, use the link there. Need a new message? Try again after 24 hours or use “Resend email” below when eligible.'
           }
+          setLoginError(detail)
           showError(detail)
           setNeedsVerifyHint(true)
         } else if (code === 'phone_not_verified') {
@@ -56,10 +75,13 @@ export default function LoginPage() {
             typeof error === 'string' && error.trim()
               ? error
               : 'Your cellphone number must be verified before you can sign in. Open your profile to complete verification.'
+          setLoginError(detail)
           showError(detail)
           setNeedsPhoneVerifyHint(true)
         } else {
-          showError(typeof error === 'string' ? error : 'Login failed')
+          const msg = typeof error === 'string' ? error : 'Login failed'
+          setLoginError(msg)
+          showError(msg)
         }
       } else {
         showSuccess('Login successful! Syncing your cart...')
@@ -71,7 +93,9 @@ export default function LoginPage() {
         router.push(returnUrl)
       }
     } catch {
-      showError('An unexpected error occurred')
+      const msg = 'An unexpected error occurred'
+      setLoginError(msg)
+      showError(msg)
     } finally {
       setIsLoading(false)
     }
@@ -83,18 +107,28 @@ export default function LoginPage() {
         <div className="bg-white p-8 rounded-xl shadow-xl border border-vintage-primary/10">
           <div className="text-center mb-10">
             <Link href="/" className="inline-block group transition-transform hover:scale-105 duration-300">
-              <div className="w-20 h-20 bg-gradient-to-br from-vintage-primary to-vintage-primary-dark rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-vintage-primary/20 group-hover:shadow-vintage-primary/30 transition-shadow">
-                <User className="w-10 h-10 text-white" />
+              <div className="w-20 h-20 brand-icon-tile rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-black/15 group-hover:shadow-black/25 transition-shadow">
+                <User className="w-10 h-10 text-[rgb(var(--color-on-dark-surface))]" />
               </div>
             </Link>
             <h1 className="text-3xl font-bold font-playfair text-text tracking-tight">Welcome Back</h1>
             <p className="text-text-muted mt-3 text-lg">Sign in to your account</p>
           </div>
 
+          {loginError ? (
+            <div
+              role="alert"
+              data-cy="login-submit-error"
+              className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+            >
+              {loginError}
+            </div>
+          ) : null}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <label htmlFor="username" className="form-label text-sm font-semibold uppercase tracking-wider text-text-light">
-                Username or email
+                Username
               </label>
               <div className="relative group">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none transition-colors group-focus-within:text-vintage-primary z-20">
@@ -107,7 +141,7 @@ export default function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-md hover:border-vintage-primary/50 transition-all focus:bg-white focus:ring-4 focus:ring-vintage-primary/10 focus:outline-none focus:border-transparent relative z-10"
-                  placeholder="Username or email"
+                  placeholder="Enter your username"
                   required
                 />
               </div>
@@ -118,10 +152,7 @@ export default function LoginPage() {
                 <label htmlFor="password" className="form-label text-sm font-semibold uppercase tracking-wider text-text-light">
                   Password
                 </label>
-                <Link
-                  href="/forgot-password"
-                  className="text-xs font-semibold text-vintage-primary hover:text-vintage-primary-dark transition-colors"
-                >
+                <Link href="/forgot-password" className="text-xs font-semibold text-vintage-primary hover:text-vintage-primary-dark transition-colors">
                   Forgot password?
                 </Link>
               </div>
@@ -180,8 +211,7 @@ export default function LoginPage() {
           {needsVerifyHint ? (
             <div className="mt-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-sm space-y-3">
               <p className="text-text font-medium">
-                Email verification required — check your inbox (and spam) for the link we sent. After you click it,
-                you can sign in here.
+                Email verification is required. Check your inbox and spam folder for our link before signing in.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Link

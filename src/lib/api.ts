@@ -183,9 +183,7 @@ export class ApiClient {
         } else {
           this.setToken(null)
           this.setRefreshToken(null)
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login'
-          }
+          this.redirectToLoginIfNeeded()
           return null
         }
       } catch (error) {
@@ -271,9 +269,43 @@ export class ApiClient {
     return headers
   }
 
+  /** 401 from these paths must reach callers (login form), not token-refresh intercept. */
+  private isAuthHandshakeUrl(urlStr: string): boolean {
+    if (!urlStr) return false
+    let pathname = ''
+    try {
+      pathname = new URL(urlStr).pathname
+    } catch {
+      return false
+    }
+    const authMarkers = [
+      '/auth/login',
+      '/auth/register',
+      '/auth/refresh',
+      '/auth/password-reset',
+      '/auth/magic-link',
+      '/auth/verify-email',
+      '/auth/check-registration-email',
+      '/auth/link-tenant',
+    ]
+    return authMarkers.some((m) => pathname.includes(m))
+  }
+
+  private redirectToLoginIfNeeded(): void {
+    if (typeof window === 'undefined') return
+    const p = window.location.pathname || ''
+    if (p === '/login' || p.startsWith('/login/')) return
+    window.location.href = '/login'
+  }
+
   private async handleResponse<T>(response: Response, retryRequest?: () => Promise<Response>): Promise<T> {
     if (!response.ok) {
-      if (response.status === 401 && this.getRefreshToken() && retryRequest) {
+      if (
+        response.status === 401 &&
+        this.getRefreshToken() &&
+        retryRequest &&
+        !this.isAuthHandshakeUrl(response.url || '')
+      ) {
         const newToken = await this.attemptTokenRefresh()
         if (newToken) {
           const retryResponse = await retryRequest()

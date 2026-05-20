@@ -227,22 +227,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await fetchProfile()
 
       return { error: null }
-    } catch (error: any) {
-      const errDetail = error?.details?.error
-      const errFromDetails =
-        typeof error?.details === 'object' && error?.details !== null
-          ? typeof error.details.error === 'string'
-            ? error.details.error
-            : error.details.message
-          : null
-      const errorMessage =
-        error?.message ||
-        (typeof errDetail === 'string' ? errDetail : null) ||
-        errFromDetails ||
-        error?.response?.data?.error ||
-        'Login failed. Please check your credentials.'
-
-      const details = error?.details as
+    } catch (error: unknown) {
+      const fallback = 'Login failed. Please check your credentials.'
+      const errObj = error as {
+        details?: {
+          code?: string
+          verification_email_sent?: boolean
+          verification_email_cooldown?: boolean
+        }
+        code?: string
+      }
+      const details = errObj?.details as
         | {
             code?: string
             verification_email_sent?: boolean
@@ -253,20 +248,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         details && typeof details.code === 'string' ? details.code : ''
       const apiCode =
         apiCodeFromDetails ||
-        (error?.details && typeof error.details === 'object' && error.details !== null && 'code' in error.details
-          ? String((error.details as { code?: string }).code || '')
+        (errObj?.details &&
+        typeof errObj.details === 'object' &&
+        errObj.details !== null &&
+        'code' in errObj.details
+          ? String((errObj.details as { code?: string }).code || '')
           : '')
       const codeFromError =
-        typeof error?.code === 'string' && !String(error.code).startsWith('HTTP_') ? error.code : ''
+        typeof errObj?.code === 'string' && !String(errObj.code).startsWith('HTTP_') ? errObj.code : ''
       const code =
         apiCode ||
         (typeof codeFromError === 'string' && codeFromError ? codeFromError : '')
+      const errorMessage = getApiErrorMessage(error, fallback)
 
       if (process.env.NODE_ENV === 'development') {
         console.error('Login error:', errorMessage, error)
       }
       return {
-        error: String(errorMessage || 'Login failed. Please check your credentials.'),
+        error: String(errorMessage.trim() || fallback),
         code:
           code === 'email_not_verified'
             ? 'email_not_verified'
