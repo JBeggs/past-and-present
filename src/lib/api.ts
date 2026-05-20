@@ -692,7 +692,7 @@ export const authApi = {
   async magicLinkRequest(email: string) {
     return apiClient.post<{ detail: string }>(
       '/auth/magic-link/request/',
-      { email: email.trim().toLowerCase() },
+      { email: email.trim().toLowerCase(), company_slug: DEFAULT_COMPANY_SLUG },
       false,
     )
   },
@@ -717,7 +717,14 @@ export const authApi = {
   async resendVerificationEmail(email: string) {
     return apiClient.post<{ detail: string }>(
       '/auth/resend-verification/',
-      { email: email.trim().toLowerCase() },
+      { email: email.trim().toLowerCase(), company_slug: DEFAULT_COMPANY_SLUG },
+      false,
+    )
+  },
+  async checkRegistrationEmail(email: string) {
+    return apiClient.post<{ status: 'available' | 'existing_can_link' | 'existing_no_link' | 'already_linked' }>(
+      '/auth/check-registration-email/',
+      { email: email.trim().toLowerCase(), company_slug: DEFAULT_COMPANY_SLUG, linkable: true },
       false,
     )
   },

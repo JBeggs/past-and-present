@@ -292,12 +292,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         phone,
       })
 
+      const accountLinked = Boolean(
+        (response as { account_linked?: boolean }).account_linked,
+      )
+
       if (response.email_verification_required) {
         authApi.logout()
         setUser(null)
         setProfile(null)
         setCompanyId(null)
-        return { error: null, verificationRequired: true as const, email }
+        return { error: null, verificationRequired: true as const, email, accountLinked }
       }
 
       setUser(response.user)
@@ -305,7 +309,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       await fetchProfile()
 
-      return { error: null }
+      return { error: null, accountLinked }
     } catch (error: unknown) {
       console.error('Registration error:', error)
       const fallback = 'Registration failed. Please try again.'
