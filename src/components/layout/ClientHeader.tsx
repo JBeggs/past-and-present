@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ShoppingCart, User, LogOut, Package, Boxes, ImageIcon } from 'lucide-react'
+import { ShoppingCart, LogOut, Package, Boxes, ImageIcon } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCartSafe } from '@/contexts/CartContext'
 import { useMounted } from '@/hooks/useMounted'
