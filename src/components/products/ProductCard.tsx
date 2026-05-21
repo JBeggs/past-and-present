@@ -9,7 +9,7 @@ import { ecommerceApi } from '@/lib/api'
 import { useToast } from '@/contexts/ToastContext'
 import { useRouter } from 'next/navigation'
 import { formatCountdown, getMinQuantity, isBundleProduct, isTimedProduct } from '@/lib/product-utils'
-import { getProductCardImages } from '@/lib/image-utils'
+import { getProductCardImages, IMAGE_DIM } from '@/lib/image-utils'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import HomeProductQuickModal from '@/components/home/HomeProductQuickModal'
 
@@ -99,6 +99,8 @@ export default function ProductCard({ product, homeQuickView = false }: ProductC
               <img
                 src={url}
                 alt={i === 0 ? product.name : ''}
+                width={IMAGE_DIM.productCard.width}
+                height={IMAGE_DIM.productCard.height}
                 loading="lazy"
                 decoding="async"
                 className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
@@ -120,6 +122,8 @@ export default function ProductCard({ product, homeQuickView = false }: ProductC
             ref={mainImgRef}
             src={mainImage}
             alt={product.name}
+            width={IMAGE_DIM.productCard.width}
+            height={IMAGE_DIM.productCard.height}
             loading="lazy"
             decoding="async"
             className={`w-full h-full object-contain group-hover:scale-[1.02] transition-opacity duration-300 ${mainImageLoaded ? 'opacity-100' : 'opacity-0'}`}

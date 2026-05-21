@@ -10,9 +10,6 @@ import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { CookieConsentBanner } from '@/components/layout/CookieConsentBanner'
 
-// Force dynamic rendering since we use cookies in Header/Footer
-export const dynamic = 'force-dynamic'
-
 function resolveMetadataBase(): URL | undefined {
   const site = (process.env.NEXT_PUBLIC_SITE_URL || '').trim()
   if (site) {
