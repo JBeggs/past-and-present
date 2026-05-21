@@ -7,6 +7,7 @@ import {
 } from '@/lib/article-display-settings'
 import { getShareImage } from '@/lib/share-image'
 import { Product, Article } from '@/lib/types'
+import { getArticleImageUrl } from '@/lib/image-utils'
 import { ArrowRight, Sparkles, Package, TimerReset } from 'lucide-react'
 import ProductCard from '@/components/products/ProductCard'
 import PageHero from '@/components/hero/PageHero'
@@ -307,13 +308,11 @@ export default async function HomePage() {
             <div className="article-grid">
               {latestArticles.map((article: Article) => (
                 <Link key={article.id} href={`/articles/${article.slug}`} className="card group">
-                  {article.featured_media?.file_url && (
-                    <img
-                      src={article.featured_media.file_url}
-                      alt={article.title}
-                      className="w-full h-48 object-cover rounded-t-lg"
-                    />
-                  )}
+                  <img
+                    src={getArticleImageUrl(article)}
+                    alt={article.title}
+                    className="w-full h-48 object-cover rounded-t-lg"
+                  />
                   <div className="p-4">
                     <h3 className="font-semibold text-text group-hover:text-vintage-primary transition-colors">
                       {article.title}
