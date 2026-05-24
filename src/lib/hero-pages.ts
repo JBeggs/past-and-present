@@ -44,9 +44,9 @@ export const HEROABLE_PAGES: readonly HeroablePage[] = [
   },
   {
     slug: 'articles',
-    label: 'Articles',
+    label: 'Services',
     path: '/articles',
-    description: 'Optional banner above the articles listing.',
+    description: 'Optional banner above the services listing.',
   },
 ] as const
 

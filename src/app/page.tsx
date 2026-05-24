@@ -5,6 +5,7 @@ import {
   filterArticlesByDisplaySettings,
   getArticleDisplaySettings,
 } from '@/lib/article-display-settings'
+import { SERVICES_SECTION_SUBTITLE, SERVICES_SECTION_TITLE } from '@/lib/services-section'
 import { getShareImage } from '@/lib/share-image'
 import { Product, Article } from '@/lib/types'
 import { getArticleCardImageUrl } from '@/lib/image-utils'
@@ -291,17 +292,17 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Articles Section */}
+      {/* Services Section */}
       {latestArticles.length > 0 && (
         <section className="py-16 bg-white">
           <div className="container-wide">
             <div className="section-header">
               <div>
-                <h2 className="section-title">Stories & Inspiration</h2>
-                <p className="text-text-muted mt-1">Tips, guides, and behind-the-scenes</p>
+                <h2 className="section-title">{SERVICES_SECTION_TITLE}</h2>
+                <p className="text-text-muted mt-1">{SERVICES_SECTION_SUBTITLE}</p>
               </div>
               <Link href="/articles" className="btn btn-secondary">
-                Read More <ArrowRight className="w-4 h-4 ml-2" />
+                View All <ArrowRight className="w-4 h-4 ml-2" />
               </Link>
             </div>
             

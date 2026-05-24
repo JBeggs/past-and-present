@@ -82,7 +82,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         <div className="container-wide py-4">
           <Link href="/articles" className="flex items-center text-text-muted hover:text-vintage-primary transition-colors">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Articles
+            Back to Services
           </Link>
         </div>
       </div>

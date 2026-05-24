@@ -7,10 +7,12 @@ import {
 } from '@/lib/article-author-options'
 import { getArticleCardImageUrl, IMAGE_DIM } from '@/lib/image-utils'
 
+import { SERVICES_SECTION_SUBTITLE, SERVICES_SECTION_TITLE } from '@/lib/services-section'
+
 export default function HomeArticlesSection({
   articles,
-  title = 'Stories & Inspiration',
-  subtitle = 'Tips, guides, and behind-the-scenes from our journal',
+  title = SERVICES_SECTION_TITLE,
+  subtitle = SERVICES_SECTION_SUBTITLE,
 }: {
   articles: Article[]
   title?: string
@@ -27,7 +29,7 @@ export default function HomeArticlesSection({
             <p className="text-text-muted mt-1">{subtitle}</p>
           </div>
           <Link href="/articles" className="btn btn-secondary">
-            Read More <ArrowRight className="w-4 h-4 ml-2" />
+            View All <ArrowRight className="w-4 h-4 ml-2" />
           </Link>
         </div>
         <div className="article-grid">

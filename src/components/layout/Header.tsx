@@ -21,7 +21,7 @@ async function getHeaderData() {
 
     const menuItems = [
       { title: 'Products', href: '/products' },
-      { title: 'Articles', href: '/articles' },
+      { title: 'Services', href: '/articles' },
       { title: 'About', href: '/about' },
     ]
 
@@ -39,7 +39,7 @@ async function getHeaderData() {
       logo: null,
       menuItems: [
         { title: 'Products', href: '/products' },
-        { title: 'Articles', href: '/articles' },
+        { title: 'Services', href: '/articles' },
         { title: 'About', href: '/about' },
       ]
     }

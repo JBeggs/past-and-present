@@ -5,8 +5,11 @@ import PageHero from '@/components/hero/PageHero'
 import { serverNewsApi } from '@/lib/api-server'
 import {
   filterArticlesByDisplaySettings,
+  filterArticleCategoriesForScope,
   getArticleDisplaySettings,
+  resolveCategoryFilterForScope,
 } from '@/lib/article-display-settings'
+import { SERVICES_SECTION_SUBTITLE, SERVICES_SECTION_TITLE } from '@/lib/services-section'
 import { Article } from '@/lib/types'
 import { getArticleCardImageUrl } from '@/lib/image-utils'
 import { resolveArticleAuthorLabel } from '@/lib/article-author-options'
@@ -14,9 +17,8 @@ import { Calendar, User, ArrowRight, Search } from 'lucide-react'
 
 export async function generateMetadata(): Promise<Metadata> {
   const image = await getShareImage('articles')
-  const title = 'Stories & Inspiration | Past and Present'
-  const description =
-    'Tips, guides, and behind-the-scenes from the world of vintage and modern treasures.'
+  const title = `${SERVICES_SECTION_TITLE} | Past and Present`
+  const description = SERVICES_SECTION_SUBTITLE
   return {
     title,
     description,
@@ -77,11 +79,16 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   const category = typeof params.category === 'string' ? params.category : undefined
   const search = typeof params.search === 'string' ? params.search : undefined
 
-  const [rawArticles, categories, displaySettings] = await Promise.all([
-    getArticles({ search, category }),
+  const [categories, displaySettings] = await Promise.all([
     getCategories(),
     getArticleDisplaySettings(),
   ])
+
+  const visibleCategories = filterArticleCategoriesForScope(categories, displaySettings, 'articles')
+  const effectiveCategory = resolveCategoryFilterForScope(category, displaySettings, 'articles')
+  const activeCategory = effectiveCategory
+
+  const rawArticles = await getArticles({ search, category: effectiveCategory })
   const articles = filterArticlesByDisplaySettings(
     rawArticles as Article[],
     displaySettings,
@@ -95,11 +102,9 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
       <section className="py-12 bg-vintage-primary text-white">
         <div className="container-wide">
           <h1 className="text-3xl md:text-4xl font-bold font-playfair mb-2">
-            Stories & Inspiration
+            {SERVICES_SECTION_TITLE}
           </h1>
-          <p className="text-lg text-green-100">
-            Tips, guides, and behind-the-scenes from the world of vintage and modern treasures
-          </p>
+          <p className="text-lg text-green-100">{SERVICES_SECTION_SUBTITLE}</p>
         </div>
       </section>
 
@@ -108,14 +113,14 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
         <div className="container-wide">
           {/* Search */}
           <form action="/articles" method="GET" className="mb-4">
-            {category && <input type="hidden" name="category" value={category} />}
+            {activeCategory && <input type="hidden" name="category" value={activeCategory} />}
             <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted" />
               <input
                 type="search"
                 name="search"
                 defaultValue={search}
-                placeholder="Search articles..."
+                placeholder="Search services..."
                 className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-vintage-primary/20 bg-white text-text focus:outline-none focus:ring-2 focus:ring-vintage-primary/30 focus:border-vintage-primary"
               />
               <button
@@ -130,21 +135,21 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
           {/* Category Pills */}
           <div className="flex flex-wrap items-center gap-2">
             <Link
-              href="/articles"
+              href={buildArticlesUrl({ search: search || undefined })}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                !category
+                !activeCategory
                   ? 'bg-vintage-primary text-white'
                   : 'bg-vintage-primary/10 text-vintage-primary hover:bg-vintage-primary/20'
               }`}
             >
               All
             </Link>
-            {categories.map((cat: { id: string; name: string }) => (
+            {visibleCategories.map((cat: { id: string; name: string }) => (
               <Link
                 key={cat.id}
                 href={buildArticlesUrl({ category: cat.id, search: search || undefined })}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  category === cat.id
+                  activeCategory === cat.id
                     ? 'bg-vintage-primary text-white'
                     : 'bg-vintage-primary/10 text-vintage-primary hover:bg-vintage-primary/20'
                 }`}
@@ -205,15 +210,15 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
                 <span className="text-2xl font-playfair text-vintage-primary">P&P</span>
               </div>
               <h2 className="text-xl font-semibold text-text mb-2">
-                {search || category ? 'No articles match your filters' : 'No articles yet'}
+                {search || activeCategory ? 'No services match your filters' : 'No services yet'}
               </h2>
               <p className="text-text-muted mb-6">
-                {search || category
+                {search || activeCategory
                   ? 'Try a different category or search term.'
-                  : 'Check back soon for stories and inspiration!'}
+                  : 'Check back soon for updates!'}
               </p>
-              <Link href={search || category ? '/articles' : '/'} className="btn btn-primary">
-                {search || category ? 'Clear filters' : 'Back to Home'}
+              <Link href={search || activeCategory ? '/articles' : '/'} className="btn btn-primary">
+                {search || activeCategory ? 'Clear filters' : 'Back to Home'}
               </Link>
             </div>
           )}

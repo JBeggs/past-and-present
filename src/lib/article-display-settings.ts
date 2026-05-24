@@ -94,32 +94,18 @@ export function filterArticlesByDisplaySettings<
 
   if (categoryIds.length > 0) {
     const allowed = new Set(categoryIds)
-    const applicable = new Set(
-      result
-        .map((a) => resolveArticleCategoryId(a))
-        .filter((id): id is string => id !== null && allowed.has(id)),
-    )
-    if (applicable.size > 0) {
-      result = result.filter((a) => {
-        const cid = resolveArticleCategoryId(a)
-        return cid !== null && applicable.has(cid)
-      })
-    }
+    result = result.filter((a) => {
+      const cid = resolveArticleCategoryId(a)
+      return cid !== null && allowed.has(cid)
+    })
   }
 
   if (authorIds.length > 0) {
     const allowed = new Set(authorIds)
-    const applicable = new Set(
-      result
-        .map((a) => resolveArticleAuthorIdFromArticle(a))
-        .filter((id): id is string => id !== null && allowed.has(id)),
-    )
-    if (applicable.size > 0) {
-      result = result.filter((a) => {
-        const aid = resolveArticleAuthorIdFromArticle(a)
-        return aid !== null && applicable.has(aid)
-      })
-    }
+    result = result.filter((a) => {
+      const aid = resolveArticleAuthorIdFromArticle(a)
+      return aid !== null && allowed.has(aid)
+    })
   }
 
   if (scope === 'home') {
@@ -127,4 +113,29 @@ export function filterArticlesByDisplaySettings<
   }
 
   return result
+}
+
+/** Categories shown as filter pills — restricted to admin allow-list when configured. */
+export function filterArticleCategoriesForScope(
+  categories: { id: string; name: string }[],
+  settings: ArticleDisplaySettings,
+  scope: ArticleDisplayScope,
+): { id: string; name: string }[] {
+  const allowedIds =
+    scope === 'home' ? settings.homeCategoryIds : settings.articlesPageCategoryIds
+  if (allowedIds.length === 0) return categories
+  const allowed = new Set(allowedIds)
+  return categories.filter((c) => allowed.has(c.id))
+}
+
+export function resolveCategoryFilterForScope(
+  category: string | undefined,
+  settings: ArticleDisplaySettings,
+  scope: ArticleDisplayScope,
+): string | undefined {
+  const allowedIds =
+    scope === 'home' ? settings.homeCategoryIds : settings.articlesPageCategoryIds
+  if (!category) return undefined
+  if (allowedIds.length === 0) return category
+  return allowedIds.includes(category) ? category : undefined
 }

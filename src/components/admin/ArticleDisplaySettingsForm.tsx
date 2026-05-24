@@ -269,24 +269,24 @@ export default function ArticleDisplaySettingsForm() {
           Article display
         </h2>
         <p className="text-sm text-text-muted mt-1 max-w-2xl">
-          Choose which categories and authors appear on your articles page and home page. Leave all
+          Choose which categories and authors appear on your Services page and home page. Leave all
           unchecked to show every published article.
         </p>
       </div>
 
       <div className="space-y-4 border-t border-border-default pt-6">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-text">Articles page</h3>
+        <h3 className="text-sm font-bold uppercase tracking-widest text-text">Services page</h3>
         <div className="grid md:grid-cols-2 gap-6">
           <MultiSelectGroup
             label="Categories"
-            hint="Only articles in these categories appear on /articles"
+            hint="Only articles in these categories appear on /articles (Services)"
             options={categories}
             selected={articlesPageCategoryIds}
             onChange={setArticlesPageCategoryIds}
           />
           <MultiSelectGroup
             label="Authors"
-            hint="Only articles by these authors appear on /articles"
+            hint="Only articles by these authors appear on /articles (Services)"
             options={authors}
             selected={articlesPageAuthorIds}
             onChange={setArticlesPageAuthorIds}
@@ -303,19 +303,19 @@ export default function ArticleDisplaySettingsForm() {
             onChange={(e) => setHomeEnabled(e.target.checked)}
             className="rounded border-border-default text-primary focus:ring-primary/30"
           />
-          <span>Show article section on the home page</span>
+          <span>Show services section on the home page</span>
         </label>
         <div className="grid md:grid-cols-2 gap-6">
           <MultiSelectGroup
             label="Categories"
-            hint="Filters the home article shelf (when enabled)"
+            hint="Filters the home services shelf (when enabled)"
             options={categories}
             selected={homeCategoryIds}
             onChange={setHomeCategoryIds}
           />
           <MultiSelectGroup
             label="Authors"
-            hint="Filters the home article shelf (when enabled)"
+            hint="Filters the home services shelf (when enabled)"
             options={authors}
             selected={homeAuthorIds}
             onChange={setHomeAuthorIds}
