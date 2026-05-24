@@ -9,6 +9,7 @@ export type ProductCondition = 'new' | 'like_new' | 'good' | 'fair' | 'vintage'
 // Profile interface
 export interface Profile {
   id: string
+  pending_email?: string
   email: string
   username?: string
   full_name?: string
