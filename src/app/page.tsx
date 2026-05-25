@@ -1,14 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { serverEcommerceApi, serverNewsApi } from '@/lib/api-server'
+import { serverEcommerceApi, listAllPublishedArticles } from '@/lib/api-server'
 import {
   filterArticlesByDisplaySettings,
   getArticleDisplaySettings,
 } from '@/lib/article-display-settings'
-import { SERVICES_SECTION_SUBTITLE, SERVICES_SECTION_TITLE } from '@/lib/services-section'
+import HomeArticlesSection from '@/components/home/HomeArticlesSection'
 import { getShareImage } from '@/lib/share-image'
 import { Product, Article } from '@/lib/types'
-import { getArticleCardImageUrl } from '@/lib/image-utils'
 import { ArrowRight, Sparkles, Package, TimerReset } from 'lucide-react'
 import ProductCard from '@/components/products/ProductCard'
 import PageHero from '@/components/hero/PageHero'
@@ -56,7 +55,7 @@ async function getHomeData(displaySettings: Awaited<ReturnType<typeof getArticle
         timed_only: 'true',
         ordering: 'name',
       }),
-      serverNewsApi.articles.list({ status: 'published' }),
+      listAllPublishedArticles(),
     ])
 
     const SHELF_LABELS = ['bundles', 'timed', 'articles'] as const
@@ -81,7 +80,7 @@ async function getHomeData(displaySettings: Awaited<ReturnType<typeof getArticle
 
     const bundlesRaw = Array.isArray(bundlesRes) ? bundlesRes : (bundlesRes as any)?.data || (bundlesRes as any)?.results || []
     const timedRaw = Array.isArray(timedRes) ? timedRes : (timedRes as any)?.data || (timedRes as any)?.results || []
-    const articlesRaw = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.data || (articlesData as any)?.results || []
+    const articlesRaw = Array.isArray(articlesData) ? articlesData : []
     const articles = articlesRaw
     const latestArticles = displaySettings.homeEnabled
       ? filterArticlesByDisplaySettings(articles as Article[], displaySettings, 'home')
@@ -293,44 +292,7 @@ export default async function HomePage() {
       )}
 
       {/* Services Section */}
-      {latestArticles.length > 0 && (
-        <section className="py-16 bg-white">
-          <div className="container-wide">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">{SERVICES_SECTION_TITLE}</h2>
-                <p className="text-text-muted mt-1">{SERVICES_SECTION_SUBTITLE}</p>
-              </div>
-              <Link href="/articles" className="btn btn-secondary">
-                View All <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </div>
-            
-            <div className="article-grid">
-              {latestArticles.map((article: Article) => (
-                <Link key={article.id} href={`/articles/${article.slug}`} className="card group">
-                  <img
-                    src={getArticleCardImageUrl(article)}
-                    alt={article.title}
-                    className="w-full h-48 object-cover rounded-t-lg"
-                  />
-                  <div className="p-4">
-                    <h3 className="font-semibold text-text group-hover:text-vintage-primary transition-colors">
-                      {article.title}
-                    </h3>
-                    {article.excerpt && (
-                      <p className="text-sm text-text-muted mt-2 line-clamp-2">{article.excerpt}</p>
-                    )}
-                    <div className="mt-3 text-sm text-text-muted">
-                      {article.published_at && new Date(article.published_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      <HomeArticlesSection articles={latestArticles} />
 
       {/* CTA Section */}
       <section className="py-16 bg-gradient-to-r from-modern-primary to-modern-primary-dark text-white">

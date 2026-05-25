@@ -150,6 +150,41 @@ class ServerApiClient {
 
 const serverApiClient = new ServerApiClient()
 
+function unwrapNewsArticleList(data: unknown): unknown[] {
+  if (Array.isArray(data)) return data
+  if (data && typeof data === 'object' && Array.isArray((data as { results?: unknown[] }).results)) {
+    return (data as { results: unknown[] }).results
+  }
+  return []
+}
+
+/** Paginate through published article list (default API page size is 20). */
+export async function listAllPublishedArticles(params?: {
+  category?: string
+  search?: string
+}): Promise<unknown[]> {
+  const all: unknown[] = []
+  let page = 1
+  const maxPages = 50
+
+  while (page <= maxPages) {
+    const data: unknown = await serverNewsApi.articles.list({
+      status: 'published',
+      page,
+      ...(params?.search?.trim() ? { search: params.search.trim() } : {}),
+      ...(params?.category ? { category: params.category } : {}),
+    })
+    const batch = unwrapNewsArticleList(data)
+    all.push(...batch)
+    const next =
+      data && typeof data === 'object' ? (data as { next?: string | null }).next : null
+    if (!next || batch.length === 0) break
+    page += 1
+  }
+
+  return all
+}
+
 // Server-side News API
 export const serverNewsApi = {
   articles: {

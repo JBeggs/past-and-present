@@ -21,7 +21,7 @@ export default function HomeArticlesSection({
   if (articles.length === 0) return null
 
   return (
-    <section className="py-16 bg-bg">
+    <section className="py-16 bg-white">
       <div className="container-wide">
         <div className="section-header">
           <div>
@@ -54,7 +54,7 @@ export default function HomeArticlesSection({
                   {article.category && (
                     <span className="tag tag-vintage mb-2">{article.category.name}</span>
                   )}
-                  <h3 className="text-lg font-semibold text-text group-hover:text-primary transition-colors line-clamp-2">
+                  <h3 className="text-lg font-semibold text-text group-hover:text-vintage-primary transition-colors line-clamp-2">
                     {article.title}
                   </h3>
                   {article.excerpt && (

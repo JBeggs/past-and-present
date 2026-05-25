@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getShareImage } from '@/lib/share-image'
 import PageHero from '@/components/hero/PageHero'
-import { serverNewsApi } from '@/lib/api-server'
+import { serverNewsApi, listAllPublishedArticles } from '@/lib/api-server'
 import {
   filterArticlesByDisplaySettings,
   filterArticleCategoriesForScope,
@@ -42,13 +42,7 @@ interface ArticlesPageProps {
 
 async function getArticles(params: { search?: string; category?: string }) {
   try {
-    const articlesData = await serverNewsApi.articles.list({
-      status: 'published',
-      ...(params.search?.trim() ? { search: params.search.trim() } : {}),
-      ...(params.category ? { category: params.category } : {}),
-    })
-    const raw = Array.isArray(articlesData) ? articlesData : (articlesData as any)?.results || []
-    return raw
+    return await listAllPublishedArticles(params)
   } catch (error) {
     console.error('Error fetching articles:', error)
     return []
@@ -85,10 +79,12 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   ])
 
   const visibleCategories = filterArticleCategoriesForScope(categories, displaySettings, 'articles')
-  const effectiveCategory = resolveCategoryFilterForScope(category, displaySettings, 'articles')
-  const activeCategory = effectiveCategory
+  const activeCategory =
+    category && (visibleCategories.some((c) => c.id === category) || displaySettings.articlesPageCategoryIds.length === 0)
+      ? category
+      : resolveCategoryFilterForScope(category, displaySettings, 'articles')
 
-  const rawArticles = await getArticles({ search, category: effectiveCategory })
+  const rawArticles = await getArticles({ search, category: activeCategory })
   const articles = filterArticlesByDisplaySettings(
     rawArticles as Article[],
     displaySettings,

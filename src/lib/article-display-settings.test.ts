@@ -31,12 +31,21 @@ describe('filterArticlesByDisplaySettings', () => {
     expect(filterArticlesByDisplaySettings(articles, baseSettings, 'articles')).toHaveLength(4)
   })
 
-  it('filters by category allow-list even when no fetched article matched before (articles scope)', () => {
+  it('skips category allow-list when no fetched article matches configured ids', () => {
     const settings: ArticleDisplaySettings = {
       ...baseSettings,
       articlesPageCategoryIds: ['cat-x'],
     }
-    expect(filterArticlesByDisplaySettings(articles, settings, 'articles')).toHaveLength(0)
+    expect(filterArticlesByDisplaySettings(articles, settings, 'articles')).toHaveLength(4)
+  })
+
+  it('skips author allow-list when no fetched article matches configured ids', () => {
+    const settings: ArticleDisplaySettings = {
+      ...baseSettings,
+      homeAuthorIds: ['user-missing'],
+      homeCategoryIds: ['cat-a'],
+    }
+    expect(filterArticlesByDisplaySettings(articles, settings, 'home')).toHaveLength(2)
   })
 
   it('filters articles page by configured categories', () => {
