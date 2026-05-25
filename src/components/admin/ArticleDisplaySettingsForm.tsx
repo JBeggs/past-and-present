@@ -286,7 +286,7 @@ export default function ArticleDisplaySettingsForm() {
           />
           <MultiSelectGroup
             label="Authors"
-            hint="Only articles by these authors appear on /articles (Services)"
+            hint="Not applied on the Services page — use Home → Authors to curate the home shelf"
             options={authors}
             selected={articlesPageAuthorIds}
             onChange={setArticlesPageAuthorIds}

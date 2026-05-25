@@ -15,6 +15,8 @@ import { getArticleCardImageUrl } from '@/lib/image-utils'
 import { resolveArticleAuthorLabel } from '@/lib/article-author-options'
 import { Calendar, User, ArrowRight, Search } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export async function generateMetadata(): Promise<Metadata> {
   const image = await getShareImage('articles')
   const title = `${SERVICES_SECTION_TITLE} | Past and Present`
@@ -85,9 +87,10 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
       : resolveCategoryFilterForScope(category, displaySettings, 'articles')
 
   const rawArticles = await getArticles({ search, category: activeCategory })
+  // Services page: category controls the grid. Author allow-list is for the home shelf only.
   const articles = filterArticlesByDisplaySettings(
     rawArticles as Article[],
-    displaySettings,
+    { ...displaySettings, articlesPageAuthorIds: [] },
     'articles',
   )
 
