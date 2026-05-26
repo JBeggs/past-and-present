@@ -3,7 +3,11 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import PageHero from '@/components/hero/PageHero'
 import { serverEcommerceApi } from '@/lib/api-server'
-import { getShareImage } from '@/lib/share-image'
+import {
+  buildProductsPageOgImageUrl,
+  resolveProductsPageTitle,
+} from '@/lib/products-share'
+import ProductsWhatsAppShareButton from '@/app/products/ProductsWhatsAppShareButton'
 import { Product } from '@/lib/types'
 import {
   Sparkles,
@@ -29,11 +33,35 @@ import {
 
 export const dynamic = 'force-dynamic'
 
-export async function generateMetadata(): Promise<Metadata> {
-  const image = await getShareImage('products')
+export async function generateMetadata({
+  searchParams,
+}: Pick<ProductsPageProps, 'searchParams'>): Promise<Metadata> {
+  const params = await searchParams
+  const [{ products }, filterCategories] = await Promise.all([
+    getProducts(params),
+    getProductFilterCategories(),
+  ])
+  const title = resolveProductsPageTitle(params, filterCategories)
+  const image = buildProductsPageOgImageUrl(title, products)
+  const description =
+    products.length > 0
+      ? `${products.length} product${products.length === 1 ? '' : 's'} — ${title}`
+      : `Browse ${title} at Past and Present`
+
   return {
-    openGraph: { images: [{ url: image }] },
-    twitter: { card: 'summary_large_image', images: [image] },
+    title: `${title} | Past and Present`,
+    description,
+    openGraph: {
+      title: `${title} | Past and Present`,
+      description,
+      images: [{ url: image, width: 1200, height: 630, alt: title }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${title} | Past and Present`,
+      description,
+      images: [image],
+    },
   }
 }
 
@@ -223,23 +251,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   if (params.supplier_slug) searchParamsForNav.supplier_slug = params.supplier_slug
   if (params.delivery_group) searchParamsForNav.delivery_group = params.delivery_group
 
-  const title = isSupplierGroup
-    ? 'Delivery Group'
-    : isBundles
-      ? 'Bundles'
-      : isTimed
-        ? 'Timed Products'
-        : isHardwareCategory
-          ? selectedCategoryLabel || 'Hardware'
-          : isConsumablesCategory
-            ? selectedCategoryLabel || 'Consumables'
-            : isOtherProductCategory
-              ? selectedCategoryLabel || params.category || 'Products'
-              : isNew
-                ? 'New Arrivals'
-                : isFeatured
-                  ? 'Featured Products'
-                  : 'All Products'
+  const title = resolveProductsPageTitle(params, filterCategories)
 
   const isAllShelves =
     !params.condition &&
@@ -566,6 +578,13 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 basePath="/products"
                 searchParams={searchParamsForNav}
               />
+              <div className="mt-10 pt-8 border-t border-gray-200">
+                <ProductsWhatsAppShareButton
+                  title={title}
+                  products={products}
+                  categories={filterCategories}
+                />
+              </div>
             </>
           ) : (
             <div className="text-center py-16" data-cy="products-empty">
