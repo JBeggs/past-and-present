@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Product } from '@/lib/types'
 import {
+  buildProductsListShareImageUrls,
   buildProductsPageOgImageUrl,
   buildProductsWhatsAppMessage,
   getProductsCollageImageUrls,
@@ -34,10 +35,10 @@ describe('resolveProductsPageTitle', () => {
 })
 
 describe('getProductsCollageImageUrls', () => {
-  it('collects up to four product images', () => {
+  it('collects up to four product thumbnail URLs', () => {
     const products = [
-      baseProduct({ id: '1', image: '/media/products/1.jpg' }),
-      baseProduct({ id: '2', image: '/media/products/2.jpg' }),
+      baseProduct({ id: '1', image_thumbnail: '/media/products/1-thumb.jpg' }),
+      baseProduct({ id: '2', image_thumbnail: '/media/products/2-thumb.jpg' }),
       baseProduct({ id: '3', image: '/images/products/default.svg' }),
     ]
     const urls = getProductsCollageImageUrls(products)
@@ -66,14 +67,27 @@ describe('buildProductsWhatsAppMessage', () => {
   })
 })
 
-describe('buildProductsPageOgImageUrl', () => {
-  it('points at og-products API with image params', () => {
+describe('buildProductsListShareImageUrls', () => {
+  it('returns proxied thumbnail URLs on the site origin', () => {
     process.env.NEXT_PUBLIC_SITE_URL = 'https://past-and-present.co.za'
-    const url = buildProductsPageOgImageUrl('Print on Anything', [
-      baseProduct({ image: '/media/products/a.jpg' }),
+    const urls = buildProductsListShareImageUrls([
+      baseProduct({ image_thumbnail: '/media/products/a-thumb.jpg' }),
     ])
+    expect(urls).toHaveLength(1)
+    expect(urls[0]).toContain('past-and-present.co.za')
+    expect(urls[0]).toContain('/api/media?src=')
+  })
+})
+
+describe('buildProductsPageOgImageUrl', () => {
+  it('points at og-products API with shelf params', () => {
+    process.env.NEXT_PUBLIC_SITE_URL = 'https://past-and-present.co.za'
+    const url = buildProductsPageOgImageUrl('Print on Anything', {
+      category: 'print-on-anything',
+    })
     expect(url).toContain('/api/og-products?')
     expect(url).toContain('title=Print')
-    expect(url).toContain('img=')
+    expect(url).toContain('category=print-on-anything')
+    expect(url).not.toContain('img=')
   })
 })

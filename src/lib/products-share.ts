@@ -1,9 +1,11 @@
 import type { Product } from '@/lib/types'
-import { getProductCardImages } from '@/lib/image-utils'
+import { ensureAbsoluteImageUrl, getProductShareThumbnailRaw } from '@/lib/image-utils'
 import { openGraphImageFromMediaUrl, publicSiteOrigin } from '@/lib/product-seo'
 import {
+  CATEGORY_SHELF_EXCLUDE_TAGS,
   CONSUMABLES_CATEGORY_SLUG,
   HARDWARE_CATEGORY_SLUG,
+  NEW_LISTING_EXCLUDED_CATEGORY_SLUGS,
 } from '@/lib/store-shelves'
 
 export type ProductsPageFilterParams = {
@@ -13,6 +15,10 @@ export type ProductsPageFilterParams = {
   bundle_only?: string
   timed_only?: string
   supplier_slug?: string
+  search?: string
+  sort?: string
+  exclude_tags?: string
+  exclude_bundles?: string
 }
 
 export function resolveProductsPageTitle(
@@ -58,30 +64,141 @@ function isGalleryPlaceholderUrl(url: string): boolean {
   }
 }
 
-/** First card image from each product, up to four, for OG collage. */
+/** Backend thumbnail URLs for collage rendering (fetched directly, not via /api/media). */
 export function getProductsCollageImageUrls(products: Product[]): string[] {
   const urls: string[] = []
   for (const product of products) {
     if (urls.length >= MAX_COLLAGE_IMAGES) break
-    const first = getProductCardImages(product)[0]
-    if (!first || isGalleryPlaceholderUrl(first)) continue
-    urls.push(openGraphImageFromMediaUrl(first))
+    const thumb = getProductShareThumbnailRaw(product)
+    if (!thumb || isGalleryPlaceholderUrl(thumb)) continue
+    urls.push(ensureAbsoluteImageUrl(thumb))
   }
   return urls
 }
 
-/** Absolute OG image URL — collage when product images exist, else branded default. */
-export function buildProductsPageOgImageUrl(title: string, products: Product[]): string {
-  const site = publicSiteOrigin()
+/** Proxied thumbnail URLs for WhatsApp share (same pattern as product detail). */
+export function buildProductsListShareImageUrls(
+  products: Product[],
+  siteOrigin?: string | null,
+): string[] {
+  const urls: string[] = []
+  for (const product of products) {
+    if (urls.length >= MAX_COLLAGE_IMAGES) break
+    const thumb = getProductShareThumbnailRaw(product)
+    if (!thumb || isGalleryPlaceholderUrl(thumb)) continue
+    urls.push(openGraphImageFromMediaUrl(thumb, siteOrigin))
+  }
+  return urls
+}
+
+function appendOgQueryParam(q: URLSearchParams, key: string, value: string | undefined) {
+  if (value != null && value !== '') q.set(key, value)
+}
+
+/** Short OG URL — collage is built server-side from shelf query params. */
+export function buildProductsPageOgImageUrl(
+  title: string,
+  params: ProductsPageFilterParams,
+  siteOrigin?: string | null,
+): string {
+  const site = siteOrigin || publicSiteOrigin()
   if (!site) return '/favicon.png'
 
-  const params = new URLSearchParams()
-  params.set('title', title)
-  for (const url of getProductsCollageImageUrls(products)) {
-    params.append('img', url)
-  }
+  const q = new URLSearchParams()
+  q.set('title', title)
+  appendOgQueryParam(q, 'category', params.category)
+  appendOgQueryParam(q, 'condition', params.condition)
+  appendOgQueryParam(q, 'featured', params.featured)
+  appendOgQueryParam(q, 'bundle_only', params.bundle_only)
+  appendOgQueryParam(q, 'timed_only', params.timed_only)
+  appendOgQueryParam(q, 'supplier_slug', params.supplier_slug)
+  appendOgQueryParam(q, 'search', params.search)
+  appendOgQueryParam(q, 'sort', params.sort)
+  appendOgQueryParam(q, 'exclude_tags', params.exclude_tags)
+  appendOgQueryParam(q, 'exclude_bundles', params.exclude_bundles)
 
-  return `${site}/api/og-products?${params.toString()}`
+  return `${site.replace(/\/$/, '')}/api/og-products?${q.toString()}`
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://3pillars.pythonanywhere.com/api'
+const COMPANY_SLUG = process.env.NEXT_PUBLIC_COMPANY_SLUG || 'past-and-present'
+
+function unwrapPublicProductList(payload: unknown): Product[] {
+  if (Array.isArray(payload)) return payload as Product[]
+  if (!payload || typeof payload !== 'object') return []
+  const row = payload as { success?: boolean; data?: unknown; results?: unknown }
+  if (Array.isArray(row.data)) return row.data as Product[]
+  if (Array.isArray(row.results)) return row.results as Product[]
+  if (row.data && typeof row.data === 'object') {
+    const nested = row.data as { results?: unknown }
+    if (Array.isArray(nested.results)) return nested.results as Product[]
+  }
+  return []
+}
+
+/** Fetch up to four products for OG collage (public API, no cookies). */
+export async function fetchProductsForOgCollage(
+  params: ProductsPageFilterParams,
+): Promise<Product[]> {
+  const isHardwareShelf = params.category === HARDWARE_CATEGORY_SLUG
+  const isConsumablesShelf = params.category === CONSUMABLES_CATEGORY_SLUG
+  const excludeTagsForApi =
+    isHardwareShelf || isConsumablesShelf
+      ? params.exclude_tags?.trim() || CATEGORY_SHELF_EXCLUDE_TAGS
+      : params.exclude_tags || undefined
+
+  const query = new URLSearchParams({
+    is_active: 'true',
+    page_size: String(MAX_COLLAGE_IMAGES),
+  })
+  if (params.category) query.set('category', params.category)
+  if (params.search) query.set('search', params.search)
+  if (params.condition) query.set('condition', params.condition)
+  if (params.featured === 'true') query.set('featured', 'true')
+  if (params.condition === 'new') query.set('exclude_featured', 'true')
+  if (params.sort) query.set('ordering', params.sort)
+  if (params.bundle_only === 'true') query.set('bundle_only', 'true')
+  if (params.timed_only === 'true') query.set('timed_only', 'true')
+  if (excludeTagsForApi) query.set('exclude_tags', excludeTagsForApi)
+  if (
+    isHardwareShelf ||
+    isConsumablesShelf ||
+    params.condition === 'new' ||
+    params.exclude_bundles === 'true'
+  ) {
+    query.set('exclude_bundles', 'true')
+  }
+  if (params.condition === 'new') {
+    query.set('exclude_category', NEW_LISTING_EXCLUDED_CATEGORY_SLUGS)
+  }
+  if (params.supplier_slug) query.set('supplier_slug', params.supplier_slug)
+
+  const url = `${API_BASE_URL.replace(/\/$/, '')}/v1/public/${COMPANY_SLUG}/products/?${query}`
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        Accept: 'application/json',
+        'X-Company-Slug': COMPANY_SLUG,
+      },
+      next: { revalidate: 300 },
+    })
+    if (!res.ok) return []
+    const payload: unknown = await res.json()
+    const raw = unwrapPublicProductList(payload)
+    return raw
+      .filter((p: Product) => p.status !== 'archived')
+      .filter((p: Product) => {
+        if (!params.supplier_slug) return true
+        return (
+          String((p as Product & { supplier_slug?: string }).supplier_slug || '').toLowerCase() ===
+          params.supplier_slug.toLowerCase()
+        )
+      })
+      .slice(0, MAX_COLLAGE_IMAGES)
+  } catch {
+    return []
+  }
 }
 
 function formatProductPriceLine(product: Product): string {

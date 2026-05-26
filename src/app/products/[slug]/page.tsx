@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { serverEcommerceApi } from '@/lib/api-server'
 export const dynamic = 'force-dynamic'
 import { Product } from '@/lib/types'
-import { buildProductOgImage, buildProductSeo, publicSiteOrigin } from '@/lib/product-seo'
+import { buildProductOgImage, buildProductSeo, buildProductShareImageUrl, publicSiteOrigin } from '@/lib/product-seo'
+import { getRequestSiteOrigin } from '@/lib/media-proxy'
 import { ArrowLeft, Shield, Info, Phone, FileText, Package, TimerReset, Truck } from 'lucide-react'
 import AddToCartButton from './AddToCartButton'
 import ProductGallery from './ProductGallery'
@@ -51,14 +52,14 @@ const COMPANY_NAME = 'Past and Present'
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params
-  const product = await getProduct(slug)
+  const [product, siteOrigin] = await Promise.all([getProduct(slug), getRequestSiteOrigin()])
   if (!product) {
     return { title: `Product | ${COMPANY_NAME}` }
   }
 
   const { title, description, keywords } = buildProductSeo(product, COMPANY_NAME)
-  const ogImage = buildProductOgImage(product)
-  const site = publicSiteOrigin()
+  const ogImage = buildProductOgImage(product, siteOrigin)
+  const site = siteOrigin || publicSiteOrigin()
   const ogUrl = site ? `${site}/products/${slug}` : undefined
 
   return {
@@ -83,11 +84,13 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params
-  const product = await getProduct(slug)
+  const [product, siteOrigin] = await Promise.all([getProduct(slug), getRequestSiteOrigin()])
 
   if (!product) {
     notFound()
   }
+
+  const shareImageUrl = buildProductShareImageUrl(product, siteOrigin)
 
   const isVintage = Array.isArray(product.tags) 
     ? product.tags.some(t => (typeof t === 'string' ? t : t.name) === 'vintage')
@@ -214,7 +217,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
                 </div>
 
                 <AddToCartButton product={product} />
-                <WhatsAppShareButton product={product} />
+                <WhatsAppShareButton product={product} shareImageUrl={shareImageUrl} />
 
                 <div className="grid gap-3 text-sm text-text-muted">
                   {product.delivery_time && (

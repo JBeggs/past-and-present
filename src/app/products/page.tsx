@@ -4,10 +4,12 @@ import { redirect } from 'next/navigation'
 import PageHero from '@/components/hero/PageHero'
 import { serverEcommerceApi } from '@/lib/api-server'
 import {
+  buildProductsListShareImageUrls,
   buildProductsPageOgImageUrl,
   resolveProductsPageTitle,
 } from '@/lib/products-share'
 import ProductsWhatsAppShareButton from '@/app/products/ProductsWhatsAppShareButton'
+import { getRequestSiteOrigin } from '@/lib/media-proxy'
 import { Product } from '@/lib/types'
 import {
   Sparkles,
@@ -37,12 +39,14 @@ export async function generateMetadata({
   searchParams,
 }: Pick<ProductsPageProps, 'searchParams'>): Promise<Metadata> {
   const params = await searchParams
-  const [{ products }, filterCategories] = await Promise.all([
+  const [{ products }, filterCategories, siteOrigin] = await Promise.all([
     getProducts(params),
     getProductFilterCategories(),
+    getRequestSiteOrigin(),
   ])
   const title = resolveProductsPageTitle(params, filterCategories)
-  const image = buildProductsPageOgImageUrl(title, products)
+  const ogParams = productsOgFilterParams(params)
+  const image = buildProductsPageOgImageUrl(title, ogParams, siteOrigin)
   const description =
     products.length > 0
       ? `${products.length} product${products.length === 1 ? '' : 's'} — ${title}`
@@ -80,6 +84,43 @@ interface ProductsPageProps {
     supplier_slug?: string
     delivery_group?: string
   }>
+}
+
+function productsOgFilterParams(params: {
+  condition?: string
+  category?: string
+  search?: string
+  featured?: string
+  sort?: string
+  bundle_only?: string
+  timed_only?: string
+  exclude_tags?: string
+  exclude_bundles?: string
+  supplier_slug?: string
+}) {
+  const isHardwareCategory = params.category === HARDWARE_CATEGORY_SLUG
+  const isConsumablesCategory = params.category === CONSUMABLES_CATEGORY_SLUG
+  return {
+    condition: params.condition,
+    category: params.category,
+    search: params.search,
+    featured: params.featured,
+    sort: params.sort,
+    bundle_only: params.bundle_only,
+    timed_only: params.timed_only,
+    supplier_slug: params.supplier_slug,
+    exclude_tags:
+      isHardwareCategory || isConsumablesCategory
+        ? params.exclude_tags?.trim() || CATEGORY_SHELF_EXCLUDE_TAGS
+        : params.exclude_tags,
+    exclude_bundles:
+      isHardwareCategory ||
+      isConsumablesCategory ||
+      params.condition === 'new' ||
+      params.exclude_bundles === 'true'
+        ? 'true'
+        : undefined,
+  }
 }
 
 async function getProducts(params: {
@@ -209,9 +250,10 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     redirect(query ? `/products?${query}` : '/products')
   }
 
-  const [{ products, pagination }, filterCategories] = await Promise.all([
+  const [{ products, pagination }, filterCategories, siteOrigin] = await Promise.all([
     getProducts(params),
     getProductFilterCategories(),
+    getRequestSiteOrigin(),
   ])
   const isNew = params.condition === 'new'
   const isFeatured = params.featured === 'true'
@@ -252,6 +294,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   if (params.delivery_group) searchParamsForNav.delivery_group = params.delivery_group
 
   const title = resolveProductsPageTitle(params, filterCategories)
+  const shareImageUrls = buildProductsListShareImageUrls(products, siteOrigin)
 
   const isAllShelves =
     !params.condition &&
@@ -581,6 +624,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               <div className="mt-10 pt-8 border-t border-gray-200">
                 <ProductsWhatsAppShareButton
                   title={title}
+                  shareImageUrls={shareImageUrls}
                   products={products}
                   categories={filterCategories}
                 />

@@ -1,26 +1,43 @@
 /**
  * Open Graph image for the products listing — collage of up to four product photos,
- * or the branded default when no images are provided.
+ * or the branded default when no images are available.
  */
 
 import { ImageResponse } from 'next/og'
-import { getPublicSiteOrigin, mediaProxyUserAgent } from '@/lib/media-proxy'
+import { fetchProxiedMedia } from '@/lib/fetch-proxied-media'
+import { parseAllowedMediaSrc } from '@/lib/media-proxy'
+import {
+  fetchProductsForOgCollage,
+  getProductsCollageImageUrls,
+  type ProductsPageFilterParams,
+} from '@/lib/products-share'
+import { getSiteSettingsMap, coerceSiteString } from '@/lib/site-settings'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 const OG_SIZE = { width: 1200, height: 630 }
 
-async function loadImageSrc(url: string): Promise<string | null> {
+async function loadImageDataUrl(mediaUrl: string): Promise<string | null> {
+  let upstreamUrl = mediaUrl
   try {
-    const res = await fetch(url, {
-      next: { revalidate: 86_400 },
-      headers: {
-        Accept: 'image/*',
-        'User-Agent': mediaProxyUserAgent(),
-      },
-    })
-    if (!res.ok) return null
-    const contentType = res.headers.get('content-type') || 'image/jpeg'
+    const parsed = new URL(mediaUrl)
+    if (
+      parsed.pathname.endsWith('/api/media') ||
+      parsed.pathname.endsWith('/api/og-proxy')
+    ) {
+      const src = parsed.searchParams.get('src')
+      if (src) upstreamUrl = src
+    }
+  } catch {
+    /* use mediaUrl as-is */
+  }
+
+  const upstream = parseAllowedMediaSrc(upstreamUrl)
+  if (!upstream) return null
+  try {
+    const res = await fetchProxiedMedia(upstream)
+    if (res.status !== 200) return null
+    const contentType = res.headers.get('Content-Type') || 'image/jpeg'
     const buf = await res.arrayBuffer()
     const bytes = new Uint8Array(buf)
     let binary = ''
@@ -54,23 +71,87 @@ function collageLayout(count: number): Array<{ left: number; top: number; width:
   ]
 }
 
+function companyMonogram(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase()
+  }
+  return (name.trim().slice(0, 2) || 'PP').toUpperCase()
+}
+
+async function brandedFallbackImage() {
+  const settings = await getSiteSettingsMap()
+  const siteName = coerceSiteString(settings.site_name) || 'Past and Present'
+  const tagline = coerceSiteString(settings.site_tagline) || 'Vintage & Modern Treasures'
+  const monogram = companyMonogram(siteName)
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, #8B4513 0%, #D4A574 50%, #2C5282 100%)',
+          color: '#fff',
+          fontFamily: 'Georgia, serif',
+          padding: 80,
+          textAlign: 'center',
+        }}
+      >
+        <div style={{ fontSize: 180, fontWeight: 700, lineHeight: 1, letterSpacing: -4 }}>
+          {monogram}
+        </div>
+        <div style={{ marginTop: 40, fontSize: 56, fontWeight: 600 }}>{siteName}</div>
+        {tagline ? (
+          <div style={{ marginTop: 16, fontSize: 28, opacity: 0.9, textTransform: 'uppercase' }}>
+            {tagline}
+          </div>
+        ) : null}
+      </div>
+    ),
+    { ...OG_SIZE },
+  )
+}
+
+function parseOgParams(searchParams: URLSearchParams): ProductsPageFilterParams {
+  return {
+    category: searchParams.get('category') || undefined,
+    condition: searchParams.get('condition') || undefined,
+    featured: searchParams.get('featured') || undefined,
+    bundle_only: searchParams.get('bundle_only') || undefined,
+    timed_only: searchParams.get('timed_only') || undefined,
+    supplier_slug: searchParams.get('supplier_slug') || undefined,
+    search: searchParams.get('search') || undefined,
+    sort: searchParams.get('sort') || undefined,
+    exclude_tags: searchParams.get('exclude_tags') || undefined,
+    exclude_bundles: searchParams.get('exclude_bundles') || undefined,
+  }
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const title = (searchParams.get('title') || 'Products').slice(0, 120)
-  const rawUrls = searchParams.getAll('img').slice(0, 4)
+  const filterParams = parseOgParams(searchParams)
+  const legacyImgParams = searchParams.getAll('img').slice(0, 4)
+
+  const products = await fetchProductsForOgCollage(filterParams)
+  const mediaUrls = [
+    ...getProductsCollageImageUrls(products),
+    ...legacyImgParams,
+  ].slice(0, 4)
 
   const loaded: string[] = []
-  for (const url of rawUrls) {
-    const src = await loadImageSrc(url)
+  for (const url of mediaUrls) {
+    const src = await loadImageDataUrl(url)
     if (src) loaded.push(src)
   }
 
   if (loaded.length === 0) {
-    const site = getPublicSiteOrigin()
-    if (site) {
-      return Response.redirect(`${site}/api/og-default`, 302)
-    }
-    return Response.redirect(new URL('/favicon.png', request.url), 302)
+    return brandedFallbackImage()
   }
 
   const slots = collageLayout(loaded.length)
@@ -87,15 +168,7 @@ export async function GET(request: Request) {
           position: 'relative',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            width: '100%',
-            height: '100%',
-            position: 'relative',
-          }}
-        >
+        <div style={{ display: 'flex', flexWrap: 'wrap', width: '100%', height: '100%', position: 'relative' }}>
           {loaded.map((src, index) => {
             const slot = slots[index]
             return (
