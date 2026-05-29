@@ -9,7 +9,6 @@ import {
   resolveProductsPageTitle,
 } from '@/lib/products-share'
 import ProductsWhatsAppShareButton from '@/app/products/ProductsWhatsAppShareButton'
-import ProductsLeadForm from '@/app/products/ProductsLeadForm'
 import { getRequestSiteOrigin } from '@/lib/media-proxy'
 import { Product } from '@/lib/types'
 import {
@@ -645,13 +644,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               </Link>
             </div>
           )}
-        </div>
-      </section>
-
-      {/* Make-an-offer lead form */}
-      <section className="pb-16">
-        <div className="container-wide">
-          <ProductsLeadForm />
         </div>
       </section>
     </div>

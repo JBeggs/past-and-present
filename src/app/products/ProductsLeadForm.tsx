@@ -5,9 +5,14 @@ import { useToast } from '@/contexts/ToastContext'
 import { submitContactLead } from '@/lib/submit-contact-lead'
 import { Send, Tag } from 'lucide-react'
 
-const LEAD_SUBJECT = 'Offer / enquiry from products page'
+interface ProductsLeadFormProps {
+  productName?: string
+}
 
-export default function ProductsLeadForm() {
+export default function ProductsLeadForm({ productName }: ProductsLeadFormProps = {}) {
+  const subject = productName
+    ? `Offer / enquiry: ${productName}`
+    : 'Offer / enquiry from products page'
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -23,7 +28,7 @@ export default function ProductsLeadForm() {
       await submitContactLead({
         name: formData.name,
         email: formData.email,
-        subject: LEAD_SUBJECT,
+        subject,
         message: formData.message,
       })
       showSuccess('Thanks! We\'ve got your offer and will be in touch soon.')

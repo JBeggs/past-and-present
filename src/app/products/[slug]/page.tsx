@@ -10,6 +10,7 @@ import { ArrowLeft, Shield, Info, Phone, FileText, Package, TimerReset, Truck } 
 import AddToCartButton from './AddToCartButton'
 import ProductGallery from './ProductGallery'
 import WhatsAppShareButton from './WhatsAppShareButton'
+import ProductsLeadForm from '@/app/products/ProductsLeadForm'
 import { getMinQuantity, getStockQuantity, isBundleProduct, isGumtreeProduct, isTimedProduct } from '@/lib/product-utils'
 
 interface ProductPageProps {
@@ -325,6 +326,13 @@ export default async function ProductPage({ params }: ProductPageProps) {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Make-an-offer lead form */}
+      <section className="pb-4">
+        <div className="container-wide max-w-3xl">
+          <ProductsLeadForm productName={product.name} />
         </div>
       </section>
     </div>
