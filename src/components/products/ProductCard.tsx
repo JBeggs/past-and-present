@@ -20,9 +20,11 @@ interface ProductCardProps {
    * Image and title always link to the product page — never removed.
    */
   homeQuickView?: boolean
+  /** Native lazy loading for product images (default lazy). Use eager only above the fold. */
+  imageLoading?: 'lazy' | 'eager'
 }
 
-export default function ProductCard({ product, homeQuickView = false }: ProductCardProps) {
+export default function ProductCard({ product, homeQuickView = false, imageLoading = 'lazy' }: ProductCardProps) {
   const { profile } = useAuth()
   const { showSuccess, showError } = useToast()
   const router = useRouter()
@@ -101,8 +103,9 @@ export default function ProductCard({ product, homeQuickView = false }: ProductC
                 alt={i === 0 ? product.name : ''}
                 width={IMAGE_DIM.productCard.width}
                 height={IMAGE_DIM.productCard.height}
-                loading="lazy"
+                loading={imageLoading}
                 decoding="async"
+                fetchPriority={imageLoading === 'lazy' ? 'low' : undefined}
                 className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                 onLoad={() => markBundleTileDone(i)}
                 onError={(e) => {
@@ -124,8 +127,9 @@ export default function ProductCard({ product, homeQuickView = false }: ProductC
             alt={product.name}
             width={IMAGE_DIM.productCard.width}
             height={IMAGE_DIM.productCard.height}
-            loading="lazy"
+            loading={imageLoading}
             decoding="async"
+            fetchPriority={imageLoading === 'lazy' ? 'low' : undefined}
             className={`w-full h-full object-contain group-hover:scale-[1.02] transition-opacity duration-300 ${mainImageLoaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={() => setMainImageLoaded(true)}
             onError={(e) => {

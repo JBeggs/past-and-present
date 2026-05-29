@@ -22,8 +22,10 @@ export function consumablesListingHref(): string {
   return `${categoryShelfListingHref(CONSUMABLES_CATEGORY_SLUG)}&exclude_bundles=true`
 }
 
+/** Products shown per home shelf (keeps home page lighter than full listing pages). */
+export const HOME_SHELF_PAGE_SIZE = 8
+
 /**
- * Product list params for a home-page category shelf, aligned with
  * `getProducts` in `app/products/page.tsx` (hardware / consumables vs other).
  */
 export function homeCategoryProductListParams(categorySlug: string): {
@@ -40,7 +42,7 @@ export function homeCategoryProductListParams(categorySlug: string): {
   return {
     is_active: true,
     category: slug,
-    page_size: 20,
+    page_size: HOME_SHELF_PAGE_SIZE,
     ordering: 'name',
     ...(isHardwareShelf || isConsumablesShelf
       ? {

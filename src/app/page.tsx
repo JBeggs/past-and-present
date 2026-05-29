@@ -6,12 +6,18 @@ import {
   getArticleDisplaySettings,
 } from '@/lib/article-display-settings'
 import HomeArticlesSection from '@/components/home/HomeArticlesSection'
+import HomeCategoryShelf from '@/components/home/HomeCategoryShelf'
 import { getShareImage } from '@/lib/share-image'
 import { Product, Article } from '@/lib/types'
 import { ArrowRight, Sparkles, Package, TimerReset } from 'lucide-react'
 import ProductCard from '@/components/products/ProductCard'
 import PageHero from '@/components/hero/PageHero'
-import { categoryViewAllHref, homeCategoryProductListParams } from '@/lib/store-shelves'
+import { HOME_SHELF_PAGE_SIZE } from '@/lib/store-shelves'
+
+export type HomeCategoryRow = {
+  name: string
+  slug: string
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -30,10 +36,37 @@ function sortProductsByName(products: Product[]): Product[] {
   )
 }
 
-export type HomeCategoryShelf = {
-  name: string
-  slug: string
+export type HomeCategoryShelf = HomeCategoryRow & {
   products: Product[]
+}
+
+async function getHomeCategoryRows(): Promise<HomeCategoryRow[]> {
+  try {
+    const catRes = await serverEcommerceApi.categories.list()
+    const catRaw = Array.isArray(catRes) ? catRes : (catRes as any)?.results || (catRes as any)?.data || []
+    const sortedCategories = (catRaw as { name?: string; slug?: string }[])
+      .filter((c) => String(c?.name || '').trim() && String(c?.slug || '').trim())
+      .sort((a, b) => {
+        const byName = String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' })
+        if (byName !== 0) return byName
+        return String(a.slug || '').localeCompare(String(b.slug || ''), undefined, { sensitivity: 'base' })
+      })
+    const seenCategorySlugs = new Set<string>()
+    return sortedCategories
+      .filter((c) => {
+        const slug = String(c.slug).trim().toLowerCase()
+        if (seenCategorySlugs.has(slug)) return false
+        seenCategorySlugs.add(slug)
+        return true
+      })
+      .map((c) => ({
+        name: String(c.name).trim(),
+        slug: String(c.slug).trim(),
+      }))
+  } catch (catErr) {
+    console.error('[home] category list failed', catErr)
+    return []
+  }
 }
 
 async function getHomeData(displaySettings: Awaited<ReturnType<typeof getArticleDisplaySettings>>) {
@@ -45,20 +78,21 @@ async function getHomeData(displaySettings: Awaited<ReturnType<typeof getArticle
     const settled = await Promise.allSettled([
       serverEcommerceApi.products.list({
         is_active: true,
-        page_size: 20,
+        page_size: HOME_SHELF_PAGE_SIZE,
         bundle_only: 'true',
         ordering: 'name',
       }),
       serverEcommerceApi.products.list({
         is_active: true,
-        page_size: 20,
+        page_size: HOME_SHELF_PAGE_SIZE,
         timed_only: 'true',
         ordering: 'name',
       }),
       listAllPublishedArticles(),
+      getHomeCategoryRows(),
     ])
 
-    const SHELF_LABELS = ['bundles', 'timed', 'articles'] as const
+    const SHELF_LABELS = ['bundles', 'timed', 'articles', 'categories'] as const
 
     const valueOrEmpty = (i: number): unknown =>
       settled[i].status === 'fulfilled'
@@ -76,7 +110,7 @@ async function getHomeData(displaySettings: Awaited<ReturnType<typeof getArticle
       console.error('[home] some SSR fetches failed; rendering remaining shelves', failures)
     }
 
-    const [bundlesRes, timedRes, articlesData] = settled.map((_, i) => valueOrEmpty(i))
+    const [bundlesRes, timedRes, articlesData, categoryRows] = settled.map((_, i) => valueOrEmpty(i))
 
     const bundlesRaw = Array.isArray(bundlesRes) ? bundlesRes : (bundlesRes as any)?.data || (bundlesRes as any)?.results || []
     const timedRaw = Array.isArray(timedRes) ? timedRes : (timedRes as any)?.data || (timedRes as any)?.results || []
@@ -87,68 +121,15 @@ async function getHomeData(displaySettings: Awaited<ReturnType<typeof getArticle
       : []
 
     const bundlesProducts: Product[] = sortProductsByName(
-      bundlesRaw.filter((p: Product) => p.status !== 'archived').slice(0, 20)
+      bundlesRaw.filter((p: Product) => p.status !== 'archived').slice(0, HOME_SHELF_PAGE_SIZE)
     )
     const timedProducts: Product[] = sortProductsByName(
-      timedRaw.filter((p: Product) => p.status !== 'archived').slice(0, 20)
+      timedRaw.filter((p: Product) => p.status !== 'archived').slice(0, HOME_SHELF_PAGE_SIZE)
     )
 
-    let categoryShelves: HomeCategoryShelf[] = []
-    try {
-      const catRes = await serverEcommerceApi.categories.list()
-      const catRaw = Array.isArray(catRes) ? catRes : (catRes as any)?.results || (catRes as any)?.data || []
-      const sortedCategories = (catRaw as { name?: string; slug?: string }[])
-        .filter((c) => String(c?.name || '').trim() && String(c?.slug || '').trim())
-        .sort((a, b) => {
-          const byName = String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' })
-          if (byName !== 0) return byName
-          return String(a.slug || '').localeCompare(String(b.slug || ''), undefined, { sensitivity: 'base' })
-        })
-      const seenCategorySlugs = new Set<string>()
-      const categoryRows = sortedCategories.filter((c) => {
-        const slug = String(c.slug).trim().toLowerCase()
-        if (seenCategorySlugs.has(slug)) return false
-        seenCategorySlugs.add(slug)
-        return true
-      })
-
-      const catSettled = await Promise.allSettled(
-        categoryRows.map((c) =>
-          serverEcommerceApi.products.list(homeCategoryProductListParams(String(c.slug).trim())),
-        ),
-      )
-
-      const catFailures = catSettled
-        .map((s, i) =>
-          s.status === 'rejected'
-            ? { shelf: `category:${String(categoryRows[i]?.slug)}`, reason: (s as PromiseRejectedResult).reason }
-            : null,
-        )
-        .filter(Boolean)
-      if (catFailures.length) {
-        console.error('[home] some category shelf fetches failed; rendering remaining category shelves', catFailures)
-      }
-
-      categoryShelves = categoryRows
-        .map((cat, i) => {
-          const res = catSettled[i]
-          if (res.status !== 'fulfilled') return null
-          const val = (res as PromiseFulfilledResult<unknown>).value
-          const raw = Array.isArray(val) ? val : (val as any)?.data || (val as any)?.results || []
-          const products = sortProductsByName(
-            raw.filter((p: Product) => p.status !== 'archived').slice(0, 20),
-          )
-          if (products.length === 0) return null
-          return {
-            name: String(cat.name).trim(),
-            slug: String(cat.slug).trim(),
-            products,
-          }
-        })
-        .filter((s): s is HomeCategoryShelf => s != null)
-    } catch (catErr) {
-      console.error('[home] categories or dynamic shelves failed', catErr)
-    }
+    const categoryShelves: HomeCategoryRow[] = Array.isArray(categoryRows)
+      ? (categoryRows as HomeCategoryRow[])
+      : []
 
     return {
       bundlesProducts,
@@ -223,7 +204,7 @@ export default async function HomePage() {
           {bundlesProducts.length > 0 ? (
             <div className="product-grid">
               {bundlesProducts.map((product: Product) => (
-                <ProductCard key={product.id} product={product} homeQuickView />
+                <ProductCard key={product.id} product={product} homeQuickView imageLoading="lazy" />
               ))}
             </div>
           ) : (
@@ -242,30 +223,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Category shelves — A–Z by category name (then slug); only categories with at least one product */}
+      {/* Category shelves — loaded on scroll; one API call per visible category */}
       {categoryShelves.map((shelf, index) => (
-        <section
-          key={shelf.slug}
-          className={`py-16 ${index % 2 === 0 ? 'bg-zinc-100' : 'bg-emerald-50/80'}`}
-        >
-          <div className="container-wide">
-            <div className="section-header">
-              <div>
-                <h2 className="section-title">{shelf.name}</h2>
-                <p className="text-text-muted mt-1">Products in this category</p>
-              </div>
-              <Link href={categoryViewAllHref(shelf.slug)} className="btn btn-secondary">
-                <Package className="w-4 h-4 mr-2" />
-                View All
-              </Link>
-            </div>
-            <div className="product-grid">
-              {shelf.products.map((product: Product) => (
-                <ProductCard key={product.id} product={product} homeQuickView />
-              ))}
-            </div>
-          </div>
-        </section>
+        <HomeCategoryShelf key={shelf.slug} name={shelf.name} slug={shelf.slug} index={index} />
       ))}
 
       {/* Timed Section */}
@@ -284,7 +244,7 @@ export default async function HomePage() {
             </div>
             <div className="product-grid">
               {timedProducts.map((product: Product) => (
-                <ProductCard key={product.id} product={product} homeQuickView />
+                <ProductCard key={product.id} product={product} homeQuickView imageLoading="lazy" />
               ))}
             </div>
           </div>

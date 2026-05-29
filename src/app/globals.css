@@ -381,6 +381,12 @@ input:-webkit-autofill:active {
   @apply rounded-xl border border-gray-200 bg-white p-3;
 }
 
+/* Defer paint for below-the-fold home shelves until near viewport */
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 520px;
+}
+
 /* Bundle image layout (ProductCard, cart, checkout) */
 .product-image-bundle {
   @apply relative w-full h-full;
