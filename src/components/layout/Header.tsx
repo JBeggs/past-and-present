@@ -52,7 +52,7 @@ export async function Header() {
   const useLogoImage = !!logo
 
   return (
-    <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+    <header id="site-header" className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
       {/* Top Bar - Minimal utility strip */}
       <div className="bg-vintage-primary text-white/95">
         <div className="container-wide">
@@ -70,23 +70,23 @@ export async function Header() {
 
       {/* Main Header - Typography-led brand (logo from settings only; else wordmark) */}
       <div className="container-wide">
-        <div className="flex items-center justify-between py-4 md:py-5">
-          <Link href="/" className="flex items-center gap-2 md:gap-4 group">
+        <div className="flex items-center justify-between gap-2 py-4 md:py-5">
+          <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 md:max-w-none md:flex-none md:gap-4 group">
             {useLogoImage && (
-              <img src={logoUrl} alt="" className="h-7 md:h-9 w-auto object-contain opacity-90 group-hover:opacity-100 transition-opacity" aria-hidden />
+              <img src={logoUrl} alt="" className="h-7 md:h-9 w-auto shrink-0 object-contain opacity-90 group-hover:opacity-100 transition-opacity" aria-hidden />
             )}
-            <div className="flex flex-col min-w-0">
+            <div className="flex min-w-0 flex-col">
               <span className="text-base sm:text-lg md:text-2xl font-playfair font-semibold text-text tracking-tight truncate">
                 {siteName}
               </span>
-              <span className="text-[10px] sm:text-[11px] md:text-xs text-text-muted tracking-[0.2em] uppercase font-medium truncate">
+              <span className="hidden sm:block text-[10px] sm:text-[11px] md:text-xs text-text-muted tracking-[0.2em] uppercase font-medium truncate">
                 {tagline}
               </span>
             </div>
           </Link>
 
-          <div className="flex items-center gap-8 md:gap-10">
-            <nav className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex shrink-0 items-center gap-8 md:gap-10">
+            <nav className="flex items-center gap-8">
               <Link href="/" className="text-sm font-medium text-text-light hover:text-vintage-primary transition-colors">Home</Link>
               {menuItems.map((item) => (
                 <Link key={item.href} href={item.href} className="text-sm font-medium text-text-light hover:text-vintage-primary transition-colors">
@@ -94,12 +94,12 @@ export async function Header() {
                 </Link>
               ))}
             </nav>
-            <div className="hidden md:block">
-              <ClientHeader />
-            </div>
+            <ClientHeader />
           </div>
 
-          <MobileNav menuItems={menuItems} logoUrl={logoUrl} />
+          <div className="shrink-0 md:hidden">
+            <MobileNav menuItems={menuItems} logoUrl={logoUrl} />
+          </div>
         </div>
       </div>
     </header>

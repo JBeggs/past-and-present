@@ -1,14 +1,41 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle, Phone, FileText, ShoppingBag } from 'lucide-react'
 import { Suspense } from 'react'
+import { useCart } from '@/contexts/CartContext'
+import { ecommerceApi } from '@/lib/api'
 
 function SuccessContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get('orderId')
   const isHighValue = searchParams.get('highValue') === 'true'
+  const { refreshCart, clearCart } = useCart()
+  const cartHandledRef = useRef(false)
+
+  useEffect(() => {
+    if (cartHandledRef.current) return
+    cartHandledRef.current = true
+
+    const finalizeCart = async () => {
+      if (orderId) {
+        try {
+          await ecommerceApi.orders.getByNumber(orderId, { syncPayment: true })
+        } catch {
+          // Payment may already be synced via webhook; still refresh the cart below.
+        }
+      }
+      try {
+        await clearCart()
+      } catch {
+        await refreshCart()
+      }
+    }
+
+    void finalizeCart()
+  }, [orderId, clearCart, refreshCart])
 
   return (
     <div className="min-h-screen bg-vintage-background py-20">

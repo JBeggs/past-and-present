@@ -16,8 +16,15 @@ interface MobileNavProps {
 
 type TruckCoords = { startX: number; startY: number; endX: number; endY: number }
 
+function measureHeaderBottom(): number {
+  if (typeof document === 'undefined') return 0
+  const header = document.getElementById('site-header')
+  return header?.getBoundingClientRect().bottom ?? 0
+}
+
 function MobileNavInner({ menuItems, logoUrl: _logoUrl = '/logo.png' }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [menuTop, setMenuTop] = useState(0)
   const [countBump, setCountBump] = useState(false)
   const [showTruck, setShowTruck] = useState(false)
   const [truckCoords, setTruckCoords] = useState<TruckCoords | null>(null)
@@ -53,10 +60,16 @@ function MobileNavInner({ menuItems, logoUrl: _logoUrl = '/logo.png' }: MobileNa
 
   useEffect(() => {
     if (!isOpen) return
+    const updateMenuTop = () => setMenuTop(measureHeaderBottom())
+    updateMenuTop()
+    window.addEventListener('resize', updateMenuTop)
+    window.addEventListener('scroll', updateMenuTop, { passive: true })
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = prev
+      window.removeEventListener('resize', updateMenuTop)
+      window.removeEventListener('scroll', updateMenuTop)
     }
   }, [isOpen])
 
@@ -70,7 +83,7 @@ function MobileNavInner({ menuItems, logoUrl: _logoUrl = '/logo.png' }: MobileNa
   }, [isOpen])
 
   return (
-    <div className="md:hidden">
+    <>
       {showTruck && truckCoords && (
         <div
           className="truck-fly-animation fixed pointer-events-none z-[9999]"
@@ -86,18 +99,19 @@ function MobileNavInner({ menuItems, logoUrl: _logoUrl = '/logo.png' }: MobileNa
           <Truck className="w-12 h-12 text-vintage-primary" strokeWidth={2} />
         </div>
       )}
-      <div className="flex items-center gap-2">
+
+      <div className="flex items-center gap-1">
         <Link
           href="/cart"
           data-cy="header-cart"
           data-cart-icon
-          className="relative p-2 text-text hover:text-vintage-primary transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+          className="relative flex min-h-[44px] min-w-[44px] items-center justify-center p-2 text-text transition-colors hover:text-vintage-primary"
           aria-label={`Cart, ${itemCount} items`}
         >
-          <ShoppingCart className="w-8 h-8" aria-hidden />
+          <ShoppingCart className="h-6 w-6" aria-hidden />
           {itemCount > 0 && (
             <span
-              className={`absolute -top-0.5 -right-0.5 bg-vintage-accent text-white text-xs font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full shadow-sm transition-transform duration-300 ${
+              className={`absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-vintage-accent px-1 text-[10px] font-bold text-white shadow-sm transition-transform duration-300 ${
                 countBump ? 'animate-cart-bump' : ''
               }`}
             >
@@ -105,123 +119,128 @@ function MobileNavInner({ menuItems, logoUrl: _logoUrl = '/logo.png' }: MobileNa
             </span>
           )}
         </Link>
-        {mounted && user ? (
-          <Link
-            href="/profile"
-            className="relative p-2 text-text hover:text-vintage-primary transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-            aria-label="Profile"
-            data-cy="mobile-header-profile"
-            onClick={() => setIsOpen(false)}
-          >
-            <ProfileNavAvatar profile={profile} user={user} size="sm" />
-          </Link>
-        ) : null}
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="p-2 text-text hover:text-vintage-primary transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center p-2 text-text transition-colors hover:text-vintage-primary"
           aria-label="Toggle menu"
           aria-expanded={isOpen}
           aria-controls="mobile-nav-panel"
         >
-          {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
       {isOpen && (
         <div
-          id="mobile-nav-panel"
-          role="dialog"
-          aria-modal="false"
-          className="absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-50 max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain"
+          className="fixed inset-x-0 z-[70]"
+          style={{ top: menuTop, bottom: 0 }}
         >
-          <nav className="container-wide py-4">
-            <div className="flex flex-col space-y-4">
-              <Link href="/" className="nav-link py-2 block" onClick={() => setIsOpen(false)}>
-                Home
-              </Link>
-              {menuItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="nav-link py-2 block"
-                  onClick={() => setIsOpen(false)}
-                >
-                  {item.title}
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/30"
+            aria-label="Close menu"
+            onClick={() => setIsOpen(false)}
+          />
+          <div
+            id="mobile-nav-panel"
+            role="dialog"
+            aria-modal="true"
+            className="relative z-10 max-h-full overflow-y-auto overscroll-contain border-b border-gray-200 bg-white shadow-lg"
+          >
+            <nav className="container-wide py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <div className="flex flex-col space-y-1">
+                <Link href="/" className="nav-link block py-3" onClick={() => setIsOpen(false)}>
+                  Home
                 </Link>
-              ))}
-              {isAdmin && (
-                <div className="border-t border-gray-200 pt-4">
-                  <p className="text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Business</p>
+                {menuItems.map((item) => (
                   <Link
-                    href="/admin/inventory"
+                    key={item.href}
+                    href={item.href}
+                    className="nav-link block py-3"
                     onClick={() => setIsOpen(false)}
-                    className="nav-link py-2 block"
                   >
-                    Inventory
+                    {item.title}
                   </Link>
-                  <Link
-                    href="/admin/orders"
-                    onClick={() => setIsOpen(false)}
-                    className="nav-link py-2 block"
-                  >
-                    Orders
-                  </Link>
-                  <Link
-                    href="/admin/branding"
-                    onClick={() => setIsOpen(false)}
-                    className="nav-link py-2 block"
-                  >
-                    Branding & Heroes
-                  </Link>
-                </div>
-              )}
-              <div className="border-t border-gray-200 pt-4">
-                <p className="text-xs uppercase tracking-widest text-text-muted mb-2 font-bold">Account</p>
+                ))}
+
                 {mounted && user ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-vintage-background border border-gray-200">
-                      <ProfileNavAvatar profile={profile} user={user} size="md" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-text truncate">{displayName}</p>
-                        {user.email ? (
-                          <p className="text-xs text-text-muted truncate">{user.email}</p>
-                        ) : null}
-                      </div>
+                  <div className="mt-2 flex items-center gap-3 rounded-xl border border-gray-200 bg-vintage-background p-3">
+                    <ProfileNavAvatar profile={profile} user={user} size="md" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-text">{displayName}</p>
+                      {user.email ? (
+                        <p className="truncate text-xs text-text-muted">{user.email}</p>
+                      ) : null}
                     </div>
-                    <Link
-                      href="/profile"
-                      className="nav-link flex items-center gap-2 py-2 block"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <User className="w-5 h-5 shrink-0" />
-                      <span>Profile &amp; settings</span>
-                    </Link>
-                    <Link href="/cart" className="nav-link py-2 block" onClick={() => setIsOpen(false)}>
-                      Cart{itemCount > 0 ? ` (${itemCount})` : ''}
-                    </Link>
-                    <button
-                      type="button"
-                      className="w-full text-left nav-link py-2 text-red-600"
-                      onClick={() => {
-                        void signOut()
-                        setIsOpen(false)
-                      }}
-                    >
-                      Sign out
-                    </button>
                   </div>
-                ) : mounted ? (
-                  <Link href="/login" className="btn btn-primary" onClick={() => setIsOpen(false)}>
-                    Sign In
-                  </Link>
                 ) : null}
+
+                {isAdmin && (
+                  <div className="border-t border-gray-200 pt-4 mt-2">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-widest text-text-muted">Business</p>
+                    <Link
+                      href="/admin/inventory"
+                      onClick={() => setIsOpen(false)}
+                      className="nav-link block py-3"
+                    >
+                      Inventory
+                    </Link>
+                    <Link
+                      href="/admin/orders"
+                      onClick={() => setIsOpen(false)}
+                      className="nav-link block py-3"
+                    >
+                      Orders
+                    </Link>
+                    <Link
+                      href="/admin/branding"
+                      onClick={() => setIsOpen(false)}
+                      className="nav-link block py-3"
+                    >
+                      Branding & Heroes
+                    </Link>
+                  </div>
+                )}
+
+                <div className="border-t border-gray-200 pt-4 mt-2">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-widest text-text-muted">Account</p>
+                  {mounted && user ? (
+                    <div className="space-y-1">
+                      <Link
+                        href="/profile"
+                        className="nav-link flex items-center gap-2 py-3"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        <User className="h-5 w-5 shrink-0" />
+                        <span>Profile &amp; settings</span>
+                      </Link>
+                      <Link href="/cart" className="nav-link block py-3" onClick={() => setIsOpen(false)}>
+                        Cart{itemCount > 0 ? ` (${itemCount})` : ''}
+                      </Link>
+                      <button
+                        type="button"
+                        className="nav-link w-full py-3 text-left text-red-600"
+                        onClick={() => {
+                          void signOut()
+                          setIsOpen(false)
+                        }}
+                      >
+                        Sign out
+                      </button>
+                    </div>
+                  ) : mounted ? (
+                    <Link href="/login" className="btn btn-primary mt-2 inline-flex" onClick={() => setIsOpen(false)}>
+                      Sign In
+                    </Link>
+                  ) : null}
+                </div>
               </div>
-            </div>
-          </nav>
+            </nav>
+          </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
 
