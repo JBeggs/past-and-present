@@ -193,8 +193,11 @@ export default function InventoryPage() {
     const cols = [
       'Product ID',
       'Product Name',
+      'Description',
       'Default Price',
       'Brand',
+      'Category',
+      'SKU',
       'Default Cost Price',
       'Ask For Quantity',
       'Default Quantity',
@@ -221,8 +224,11 @@ export default function InventoryPage() {
       const row: Record<string, string> = {
         'Product ID': '',
         'Product Name': p.name ?? '',
+        'Description': p.description ?? '',
         'Default Price': p.price != null ? Number(p.price).toFixed(2) : '',
         'Brand': '',
+        'Category': p.category?.name?.trim() || p.category_name?.trim() || '',
+        'SKU': p.sku ?? '',
         'Default Cost Price': '',
         'Ask For Quantity': 'no',
         'Default Quantity': '1',
