@@ -2,10 +2,15 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { serverNewsApi } from '@/lib/api-server'
-import { openGraphImageFromMediaUrl, publicSiteOrigin } from '@/lib/product-seo'
+import { buildArticleShareImageUrl } from '@/lib/article-share'
+import { getRequestSiteOrigin } from '@/lib/media-proxy'
+import { publicSiteOrigin } from '@/lib/product-seo'
 import { Article } from '@/lib/types'
 import { Calendar, User, ArrowLeft, Clock } from 'lucide-react'
 import { getArticleHeroImageUrl, IMAGE_DIM } from '@/lib/image-utils'
+import ShareButtons from '@/components/articles/ShareButtons'
+
+export const dynamic = 'force-dynamic'
 
 const STORE_NAME = 'Past and Present'
 
@@ -26,7 +31,7 @@ async function getArticle(slug: string): Promise<Article | null> {
 
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { slug } = await params
-  const article = await getArticle(slug)
+  const [article, siteOrigin] = await Promise.all([getArticle(slug), getRequestSiteOrigin()])
   if (!article) {
     return { title: `Article | ${STORE_NAME}` }
   }
@@ -39,17 +44,14 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     article.subtitle ||
     ''
   ).trim()
-  const site = publicSiteOrigin()
+  const site = siteOrigin || publicSiteOrigin()
   const canonical = site ? `${site}/articles/${slug}` : undefined
-  const thumb =
-    article.featured_media?.file_url ||
-    article.social_image?.file_url ||
-    ''
-  const ogImage = openGraphImageFromMediaUrl(thumb)
+  const ogImage = buildArticleShareImageUrl(article, siteOrigin)
 
   return {
     title,
     description,
+    ...(canonical ? { alternates: { canonical } } : {}),
     openGraph: {
       title,
       description,
@@ -69,11 +71,14 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug } = await params
-  const article = await getArticle(slug)
+  const [article, siteOrigin] = await Promise.all([getArticle(slug), getRequestSiteOrigin()])
 
   if (!article) {
     notFound()
   }
+
+  const shareImageUrl = buildArticleShareImageUrl(article, siteOrigin)
+  const titleBase = (article.seo_title || article.title || '').trim() || 'Article'
 
   return (
     <div className="min-h-screen bg-vintage-background">
@@ -168,6 +173,18 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           )}
         </div>
       </article>
+
+      <ShareButtons
+        title={titleBase}
+        url={`/articles/${slug}`}
+        siteOrigin={siteOrigin || undefined}
+        excerpt={article.excerpt}
+        subtitle={article.subtitle}
+        seoDescription={article.seo_description}
+        shareImageUrl={shareImageUrl}
+        siteName={STORE_NAME}
+        articleSlug={slug}
+      />
 
       {/* CTA */}
       <section className="py-12 bg-white border-t border-gray-200">
