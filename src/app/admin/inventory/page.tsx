@@ -220,10 +220,23 @@ export default function InventoryPage() {
       return s
     }
     const header = cols.join(',')
+    // Yoco groups rows by Product Name, treating same-named rows as variants of one product.
+    // Distinct products that share a name must be disambiguated or the import fails with
+    // "duplicate variant rows" / "default price does not match". Make every name unique.
+    const nameCounts = new Map<string, number>()
+    const uniqueName = (rawName: string, sku: string) => {
+      const name = rawName.trim() || 'Untitled product'
+      const key = name.toLowerCase()
+      const seen = nameCounts.get(key) ?? 0
+      nameCounts.set(key, seen + 1)
+      if (seen === 0) return name
+      const suffix = sku.trim() ? ` (${sku.trim()})` : ` (${seen + 1})`
+      return `${name}${suffix}`
+    }
     const rows = products.map((p) => {
       const row: Record<string, string> = {
         'Product ID': '',
-        'Product Name': p.name ?? '',
+        'Product Name': uniqueName(p.name ?? '', p.sku ?? ''),
         'Description': p.description ?? '',
         'Default Price': p.price != null ? Number(p.price).toFixed(2) : '',
         'Brand': '',
