@@ -10,9 +10,18 @@ import { Cart, CartItem, SupplierDeliveryBreakdownItem, type GumtreeFulfillmentM
 import { ArrowLeft, CreditCard, Truck, Shield, Lock, MapPin, Package } from 'lucide-react'
 import { getCartItemImages, isCourierGuyCartItem, normalizeCartResponse } from '@/lib/cart-utils'
 import { getProductCardImages, IMAGE_DIM } from '@/lib/image-utils'
-import { PudoLocationSelector, type PudoLocation } from '@/components/checkout/PudoLocationSelector'
+import { type PudoLocation } from '@/components/checkout/PudoLocationSelector'
 
-type DeliveryMethod = 'standard' | 'express' | 'pudo'
+type DeliveryMethod = 'standard' | 'express' | 'pudo' | 'collect'
+
+type CollectionAddress = {
+  display?: string
+  street_address?: string
+  suburb?: string
+  city?: string
+  postal_code?: string
+  province?: string
+}
 
 const OTHER_COURIER_SLUGS = new Set(['temu', 'aliexpress', 'ubuy']) // Courier Guy but not Gumtree
 const GUMTREE_DELIVERY_BLOCK_MESSAGE = 'Item cannot be delivered. Please contact support.'
@@ -42,12 +51,14 @@ export default function CheckoutPage() {
   const [gumtreeDeliveryBlocked, setGumtreeDeliveryBlocked] = useState(false)
   const [pudoAvailable, setPudoAvailable] = useState(true)
   const [collectionAddressDisplay, setCollectionAddressDisplay] = useState<string | null>(null)
+  const [collectionAddress, setCollectionAddress] = useState<CollectionAddress | null>(null)
   const [addressChecked, setAddressChecked] = useState(false)
   const [addressQuoteMessage, setAddressQuoteMessage] = useState('')
   const [dynamicRates, setDynamicRates] = useState<Record<DeliveryMethod, number>>({
     standard: 90,
     express: 130,
     pudo: 40,
+    collect: 0,
   })
   const { user, profile, loading: authLoading } = useAuth()
   const { showError } = useToast()
@@ -77,9 +88,11 @@ export default function CheckoutPage() {
   const courierShipping =
     !hasCourierGuyItems
       ? 0
-      : hasGumtreeItems && !hasOtherCourierItems && gumtreeFulfillmentMethod === 'collect'
+      : deliveryMethod === 'collect'
         ? 0
-        : Number(dynamicRates[deliveryMethod] || 0)
+        : hasGumtreeItems && !hasOtherCourierItems && gumtreeFulfillmentMethod === 'collect'
+          ? 0
+          : Number(dynamicRates[deliveryMethod] || 0)
   const courierShippingForDisplay = hasCourierGuyItems && addressChecked ? courierShipping : 0
   const displayTotal = Number(cart?.subtotal || 0) + supplierDelivery + courierShippingForDisplay
 
@@ -335,6 +348,7 @@ export default function CheckoutPage() {
       const quotePayload = data?.data ?? data
       const collectionDisplay = quotePayload?.collection_address?.display || null
       setCollectionAddressDisplay(collectionDisplay)
+      setCollectionAddress(quotePayload?.collection_address || null)
       const nextPudoAvailable = quotePayload?.pudo_available !== false
       setPudoAvailable(nextPudoAvailable)
       if (!nextPudoAvailable && deliveryMethod === 'pudo') {
@@ -366,9 +380,8 @@ export default function CheckoutPage() {
       }))
       const addressVerified = quotePayload?.address_verified !== false
       setAddressChecked(addressVerified)
-      const pudoMsg = nextPudoAvailable ? '' : ' Pudo disabled: parcel exceeds locker limits (20kg, 37x69x55cm).'
       const collectionMsg = collectionDisplay ? ` Collection point: ${collectionDisplay}.` : ''
-      setAddressQuoteMessage((quotePayload?.message || 'Address verified. Courier Guy rates updated.') + pudoMsg + collectionMsg)
+      setAddressQuoteMessage((quotePayload?.message || 'Address verified. Courier Guy rates updated.') + collectionMsg)
     } catch (error: any) {
       showError(error?.message || 'Failed to fetch Courier Guy rates')
       setAddressChecked(false)
@@ -403,7 +416,8 @@ export default function CheckoutPage() {
       if (deliveryMethod === 'pudo' && selectedPudoLocation) {
         cartUpdatePayload.pudo_pickup_point = selectedPudoLocation
       }
-      ;(cartUpdatePayload as any).shipping_override = hasCourierGuyItems ? (dynamicRates[deliveryMethod] || 0) : 0
+      ;(cartUpdatePayload as any).shipping_override =
+        hasCourierGuyItems && deliveryMethod !== 'collect' ? (dynamicRates[deliveryMethod] || 0) : 0
       await ecommerceApi.cart.updateShipping(cartUpdatePayload)
 
       let shippingAddress: Record<string, string>
@@ -415,6 +429,18 @@ export default function CheckoutPage() {
           city: selectedPudoLocation.city,
           province: selectedPudoLocation.province || '',
           postal_code: selectedPudoLocation.postal_code || selectedPudoLocation.postalCode || '',
+          country: 'ZA',
+        }
+      } else if (deliveryMethod === 'collect' && collectionAddress) {
+        // Collect: ship-to is the business owner's collection address (free, no courier).
+        shippingAddress = {
+          businessName: formData.business_name,
+          address: collectionAddress.street_address || collectionAddressDisplay || '',
+          street_address: collectionAddress.street_address || '',
+          suburb: collectionAddress.suburb || '',
+          city: collectionAddress.city || '',
+          province: collectionAddress.province || '',
+          postal_code: collectionAddress.postal_code || '',
           country: 'ZA',
         }
       } else {
@@ -761,23 +787,20 @@ export default function CheckoutPage() {
                     </div>
                   </label>
                   <label className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
-                    deliveryMethod === 'pudo' ? 'border-vintage-primary bg-vintage-primary/5' : 'border-gray-200 hover:border-vintage-primary/50'
-                  } ${pudoAvailable ? '' : 'opacity-50 pointer-events-none'}`}>
+                    deliveryMethod === 'collect' ? 'border-vintage-primary bg-vintage-primary/5' : 'border-gray-200 hover:border-vintage-primary/50'
+                  }`}>
                     <input
                       type="radio"
                       name="deliveryMethod"
-                      value="pudo"
-                      checked={deliveryMethod === 'pudo'}
-                      onChange={() => { setDeliveryAndEnsureAllowed('pudo'); setSelectedPudoLocation(null) }}
+                      value="collect"
+                      checked={deliveryMethod === 'collect'}
+                      onChange={() => setDeliveryAndEnsureAllowed('collect')}
                       className="mt-1"
-                      disabled={!pudoAvailable}
                     />
                     <div>
-                      <span className="font-medium">Pudo Pickup Point</span>
-                      <span className="ml-2 text-text-muted">R{dynamicRates.pudo.toFixed(2)}</span>
-                      <p className="text-sm text-text-muted mt-0.5">
-                        {pudoAvailable ? 'Collect from nearest Pudo location' : 'Unavailable for this parcel size'}
-                      </p>
+                      <span className="font-medium">Collect from store</span>
+                      <span className="ml-2 text-green-700 font-medium">Free</span>
+                      <p className="text-sm text-text-muted mt-0.5">Collect your order from us — no delivery charge.</p>
                     </div>
                   </label>
                       </>
@@ -799,13 +822,12 @@ export default function CheckoutPage() {
                   </p>
                 )}
 
-                {deliveryMethod === 'pudo' && (
-                  <div className="mt-6 pt-6 border-t border-gray-200">
-                    <PudoLocationSelector
-                      selectedLocation={selectedPudoLocation}
-                      onSelect={setSelectedPudoLocation}
-                      disabled={processing}
-                    />
+                {deliveryMethod === 'collect' && (
+                  <div className="mt-6 pt-6 border-t border-gray-200 text-sm">
+                    <p className="font-medium text-text mb-1">Collect from:</p>
+                    <p className="text-text-muted">
+                      {collectionAddressDisplay || 'Our store — we will confirm collection details after your order.'}
+                    </p>
                   </div>
                 )}
                 </div>
