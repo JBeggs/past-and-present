@@ -189,7 +189,27 @@ export default function InventoryPage() {
   }
 
   const handleExportCsv = () => {
-    const cols = ['name', 'sku', 'price', 'stock_quantity', 'status', 'description', 'category', 'created_at']
+    // Yoco bulk-upload template columns (exact order/headers required by Yoco's importer).
+    const cols = [
+      'Product ID',
+      'Product Name',
+      'Default Price',
+      'Brand',
+      'Default Cost Price',
+      'Ask For Quantity',
+      'Default Quantity',
+      'Quantity Units',
+      'Ask For Price',
+      'VAT Enabled',
+      'Variant Price',
+      'Variant Enabled',
+      'Attribute 1',
+      'Value 1',
+      'Attribute 2',
+      'Value 2',
+      'Attribute 3',
+      'Value 3',
+    ]
     const escape = (v: unknown) => {
       if (v == null) return ''
       const s = String(v)
@@ -197,20 +217,38 @@ export default function InventoryPage() {
       return s
     }
     const header = cols.join(',')
-    const rows = products.map(p => cols.map(c => {
-      if (c === 'category') return escape(p.category?.name?.trim() || p.category_name?.trim() || '')
-      const v = (p as unknown as Record<string, unknown>)[c]
-      return escape(v)
-    }).join(','))
+    const rows = products.map((p) => {
+      const row: Record<string, string> = {
+        'Product ID': '',
+        'Product Name': p.name ?? '',
+        'Default Price': p.price != null ? Number(p.price).toFixed(2) : '',
+        'Brand': '',
+        'Default Cost Price': '',
+        'Ask For Quantity': 'no',
+        'Default Quantity': '1',
+        'Quantity Units': '',
+        'Ask For Price': 'no',
+        'VAT Enabled': 'yes',
+        'Variant Price': '',
+        'Variant Enabled': 'no',
+        'Attribute 1': '',
+        'Value 1': '',
+        'Attribute 2': '',
+        'Value 2': '',
+        'Attribute 3': '',
+        'Value 3': '',
+      }
+      return cols.map((c) => escape(row[c])).join(',')
+    })
     const csv = [header, ...rows].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `products-export-${new Date().toISOString().slice(0, 10)}.csv`
+    a.download = `yoco-products-export-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
     URL.revokeObjectURL(url)
-    showSuccess('Products exported')
+    showSuccess('Products exported for Yoco')
   }
 
   const getStatusBadge = (status: string) => {
