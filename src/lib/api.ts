@@ -364,13 +364,24 @@ export class ApiClient {
           message = errorFields.join('; ')
         } else if (data.error) {
           if (typeof data.error === 'object' && data.error !== null) {
-            const errorFields = Object.entries(data.error)
-              .map(([field, messages]: [string, any]) => {
-                const m = drfErrorToMessage(messages, '')
-                return m ? `${field}: ${m}` : ''
-              })
-              .filter(Boolean)
-            message = errorFields.join('; ')
+            const errObj = data.error as Record<string, unknown>
+            const nestedDetails = errObj.details
+            if (nestedDetails && typeof nestedDetails === 'object') {
+              message = drfErrorToMessage(nestedDetails, '')
+            }
+            if (!message || message === 'An error occurred') {
+              const errorFields = Object.entries(errObj)
+                .filter(([field]) => field !== 'details')
+                .map(([field, messages]: [string, any]) => {
+                  const m = drfErrorToMessage(messages, '')
+                  return m ? `${field}: ${m}` : ''
+                })
+                .filter(Boolean)
+              message = errorFields.join('; ')
+            }
+            if ((!message || message === 'An error occurred') && typeof errObj.message === 'string') {
+              message = errObj.message
+            }
           } else if (typeof data.error === 'string') {
             message = data.error
           }

@@ -11,6 +11,7 @@ import { ArrowLeft, CreditCard, Truck, Shield, Lock, MapPin, Package } from 'luc
 import { getCartItemImages, isCourierGuyCartItem, normalizeCartResponse } from '@/lib/cart-utils'
 import { getProductCardImages, IMAGE_DIM } from '@/lib/image-utils'
 import { showYocoPaymentPopup } from '@/lib/yoco-popup'
+import { getApiErrorMessage } from '@/lib/api'
 import { type PudoLocation } from '@/components/checkout/PudoLocationSelector'
 
 type DeliveryMethod = 'standard' | 'express' | 'pudo' | 'collect'
@@ -54,6 +55,8 @@ export default function CheckoutPage() {
   const [collectionAddressDisplay, setCollectionAddressDisplay] = useState<string | null>(null)
   const [collectionAddress, setCollectionAddress] = useState<CollectionAddress | null>(null)
   const [addressChecked, setAddressChecked] = useState(false)
+  const [addressVerificationFailed, setAddressVerificationFailed] = useState(false)
+  const [addressCheckBypassed, setAddressCheckBypassed] = useState(false)
   const [addressQuoteMessage, setAddressQuoteMessage] = useState('')
   const [dynamicRates, setDynamicRates] = useState<Record<DeliveryMethod, number>>({
     standard: 90,
@@ -281,6 +284,34 @@ export default function CheckoutPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- only refetch when gumtree method changes
   }, [gumtreeFulfillmentMethod])
 
+  const resetAddressVerification = () => {
+    setAddressChecked(false)
+    setAddressVerificationFailed(false)
+    setAddressCheckBypassed(false)
+  }
+
+  const hasCompleteShippingAddress = () =>
+    [
+      formData.shipping_address,
+      formData.shipping_suburb,
+      formData.shipping_city,
+      formData.shipping_province,
+      formData.shipping_postal_code,
+    ].every((v) => String(v || '').trim().length > 0)
+
+  const continueWithoutAddressVerification = () => {
+    if (!hasCompleteShippingAddress()) {
+      showError('Please complete address, suburb, city, province and postal code first.')
+      return
+    }
+    setAddressChecked(true)
+    setAddressCheckBypassed(true)
+    setAddressVerificationFailed(false)
+    setAddressQuoteMessage(
+      'Address could not be verified automatically. Continuing with estimated courier rates — we will confirm your address after your order.',
+    )
+  }
+
   const normalizeShippingAddressForQuote = () => ({
     address: formData.shipping_address,
     street_address: formData.shipping_address,
@@ -332,6 +363,8 @@ export default function CheckoutPage() {
 
     setQuoteLoading(true)
     setAddressQuoteMessage('Checking address and fetching Courier Guy rates...')
+    setAddressVerificationFailed(false)
+    setAddressCheckBypassed(false)
     try {
       const payload: {
         shipping_address: Record<string, unknown>
@@ -383,12 +416,13 @@ export default function CheckoutPage() {
         express: Number.isFinite(expressRate as number) ? (expressRate as number) : (Number.isFinite(fallbackExpress) ? fallbackExpress : prev.express),
       }))
       const addressVerified = quotePayload?.address_verified !== false
+      setAddressVerificationFailed(!addressVerified)
       setAddressChecked(addressVerified)
       const collectionMsg = collectionDisplay ? ` Collection point: ${collectionDisplay}.` : ''
       setAddressQuoteMessage((quotePayload?.message || 'Address verified. Courier Guy rates updated.') + collectionMsg)
     } catch (error: any) {
       showError(error?.message || 'Failed to fetch Courier Guy rates')
-      setAddressChecked(false)
+      resetAddressVerification()
       setAddressQuoteMessage('')
     } finally {
       setQuoteLoading(false)
@@ -461,11 +495,19 @@ export default function CheckoutPage() {
       }
 
       const primaryDeliveryMethod =
-        hasOtherCourierItems || (hasGumtreeItems && gumtreeFulfillmentMethod === 'deliver')
+        deliveryMethod === 'collect'
+          ? 'collect'
+          : hasOtherCourierItems || (hasGumtreeItems && gumtreeFulfillmentMethod === 'deliver')
+            ? deliveryMethod
+            : hasGumtreeItems && gumtreeFulfillmentMethod === 'collect'
+              ? 'collect'
+              : deliveryMethod
+
+      const courierFulfillmentMethod =
+        deliveryMethod !== 'collect' &&
+        (hasOtherCourierItems || (hasGumtreeItems && gumtreeFulfillmentMethod === 'deliver'))
           ? deliveryMethod
-          : hasGumtreeItems && gumtreeFulfillmentMethod === 'collect'
-            ? 'collect'
-            : deliveryMethod
+          : undefined
 
       const orderPayload: Record<string, unknown> = {
         customer: {
@@ -480,11 +522,13 @@ export default function CheckoutPage() {
         notes: formData.customer_notes,
         supplier_delivery: supplierDelivery,
         courier_guy_shipping: courierShipping,
-        gumtree_fulfillment_method: hasGumtreeItems ? gumtreeFulfillmentMethod : undefined,
-        courier_fulfillment_method:
-          hasOtherCourierItems || (hasGumtreeItems && gumtreeFulfillmentMethod === 'deliver')
-            ? deliveryMethod
-            : undefined,
+      }
+
+      if (hasGumtreeItems) {
+        orderPayload.gumtree_fulfillment_method = gumtreeFulfillmentMethod
+      }
+      if (courierFulfillmentMethod) {
+        orderPayload.courier_fulfillment_method = courierFulfillmentMethod
       }
 
       if (deliveryMethod === 'pudo' && selectedPudoLocation) {
@@ -532,8 +576,12 @@ export default function CheckoutPage() {
       else successQuery.set('orderId', String(orderId))
       if (orderTotal >= 2000) successQuery.set('highValue', 'true')
       router.push(`/checkout/success?${successQuery.toString()}`)
-    } catch (error: any) {
-      const errPayload = error?.details?.error
+    } catch (error: unknown) {
+      const errPayload =
+        error &&
+        typeof error === 'object' &&
+        'details' in error &&
+        (error as { details?: { error?: { code?: string; message?: string } } }).details?.error
       const phoneBlocked =
         errPayload &&
         typeof errPayload === 'object' &&
@@ -542,7 +590,7 @@ export default function CheckoutPage() {
         ? typeof errPayload.message === 'string' && errPayload.message.trim()
           ? errPayload.message
           : 'Please verify your cellphone number on your profile before checkout.'
-        : error.message || 'Failed to process checkout'
+        : getApiErrorMessage(error, 'Failed to process checkout')
       showError(checkoutMsg)
     } finally {
       setProcessing(false)
@@ -655,7 +703,7 @@ export default function CheckoutPage() {
                         id="shipping_address"
                         type="text"
                         value={formData.shipping_address}
-                        onChange={(e) => { setFormData({ ...formData, shipping_address: e.target.value }); setAddressChecked(false) }}
+                        onChange={(e) => { setFormData({ ...formData, shipping_address: e.target.value }); resetAddressVerification() }}
                         className="form-input"
                         required
                       />
@@ -666,7 +714,7 @@ export default function CheckoutPage() {
                         id="shipping_suburb"
                         type="text"
                         value={formData.shipping_suburb}
-                        onChange={(e) => { setFormData({ ...formData, shipping_suburb: e.target.value }); setAddressChecked(false) }}
+                        onChange={(e) => { setFormData({ ...formData, shipping_suburb: e.target.value }); resetAddressVerification() }}
                         className="form-input"
                         required
                       />
@@ -678,7 +726,7 @@ export default function CheckoutPage() {
                           id="shipping_city"
                           type="text"
                           value={formData.shipping_city}
-                          onChange={(e) => { setFormData({ ...formData, shipping_city: e.target.value }); setAddressChecked(false) }}
+                          onChange={(e) => { setFormData({ ...formData, shipping_city: e.target.value }); resetAddressVerification() }}
                           className="form-input"
                           required
                         />
@@ -688,7 +736,7 @@ export default function CheckoutPage() {
                         <select
                           id="shipping_province"
                           value={formData.shipping_province}
-                          onChange={(e) => { setFormData({ ...formData, shipping_province: e.target.value }); setAddressChecked(false) }}
+                          onChange={(e) => { setFormData({ ...formData, shipping_province: e.target.value }); resetAddressVerification() }}
                           className="form-input"
                           required
                         >
@@ -706,7 +754,7 @@ export default function CheckoutPage() {
                           id="shipping_postal_code"
                           type="text"
                           value={formData.shipping_postal_code}
-                          onChange={(e) => { setFormData({ ...formData, shipping_postal_code: e.target.value }); setAddressChecked(false) }}
+                          onChange={(e) => { setFormData({ ...formData, shipping_postal_code: e.target.value }); resetAddressVerification() }}
                           className="form-input"
                           required
                         />
@@ -732,9 +780,25 @@ export default function CheckoutPage() {
                       {quoteLoading ? 'Checking address...' : 'Check address'}
                     </button>
                     {addressQuoteMessage && (
-                      <p className={`text-sm ${addressChecked ? 'text-green-700' : 'text-amber-700'}`}>
+                      <p className={`text-sm ${addressChecked && !addressCheckBypassed ? 'text-green-700' : 'text-amber-700'}`}>
                         {addressQuoteMessage}
                       </p>
+                    )}
+                    {addressVerificationFailed && !addressChecked && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+                        <p className="text-sm text-amber-900">
+                          We could not match this address on the map. You can continue with estimated courier rates using the address you entered.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={continueWithoutAddressVerification}
+                          disabled={quoteLoading || processing}
+                          className="btn btn-secondary"
+                          data-cy="checkout-skip-address-check"
+                        >
+                          Continue with estimated shipping
+                        </button>
+                      </div>
                     )}
                   </div>
               </div>
