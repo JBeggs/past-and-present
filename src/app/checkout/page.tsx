@@ -10,6 +10,7 @@ import { Cart, CartItem, SupplierDeliveryBreakdownItem, type GumtreeFulfillmentM
 import { ArrowLeft, CreditCard, Truck, Shield, Lock, MapPin, Package } from 'lucide-react'
 import { getCartItemImages, isCourierGuyCartItem, normalizeCartResponse } from '@/lib/cart-utils'
 import { getProductCardImages, IMAGE_DIM } from '@/lib/image-utils'
+import { showYocoPaymentPopup } from '@/lib/yoco-popup'
 import { type PudoLocation } from '@/components/checkout/PudoLocationSelector'
 
 type DeliveryMethod = 'standard' | 'express' | 'pudo' | 'collect'
@@ -103,6 +104,9 @@ export default function CheckoutPage() {
     if (method !== 'pudo') setSelectedPudoLocation(null)
   }
 
+  const showCourierDeliveryOptions =
+    hasCourierGuyItems && (hasOtherCourierItems || gumtreeFulfillmentMethod === 'deliver')
+
   const fetchCart = useCallback(async () => {
     if (!user) return
     try {
@@ -155,8 +159,8 @@ export default function CheckoutPage() {
 
       const dm = deliveryMethodRef.current
       if (!hasCg) {
-        setDeliveryMethod('standard')
-      } else if (!['standard', 'express', 'pudo'].includes(dm)) {
+        if (dm !== 'collect') setDeliveryMethod('standard')
+      } else if (!['standard', 'express', 'pudo', 'collect'].includes(dm)) {
         setDeliveryMethod('standard')
       }
 
@@ -491,20 +495,43 @@ export default function CheckoutPage() {
       const order = orderResponse?.data ?? orderResponse
 
       const orderId = order?.id
+      const orderNumber = order?.order_number || order?.orderNumber
+      const orderTotal = Number(order?.total ?? displayTotal)
       if (!orderId) {
         showError('Invalid order response')
         return
       }
-
-      const checkoutResponse = await ecommerceApi.payments.createCheckout(orderId) as any
-      const res = checkoutResponse?.data ?? checkoutResponse
-      const redirectUrl = res?.data?.redirectUrl ?? res?.redirectUrl
-
-      if (redirectUrl) {
-        window.location.href = redirectUrl
-      } else {
-        showError('Failed to create payment session')
+      if (!Number.isFinite(orderTotal) || orderTotal < 2) {
+        showError('Minimum order total for card payment is R2.00')
+        return
       }
+
+      const configResponse = await ecommerceApi.payments.getConfig() as any
+      const config = configResponse?.data ?? configResponse
+      const publicKey = config?.publicKey || config?.data?.publicKey
+      if (!publicKey) {
+        showError('Yoco payments are not configured for this store yet.')
+        return
+      }
+
+      const popupResult = await showYocoPaymentPopup({
+        publicKey,
+        amountInCents: Math.round(orderTotal * 100),
+        name: 'Past and Present',
+        description: orderNumber ? `Order ${orderNumber}` : 'Order payment',
+        metadata: {
+          orderId: String(orderId),
+          ...(orderNumber ? { orderNumber: String(orderNumber) } : {}),
+        },
+      })
+
+      await ecommerceApi.payments.chargeOrder(String(orderId), popupResult.id)
+
+      const successQuery = new URLSearchParams()
+      if (orderNumber) successQuery.set('orderId', String(orderNumber))
+      else successQuery.set('orderId', String(orderId))
+      if (orderTotal >= 2000) successQuery.set('highValue', 'true')
+      router.push(`/checkout/success?${successQuery.toString()}`)
     } catch (error: any) {
       const errPayload = error?.details?.error
       const phoneBlocked =
@@ -750,7 +777,7 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                     )}
-                    {hasCourierGuyItems && (hasOtherCourierItems || gumtreeFulfillmentMethod === 'deliver') && (
+                    {showCourierDeliveryOptions && (
                       <>
                   <label className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
                     deliveryMethod === 'standard' ? 'border-vintage-primary bg-vintage-primary/5' : 'border-gray-200 hover:border-vintage-primary/50'
@@ -786,25 +813,25 @@ export default function CheckoutPage() {
                       <p className="text-sm text-text-muted mt-0.5">1-2 business days</p>
                     </div>
                   </label>
-                  <label className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
-                    deliveryMethod === 'collect' ? 'border-vintage-primary bg-vintage-primary/5' : 'border-gray-200 hover:border-vintage-primary/50'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="deliveryMethod"
-                      value="collect"
-                      checked={deliveryMethod === 'collect'}
-                      onChange={() => setDeliveryAndEnsureAllowed('collect')}
-                      className="mt-1"
-                    />
-                    <div>
-                      <span className="font-medium">Collect from store</span>
-                      <span className="ml-2 text-green-700 font-medium">Free</span>
-                      <p className="text-sm text-text-muted mt-0.5">Collect your order from us — no delivery charge.</p>
-                    </div>
-                  </label>
                       </>
                     )}
+                    <label className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                      deliveryMethod === 'collect' ? 'border-vintage-primary bg-vintage-primary/5' : 'border-gray-200 hover:border-vintage-primary/50'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="deliveryMethod"
+                        value="collect"
+                        checked={deliveryMethod === 'collect'}
+                        onChange={() => setDeliveryAndEnsureAllowed('collect')}
+                        className="mt-1"
+                      />
+                      <div>
+                        <span className="font-medium">Collect from store</span>
+                        <span className="ml-2 text-green-700 font-medium">Free</span>
+                        <p className="text-sm text-text-muted mt-0.5">Collect your order from us — no delivery charge.</p>
+                      </div>
+                    </label>
                 </div>
                 {collectionAddressDisplay && (
                   <p className="mt-4 text-sm text-text-muted">
@@ -932,9 +959,11 @@ export default function CheckoutPage() {
                       </div>
                     ) : null
                   })()}
-                  {hasGumtreeItems && gumtreeFulfillmentMethod === 'collect' && (
+                  {(deliveryMethod === 'collect' || (hasGumtreeItems && gumtreeFulfillmentMethod === 'collect')) && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-text-muted">Gumtree: Collect in-store</span>
+                      <span className="text-text-muted">
+                        {deliveryMethod === 'collect' ? 'Collect from store' : 'Gumtree: Collect in-store'}
+                      </span>
                       <span className="font-medium text-green-700">Free</span>
                     </div>
                   )}

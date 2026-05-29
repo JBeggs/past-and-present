@@ -1017,6 +1017,7 @@ export const ecommerceApi = {
 
   // Yoco payment integration (backend: POST /v1/yoco/orders/{orderId}/yoco-checkout/)
   payments: {
+    getConfig: () => apiClient.get('/v1/yoco/payment-config/'),
     createCheckout: (orderId: string, options?: { successUrl?: string; cancelUrl?: string }) => {
       const base = typeof window !== 'undefined' ? window.location.origin : ''
       const successUrl = options?.successUrl ?? `${base}/checkout/success`
@@ -1026,6 +1027,8 @@ export const ecommerceApi = {
         cancelUrl,
       })
     },
+    chargeOrder: (orderId: string, token: string) =>
+      apiClient.post(`/v1/yoco/orders/${orderId}/yoco-charge/`, { token }),
     verifyPayment: (checkoutId: string) =>
       apiClient.get(`/v1/payments/yoco/verify/${checkoutId}/`),
   },
