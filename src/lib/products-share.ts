@@ -21,6 +21,14 @@ export type ProductsPageFilterParams = {
   exclude_bundles?: string
 }
 
+export function formatCategorySlug(slug: string): string {
+  return String(slug || '')
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
 export function resolveProductsPageTitle(
   params: ProductsPageFilterParams,
   filterCategories: { name: string; slug: string }[],
@@ -36,7 +44,7 @@ export function resolveProductsPageTitle(
     !!params.category && !isHardwareCategory && !isConsumablesCategory
 
   const selectedCategoryLabel = params.category
-    ? filterCategories.find((c) => c.slug === params.category)?.name
+    ? filterCategories.find((c) => c.slug === params.category)?.name || formatCategorySlug(params.category)
     : undefined
 
   if (isSupplierGroup) return 'Delivery Group'

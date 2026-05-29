@@ -2,12 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import PageHero from '@/components/hero/PageHero'
-import { serverEcommerceApi } from '@/lib/api-server'
 import {
   buildProductsListShareImageUrls,
   buildProductsPageOgImageUrl,
   resolveProductsPageTitle,
 } from '@/lib/products-share'
+import { getProductsForPage, getProductFilterCategories } from '@/lib/products-page-data'
 import ProductsWhatsAppShareButton from '@/app/products/ProductsWhatsAppShareButton'
 import { getRequestSiteOrigin } from '@/lib/media-proxy'
 import { Product } from '@/lib/types'
@@ -29,8 +29,6 @@ import {
   CATEGORY_SHELF_EXCLUDE_TAGS,
   CONSUMABLES_CATEGORY_SLUG,
   HARDWARE_CATEGORY_SLUG,
-  NEW_LISTING_EXCLUDED_CATEGORY_SLUGS,
-  homeCategoryProductListParams,
 } from '@/lib/store-shelves'
 
 export const dynamic = 'force-dynamic'
@@ -40,7 +38,7 @@ export async function generateMetadata({
 }: Pick<ProductsPageProps, 'searchParams'>): Promise<Metadata> {
   const params = await searchParams
   const [{ products }, filterCategories, siteOrigin] = await Promise.all([
-    getProducts(params),
+    getProductsForPage(params),
     getProductFilterCategories(),
     getRequestSiteOrigin(),
   ])
@@ -123,117 +121,8 @@ function productsOgFilterParams(params: {
   }
 }
 
-async function getProducts(params: {
-  condition?: string
-  category?: string
-  search?: string
-  page?: string
-  featured?: string
-  sort?: string
-  bundle_only?: string
-  timed_only?: string
-  exclude_tags?: string
-  exclude_bundles?: string
-  supplier_slug?: string
-  delivery_group?: string
-}) {
-  try {
-    const isHardwareShelf = params.category === HARDWARE_CATEGORY_SLUG
-    const isConsumablesShelf = params.category === CONSUMABLES_CATEGORY_SLUG
-    const excludeTagsForApi =
-      isHardwareShelf || isConsumablesShelf
-        ? (params.exclude_tags?.trim() ? params.exclude_tags : CATEGORY_SHELF_EXCLUDE_TAGS)
-        : params.exclude_tags || undefined
-
-    const response = await serverEcommerceApi.products.list({
-      is_active: true,
-      category: params.category,
-      search: params.search,
-      condition: params.condition,
-      featured: params.featured === 'true' ? true : undefined,
-      /** Matches home rails: vintage & new pools exclude already-featured items. */
-      exclude_featured: params.condition === 'new' ? true : undefined,
-      page: params.page ? parseInt(params.page) : 1,
-      page_size: 24,
-      ordering: params.sort || undefined,
-      bundle_only: params.bundle_only === 'true' ? 'true' : undefined,
-      timed_only: params.timed_only === 'true' ? 'true' : undefined,
-      exclude_tags: excludeTagsForApi,
-      exclude_bundles:
-        isHardwareShelf ||
-        isConsumablesShelf ||
-        params.condition === 'new' ||
-        params.exclude_bundles === 'true'
-          ? 'true'
-          : undefined,
-      exclude_category:
-        params.condition === 'new' ? NEW_LISTING_EXCLUDED_CATEGORY_SLUGS : undefined,
-      supplier_slug: params.supplier_slug || undefined,
-    })
-
-    const raw = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.results || []
-    const products = raw
-      .filter((p: Product) => p.status !== 'archived')
-      .filter((p: any) => {
-        if (!params.supplier_slug) return true
-        return String(p.supplier_slug || '').toLowerCase() === params.supplier_slug.toLowerCase()
-      })
-    const pagination = (response as any)?.pagination
-
-    return {
-      products,
-      pagination: pagination
-        ? {
-            page: pagination.page ?? 1,
-            totalPages: pagination.totalPages ?? 1,
-            total: pagination.total ?? products.length,
-          }
-        : { page: 1, totalPages: 1, total: products.length },
-    }
-  } catch (error) {
-    console.error('Error fetching products:', error)
-    return { products: [], pagination: { page: 1, totalPages: 1, total: 0 } }
-  }
-}
-
-/** Categories A–Z that have at least one active, listable product (matches home shelf rules per slug). */
-async function getProductFilterCategories(): Promise<{ name: string; slug: string }[]> {
-  try {
-    const catRes = await serverEcommerceApi.categories.list()
-    const catRaw = Array.isArray(catRes) ? catRes : (catRes as any)?.results || (catRes as any)?.data || []
-    const rows = (catRaw as { name?: string; slug?: string }[])
-      .filter((c) => String(c?.name || '').trim() && String(c?.slug || '').trim())
-      .sort((a, b) => {
-        const byName = String(a.name).localeCompare(String(b.name), undefined, { sensitivity: 'base' })
-        if (byName !== 0) return byName
-        return String(a.slug || '').localeCompare(String(b.slug || ''), undefined, { sensitivity: 'base' })
-      })
-
-    const settled = await Promise.allSettled(
-      rows.map((c) =>
-        serverEcommerceApi.products.list({
-          ...homeCategoryProductListParams(String(c.slug).trim()),
-          page_size: 1,
-        }),
-      ),
-    )
-
-    const out: { name: string; slug: string }[] = []
-    rows.forEach((cat, i) => {
-      const res = settled[i]
-      if (res.status !== 'fulfilled') return
-      const val = (res as PromiseFulfilledResult<unknown>).value
-      const raw = Array.isArray(val) ? val : (val as any)?.data || (val as any)?.results || []
-      const has = raw.some((p: Product) => p.status !== 'archived')
-      if (has) {
-        out.push({ name: String(cat.name).trim(), slug: String(cat.slug).trim() })
-      }
-    })
-    return out
-  } catch (e) {
-    console.error('[products] category filter list failed', e)
-    return []
-  }
+async function getProducts(params: ProductsPageProps['searchParams'] extends Promise<infer P> ? P : never) {
+  return getProductsForPage(params)
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
@@ -264,10 +153,6 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const isConsumablesCategory = params.category === CONSUMABLES_CATEGORY_SLUG
   const isOtherProductCategory =
     !!params.category && !isHardwareCategory && !isConsumablesCategory
-
-  const selectedCategoryLabel = params.category
-    ? filterCategories.find((c) => c.slug === params.category)?.name
-    : undefined
 
   const searchParamsForNav: Record<string, string> = {}
   if (params.condition) searchParamsForNav.condition = params.condition
@@ -610,8 +495,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           {products.length > 0 ? (
             <>
               <div className="product-grid" data-cy="products-grid">
-                {products.map((product: Product) => (
-                  <ProductCard key={product.id} product={product} homeQuickView />
+                {products.map((product: Product, index: number) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    imageLoading={index < 4 ? 'eager' : 'lazy'}
+                  />
                 ))}
               </div>
               <PaginationNav
