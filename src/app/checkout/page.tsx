@@ -10,7 +10,6 @@ import { Cart, CartItem, SupplierDeliveryBreakdownItem, type GumtreeFulfillmentM
 import { ArrowLeft, CreditCard, Truck, Shield, Lock, MapPin, Package } from 'lucide-react'
 import { getCartItemImages, isCourierGuyCartItem, normalizeCartResponse } from '@/lib/cart-utils'
 import { getProductCardImages, IMAGE_DIM } from '@/lib/image-utils'
-import { showYocoPaymentPopup } from '@/lib/yoco-popup'
 import { getApiErrorMessage } from '@/lib/api'
 import { type PudoLocation } from '@/components/checkout/PudoLocationSelector'
 
@@ -550,32 +549,24 @@ export default function CheckoutPage() {
         return
       }
 
-      const configResponse = await ecommerceApi.payments.getConfig() as any
-      const config = configResponse?.data ?? configResponse
-      const publicKey = config?.publicKey || config?.data?.publicKey
-      if (!publicKey) {
-        showError('Yoco payments are not configured for this store yet.')
-        return
-      }
-
-      const popupResult = await showYocoPaymentPopup({
-        publicKey,
-        amountInCents: Math.round(orderTotal * 100),
-        name: 'Past and Present',
-        description: orderNumber ? `Order ${orderNumber}` : 'Order payment',
-        metadata: {
-          orderId: String(orderId),
-          ...(orderNumber ? { orderNumber: String(orderNumber) } : {}),
-        },
-      })
-
-      await ecommerceApi.payments.chargeOrder(String(orderId), popupResult.id)
-
       const successQuery = new URLSearchParams()
       if (orderNumber) successQuery.set('orderId', String(orderNumber))
       else successQuery.set('orderId', String(orderId))
       if (orderTotal >= 2000) successQuery.set('highValue', 'true')
-      router.push(`/checkout/success?${successQuery.toString()}`)
+
+      const checkoutResponse = await ecommerceApi.payments.createCheckout(String(orderId), {
+        successUrl: `${window.location.origin}/checkout/success?${successQuery.toString()}`,
+        cancelUrl: `${window.location.origin}/checkout`,
+      }) as { data?: { redirectUrl?: string; data?: { redirectUrl?: string } }; redirectUrl?: string }
+      const checkoutData = checkoutResponse?.data ?? checkoutResponse
+      const redirectUrl = checkoutData?.data?.redirectUrl ?? checkoutData?.redirectUrl
+
+      if (redirectUrl) {
+        window.location.href = redirectUrl
+        return
+      }
+
+      showError('Failed to create payment session')
     } catch (error: unknown) {
       type CheckoutErrorPayload = { code?: string; message?: string }
       const errPayload: CheckoutErrorPayload | undefined =
