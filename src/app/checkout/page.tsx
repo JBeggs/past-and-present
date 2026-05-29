@@ -577,19 +577,17 @@ export default function CheckoutPage() {
       if (orderTotal >= 2000) successQuery.set('highValue', 'true')
       router.push(`/checkout/success?${successQuery.toString()}`)
     } catch (error: unknown) {
-      const errPayload =
+      type CheckoutErrorPayload = { code?: string; message?: string }
+      const errPayload: CheckoutErrorPayload | undefined =
         error &&
         typeof error === 'object' &&
-        'details' in error &&
-        (error as { details?: { error?: { code?: string; message?: string } } }).details?.error
-      const phoneBlocked =
-        errPayload &&
-        typeof errPayload === 'object' &&
-        errPayload.code === 'PHONE_NOT_VERIFIED'
+        'details' in error
+          ? (error as { details?: { error?: CheckoutErrorPayload } }).details?.error
+          : undefined
+      const phoneBlocked = errPayload?.code === 'PHONE_NOT_VERIFIED'
       const checkoutMsg = phoneBlocked
-        ? typeof errPayload.message === 'string' && errPayload.message.trim()
-          ? errPayload.message
-          : 'Please verify your cellphone number on your profile before checkout.'
+        ? errPayload?.message?.trim() ||
+          'Please verify your cellphone number on your profile before checkout.'
         : getApiErrorMessage(error, 'Failed to process checkout')
       showError(checkoutMsg)
     } finally {
