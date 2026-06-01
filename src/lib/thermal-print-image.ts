@@ -10,6 +10,12 @@ export function nextRotation(current: ImageRotation, direction: 'cw' | 'ccw'): I
   return ROTATIONS[next] ?? 0
 }
 
+export type PreparedThermalPrintImage = {
+  dataUrl: string
+  width: number
+  height: number
+}
+
 /** Rasterise + optionally greyscale so mobile PDF/thermal print does not fail on huge PNGs or CSS filters. */
 export async function prepareThermalPrintImage(
   src: string,
@@ -19,7 +25,7 @@ export async function prepareThermalPrintImage(
     maxWidth?: number
     maxHeight?: number
   } = {},
-): Promise<string | null> {
+): Promise<PreparedThermalPrintImage | null> {
   const { rotation = 0, thermal = true, maxWidth = 640, maxHeight = 640 } = options
 
   return new Promise((resolve) => {
@@ -37,7 +43,6 @@ export async function prepareThermalPrintImage(
         const swap = rotation === 90 || rotation === 270
         const basisW = swap ? naturalH : naturalW
         const basisH = swap ? naturalW : naturalH
-        // Fit inside one page — critical for 90°/270° so PDF does not spill to page 2.
         const scale = Math.min(1, maxWidth / basisW, maxHeight / basisH)
         const outW = Math.max(1, Math.round(basisW * scale))
         const outH = Math.max(1, Math.round(basisH * scale))
@@ -67,7 +72,11 @@ export async function prepareThermalPrintImage(
         ctx.restore()
 
         const dataUrl = canvas.toDataURL('image/jpeg', 0.88)
-        resolve(dataUrl.startsWith('data:image') ? dataUrl : null)
+        if (!dataUrl.startsWith('data:image')) {
+          resolve(null)
+          return
+        }
+        resolve({ dataUrl, width: outW, height: outH })
       } catch {
         resolve(null)
       }

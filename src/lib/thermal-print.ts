@@ -209,22 +209,112 @@ export function buildThermalPageCss(paperSize: ThermalPaperSize): string {
 `
 }
 
-const THERMAL_PRINT_IMAGE_PAGE_STYLE_ID = 'thermal-print-image-page'
+export type ThermalPrintImagePayload = {
+  dataUrl: string
+  width: number
+  height: number
+}
 
-export function applyThermalImagePageCss(
+function thermalPageHeightMm(paperSize: ThermalPaperSize, imageWidthPx: number, imageHeightPx: number): number | null {
+  const widthMm = paperWidthMm(paperSize)
+  if (!widthMm || !imageWidthPx || !imageHeightPx) return null
+  return Math.ceil(((widthMm * imageHeightPx) / imageWidthPx) * 10) / 10
+}
+
+/** Print only the rasterised image in an isolated iframe — avoids admin page layout splitting across pages. */
+export function printThermalImageOnly(
+  image: ThermalPrintImagePayload,
   paperSize: ThermalPaperSize,
-  imageWidthPx: number,
-  imageHeightPx: number,
-): void {
-  if (typeof document === 'undefined') return
-  const css = buildThermalImagePageCss(paperSize, imageWidthPx, imageHeightPx)
-  let styleEl = document.getElementById(THERMAL_PRINT_IMAGE_PAGE_STYLE_ID) as HTMLStyleElement | null
-  if (!styleEl) {
-    styleEl = document.createElement('style')
-    styleEl.id = THERMAL_PRINT_IMAGE_PAGE_STYLE_ID
-    document.head.appendChild(styleEl)
+): Promise<void> {
+  if (typeof document === 'undefined') return Promise.resolve()
+
+  const widthMm = paperWidthMm(paperSize)
+  const heightMm = thermalPageHeightMm(paperSize, image.width, image.height)
+  const pageSizeRule =
+    widthMm && heightMm ? `size: ${widthMm}mm ${heightMm}mm;` : 'size: auto;'
+  const bodySizeRule =
+    widthMm && heightMm
+      ? `width:${widthMm}mm;height:${heightMm}mm;max-width:${widthMm}mm;max-height:${heightMm}mm;`
+      : `width:${image.width}px;height:${image.height}px;`
+  const imgSizeRule =
+    widthMm && heightMm
+      ? `width:${widthMm}mm;height:${heightMm}mm;max-width:${widthMm}mm;max-height:${heightMm}mm;`
+      : `width:${image.width}px;height:${image.height}px;`
+
+  return new Promise((resolve) => {
+    const iframe = document.createElement('iframe')
+    iframe.setAttribute('aria-hidden', 'true')
+    iframe.style.cssText =
+      'position:fixed;top:0;left:0;width:0;height:0;border:none;visibility:hidden;pointer-events:none'
+    document.body.appendChild(iframe)
+
+    const win = iframe.contentWindow
+    const doc = iframe.contentDocument ?? win?.document
+    if (!win || !doc) {
+      iframe.remove()
+      resolve()
+      return
+    }
+
+    let finished = false
+    const finish = () => {
+      if (finished) return
+      finished = true
+      window.setTimeout(() => iframe.remove(), 600)
+      resolve()
+    }
+
+    doc.open()
+    doc.write(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Print</title>
+<style>
+  @page { margin: 0; ${pageSizeRule} }
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    ${bodySizeRule}
   }
-  styleEl.textContent = css
+  img {
+    display: block;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    object-fit: fill;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    ${imgSizeRule}
+  }
+</style></head><body></body></html>`)
+    doc.close()
+
+    const img = doc.createElement('img')
+    img.alt = 'Flyer'
+    img.width = image.width
+    img.height = image.height
+
+    let printed = false
+    const triggerPrint = () => {
+      if (printed) return
+      printed = true
+      doc.body.appendChild(img)
+      win.onafterprint = finish
+      window.setTimeout(finish, 15000)
+      win.focus()
+      win.print()
+    }
+
+    img.onload = triggerPrint
+    img.onerror = finish
+    img.src = image.dataUrl
+
+    if (img.complete && img.naturalHeight > 0) {
+      triggerPrint()
+    }
+  })
 }
 
 export const THERMAL_PRINT_CSS = `

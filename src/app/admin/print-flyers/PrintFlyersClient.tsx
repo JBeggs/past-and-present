@@ -1,16 +1,17 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Loader2, Printer, RotateCcw, RotateCw } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import ThermalPrintImageSheet from '@/components/admin/ThermalPrintImageSheet'
 import { nextRotation, type ImageRotation } from '@/lib/thermal-print-image'
+import type { PreparedThermalPrintImage } from '@/lib/thermal-print-image'
 import {
-  applyThermalImagePageCss,
   buildThermalPageCss,
   HANDY_MAN_PRINT_FLYERS,
+  printThermalImageOnly,
   readStoredThermalPaperSize,
   readStoredThermalPrintMode,
   storeThermalPaperSize,
@@ -30,6 +31,7 @@ export default function PrintFlyersClient() {
   const [selectedFlyerId, setSelectedFlyerId] = useState<string | null>(null)
   const [rotation, setRotation] = useState<ImageRotation>(0)
   const [imagePreparing, setImagePreparing] = useState(false)
+  const preparedImageRef = useRef<PreparedThermalPrintImage | null>(null)
 
   const isAuthorized = profile?.role === 'admin' || profile?.role === 'business_owner'
 
@@ -56,6 +58,7 @@ export default function PrintFlyersClient() {
   useEffect(() => {
     setRotation(0)
     setImagePreparing(false)
+    preparedImageRef.current = null
   }, [selectedFlyerId])
 
   const paperOption = useMemo(
@@ -66,43 +69,11 @@ export default function PrintFlyersClient() {
   const dynamicPageCss = useMemo(() => buildThermalPageCss(paperSize), [paperSize])
 
   const handlePrint = useCallback(async () => {
-    if (!selectedFlyer || imagePreparing) return
+    const prepared = preparedImageRef.current
+    if (!selectedFlyer || imagePreparing || !prepared) return
     setPrinting(true)
     try {
-      const imgs = Array.from(document.querySelectorAll<HTMLImageElement>('.thermal-print-root .print-image'))
-      await Promise.all(
-        imgs.map((img) =>
-          Promise.race([
-            (async () => {
-              if (img.complete && img.naturalHeight > 0) return
-              if (typeof img.decode === 'function') {
-                try {
-                  await img.decode()
-                  if (img.naturalHeight > 0) return
-                } catch {
-                  /* continue */
-                }
-              }
-              await new Promise<void>((resolve) => {
-                if (img.complete && img.naturalHeight > 0) {
-                  resolve()
-                  return
-                }
-                img.addEventListener('load', () => resolve(), { once: true })
-                img.addEventListener('error', () => resolve(), { once: true })
-              })
-            })(),
-            new Promise<void>((resolve) => window.setTimeout(resolve, 8000)),
-          ]),
-        ),
-      )
-
-      const printImg = imgs[0]
-      if (printImg?.naturalWidth && printImg.naturalHeight) {
-        applyThermalImagePageCss(paperSize, printImg.naturalWidth, printImg.naturalHeight)
-      }
-
-      window.print()
+      await printThermalImageOnly(prepared, paperSize)
     } finally {
       setPrinting(false)
     }
@@ -110,6 +81,10 @@ export default function PrintFlyersClient() {
 
   const handlePreparedChange = useCallback((ready: boolean) => {
     setImagePreparing(!ready)
+  }, [])
+
+  const handlePreparedImage = useCallback((image: PreparedThermalPrintImage | null) => {
+    preparedImageRef.current = image
   }, [])
 
   if (authLoading || !isAuthorized) {
@@ -275,6 +250,7 @@ export default function PrintFlyersClient() {
           thermalMode={thermalMode}
           previewWidth={paperOption.previewWidth}
           onPreparedChange={handlePreparedChange}
+          onPreparedImage={handlePreparedImage}
         />
       ) : (
         <p className="no-print mx-auto max-w-lg text-center text-sm text-[#8a837a]">

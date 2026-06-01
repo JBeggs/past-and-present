@@ -1,7 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { prepareThermalPrintImage, type ImageRotation } from '@/lib/thermal-print-image'
+import {
+  prepareThermalPrintImage,
+  type ImageRotation,
+  type PreparedThermalPrintImage,
+} from '@/lib/thermal-print-image'
 import {
   THERMAL_PRINT_CSS,
   thermalPrintPageLimits,
@@ -16,6 +20,7 @@ type ThermalPrintImageSheetProps = {
   thermalMode?: boolean
   previewWidth?: string
   onPreparedChange?: (ready: boolean) => void
+  onPreparedImage?: (image: PreparedThermalPrintImage | null) => void
 }
 
 export default function ThermalPrintImageSheet({
@@ -25,6 +30,7 @@ export default function ThermalPrintImageSheet({
   thermalMode = true,
   previewWidth = '80mm',
   onPreparedChange,
+  onPreparedImage,
 }: ThermalPrintImageSheetProps) {
   const [preparedSrc, setPreparedSrc] = useState<string | null>(null)
   const [preparing, setPreparing] = useState(true)
@@ -34,6 +40,7 @@ export default function ThermalPrintImageSheet({
     setPreparing(true)
     setPreparedSrc(null)
     onPreparedChange?.(false)
+    onPreparedImage?.(null)
 
     const { maxWidth, maxHeight } = thermalPrintPageLimits(paperSize)
 
@@ -42,17 +49,18 @@ export default function ThermalPrintImageSheet({
       thermal: thermalMode,
       maxWidth,
       maxHeight,
-    }).then((dataUrl) => {
+    }).then((prepared) => {
       if (cancelled) return
-      setPreparedSrc(dataUrl)
+      setPreparedSrc(prepared?.dataUrl ?? null)
       setPreparing(false)
-      onPreparedChange?.(true)
+      onPreparedChange?.(Boolean(prepared))
+      onPreparedImage?.(prepared)
     })
 
     return () => {
       cancelled = true
     }
-  }, [flyer.src, rotation, thermalMode, paperSize, onPreparedChange])
+  }, [flyer.src, rotation, thermalMode, paperSize, onPreparedChange, onPreparedImage])
 
   return (
     <>
