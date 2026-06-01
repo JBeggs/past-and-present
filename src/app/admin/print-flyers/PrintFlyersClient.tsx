@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, Printer } from 'lucide-react'
+import { ArrowLeft, Loader2, Printer, RotateCcw, RotateCw } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import ThermalPrintImageSheet from '@/components/admin/ThermalPrintImageSheet'
+import { nextRotation, type ImageRotation } from '@/lib/thermal-print-image'
 import {
   buildThermalPageCss,
   HANDY_MAN_PRINT_FLYERS,
@@ -26,6 +27,8 @@ export default function PrintFlyersClient() {
   const [paperSize, setPaperSize] = useState<ThermalPaperSize>('80mm')
   const [thermalMode, setThermalMode] = useState(true)
   const [selectedFlyerId, setSelectedFlyerId] = useState<string | null>(null)
+  const [rotation, setRotation] = useState<ImageRotation>(0)
+  const [imagePreparing, setImagePreparing] = useState(false)
 
   const isAuthorized = profile?.role === 'admin' || profile?.role === 'business_owner'
 
@@ -49,6 +52,11 @@ export default function PrintFlyersClient() {
     }
   }, [authLoading, isAuthorized, router])
 
+  useEffect(() => {
+    setRotation(0)
+    setImagePreparing(false)
+  }, [selectedFlyerId])
+
   const paperOption = useMemo(
     () => THERMAL_PAPER_OPTIONS.find((o) => o.id === paperSize) ?? THERMAL_PAPER_OPTIONS[0],
     [paperSize],
@@ -57,10 +65,10 @@ export default function PrintFlyersClient() {
   const dynamicPageCss = useMemo(() => buildThermalPageCss(paperSize), [paperSize])
 
   const handlePrint = useCallback(async () => {
-    if (!selectedFlyer) return
+    if (!selectedFlyer || imagePreparing) return
     setPrinting(true)
     try {
-      const imgs = Array.from(document.querySelectorAll<HTMLImageElement>('.thermal-print-root img'))
+      const imgs = Array.from(document.querySelectorAll<HTMLImageElement>('.thermal-print-root .print-image'))
       await Promise.all(
         imgs.map((img) =>
           Promise.race([
@@ -91,7 +99,11 @@ export default function PrintFlyersClient() {
     } finally {
       setPrinting(false)
     }
-  }, [selectedFlyer])
+  }, [selectedFlyer, imagePreparing])
+
+  const handlePreparedChange = useCallback((ready: boolean) => {
+    setImagePreparing(!ready)
+  }, [])
 
   if (authLoading || !isAuthorized) {
     return (
@@ -117,7 +129,7 @@ export default function PrintFlyersClient() {
           <button
             type="button"
             onClick={() => void handlePrint()}
-            disabled={printing || !selectedFlyer}
+            disabled={printing || !selectedFlyer || imagePreparing}
             className="inline-flex items-center gap-2 rounded-full bg-vintage-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             <Printer className="h-4 w-4" />
@@ -128,7 +140,7 @@ export default function PrintFlyersClient() {
         <div className="rounded-2xl border border-[#e8e4df] bg-white p-4 text-sm text-[#141414] shadow-sm">
           <p className="mb-1 font-semibold">Print Handy Man flyer</p>
           <p className="mb-3 text-xs text-[#8a837a]">
-            Select one flyer below, then print full width for thermal output.
+            Select one flyer, rotate if needed, then print full width for thermal output.
           </p>
 
           <fieldset className="mb-4">
@@ -170,6 +182,33 @@ export default function PrintFlyersClient() {
             ) : null}
           </fieldset>
 
+          {selectedFlyer ? (
+            <div className="mb-4">
+              <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-[#8a837a]">
+                Rotation
+              </span>
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-[#e8e4df] bg-[#faf9f7] p-3">
+                <button
+                  type="button"
+                  onClick={() => setRotation((r) => nextRotation(r, 'ccw'))}
+                  className="inline-flex items-center gap-1 rounded-lg border border-[#e8e4df] bg-white px-3 py-2 text-xs font-medium"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Left
+                </button>
+                <span className="text-sm font-semibold tabular-nums">{rotation}°</span>
+                <button
+                  type="button"
+                  onClick={() => setRotation((r) => nextRotation(r, 'cw'))}
+                  className="inline-flex items-center gap-1 rounded-lg border border-[#e8e4df] bg-white px-3 py-2 text-xs font-medium"
+                >
+                  Right
+                  <RotateCw className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <label className="mb-3 block">
             <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#8a837a]">
               Paper width
@@ -205,7 +244,7 @@ export default function PrintFlyersClient() {
             <span>
               <span className="font-medium">Thermal printer mode</span>
               <span className="mt-0.5 block text-xs text-[#8a837a]">
-                Greyscale + high contrast — best for receipt and label printers.
+                Greyscale + high contrast — baked into the image before print.
               </span>
             </span>
           </label>
@@ -223,10 +262,12 @@ export default function PrintFlyersClient() {
 
       {selectedFlyer ? (
         <ThermalPrintImageSheet
-          flyers={[selectedFlyer]}
+          flyer={selectedFlyer}
+          rotation={rotation}
           paperSize={paperSize}
           thermalMode={thermalMode}
           previewWidth={paperOption.previewWidth}
+          onPreparedChange={handlePreparedChange}
         />
       ) : (
         <p className="no-print mx-auto max-w-lg text-center text-sm text-[#8a837a]">

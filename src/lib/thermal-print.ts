@@ -65,28 +65,34 @@ export function storeThermalPrintMode(thermal: boolean): void {
 export function buildThermalPageCss(paperSize: ThermalPaperSize): string {
   const option = THERMAL_PAPER_OPTIONS.find((o) => o.id === paperSize) ?? THERMAL_PAPER_OPTIONS[0]
   const fullPage = paperSize === 'full'
+  // Use auto page height — fixed mm heights often break mobile Save-as-PDF.
+  const pageSize = fullPage ? 'auto' : `${option.previewWidth} auto`
   return `
 @media print {
   @page {
     margin: 0;
-    size: ${option.pageSize};
+    size: ${pageSize};
   }
   html, body {
     width: ${fullPage ? '100%' : option.previewWidth} !important;
     max-width: 100% !important;
     height: auto !important;
-    min-height: ${fullPage ? '100vh' : 'auto'} !important;
+    min-height: 0 !important;
+    overflow: visible !important;
     font-size: 16px !important;
     -webkit-text-size-adjust: none !important;
     text-size-adjust: none !important;
   }
   .thermal-print-page,
   .thermal-print-root,
-  .thermal-print-root .sheet {
+  .thermal-print-root .sheet,
+  .thermal-print-root .page,
+  .thermal-print-root .print-image-frame {
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
+    overflow: visible !important;
   }
 }
 `
@@ -109,6 +115,13 @@ export const THERMAL_PRINT_CSS = `
     margin: 0;
     text-align: center;
   }
+  .thermal-print-root .print-image-frame {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #fff;
+  }
   .thermal-print-root .print-image {
     width: 100%;
     max-width: 100%;
@@ -116,7 +129,12 @@ export const THERMAL_PRINT_CSS = `
     display: block;
     margin: 0 auto;
   }
-  .thermal-print-root[data-thermal="true"] .print-image {
+  .thermal-print-root[data-rasterized="true"] .print-image,
+  .thermal-print-root[data-rasterized="true"][data-thermal="true"] .print-image {
+    filter: none !important;
+    -webkit-filter: none !important;
+  }
+  .thermal-print-root[data-thermal="true"]:not([data-rasterized="true"]) .print-image {
     filter: grayscale(100%) contrast(1.15);
     -webkit-filter: grayscale(100%) contrast(1.15);
   }
@@ -151,8 +169,8 @@ export const THERMAL_PRINT_CSS = `
     }
     .thermal-print-root[data-thermal="true"] .print-image,
     .thermal-print-root .print-image {
-      filter: grayscale(100%) contrast(1.15) !important;
-      -webkit-filter: grayscale(100%) contrast(1.15) !important;
+      filter: none !important;
+      -webkit-filter: none !important;
     }
   }
 `
