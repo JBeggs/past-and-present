@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { prepareThermalPrintImage, type ImageRotation } from '@/lib/thermal-print-image'
 import {
   THERMAL_PRINT_CSS,
+  thermalPrintPageLimits,
   type ThermalPaperSize,
   type ThermalPrintFlyer,
 } from '@/lib/thermal-print'
@@ -34,7 +35,14 @@ export default function ThermalPrintImageSheet({
     setPreparedSrc(null)
     onPreparedChange?.(false)
 
-    void prepareThermalPrintImage(flyer.src, { rotation, thermal: thermalMode }).then((dataUrl) => {
+    const { maxWidth, maxHeight } = thermalPrintPageLimits(paperSize)
+
+    void prepareThermalPrintImage(flyer.src, {
+      rotation,
+      thermal: thermalMode,
+      maxWidth,
+      maxHeight,
+    }).then((dataUrl) => {
       if (cancelled) return
       setPreparedSrc(dataUrl)
       setPreparing(false)
@@ -44,7 +52,7 @@ export default function ThermalPrintImageSheet({
     return () => {
       cancelled = true
     }
-  }, [flyer.src, rotation, thermalMode, onPreparedChange])
+  }, [flyer.src, rotation, thermalMode, paperSize, onPreparedChange])
 
   return (
     <>

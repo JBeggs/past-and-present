@@ -62,6 +62,25 @@ export function storeThermalPrintMode(thermal: boolean): void {
   window.sessionStorage.setItem(THERMAL_MODE_STORAGE_KEY, thermal ? 'true' : 'false')
 }
 
+export function thermalPrintPageLimits(paperSize: ThermalPaperSize): {
+  maxWidth: number
+  maxHeight: number
+} {
+  // ~203 dpi — typical thermal resolution; keep output inside one square page.
+  const mmToPx = (mm: number) => Math.round((mm * 203) / 25.4)
+  switch (paperSize) {
+    case '58mm':
+      return { maxWidth: mmToPx(58), maxHeight: mmToPx(58) }
+    case '100mm':
+      return { maxWidth: mmToPx(100), maxHeight: mmToPx(100) }
+    case 'full':
+      return { maxWidth: 800, maxHeight: 1050 }
+    case '80mm':
+    default:
+      return { maxWidth: mmToPx(80), maxHeight: mmToPx(80) }
+  }
+}
+
 export function buildThermalPageCss(paperSize: ThermalPaperSize): string {
   const option = THERMAL_PAPER_OPTIONS.find((o) => o.id === paperSize) ?? THERMAL_PAPER_OPTIONS[0]
   const fullPage = paperSize === 'full'
@@ -78,10 +97,16 @@ export function buildThermalPageCss(paperSize: ThermalPaperSize): string {
     max-width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
-    overflow: visible !important;
+    max-height: none !important;
+    overflow: hidden !important;
     font-size: 16px !important;
     -webkit-text-size-adjust: none !important;
     text-size-adjust: none !important;
+  }
+  .thermal-print-page {
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
   }
   .thermal-print-page,
   .thermal-print-root,
@@ -157,11 +182,22 @@ export const THERMAL_PRINT_CSS = `
     .thermal-print-page {
       padding: 0 !important;
       background: #fff !important;
-      min-height: auto !important;
+      min-height: 0 !important;
+      height: auto !important;
+    }
+    .thermal-print-root .sheet {
+      page-break-after: avoid !important;
+      break-after: avoid !important;
     }
     .thermal-print-root .page {
       page-break-inside: avoid !important;
       break-inside: avoid !important;
+      page-break-after: avoid !important;
+      break-after: avoid !important;
+    }
+    .thermal-print-root .print-image {
+      max-height: 100% !important;
+      object-fit: contain !important;
     }
     .thermal-print-root .page + .page {
       page-break-before: always !important;

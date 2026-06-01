@@ -114,7 +114,7 @@ export default function PrintFlyersClient() {
   }
 
   return (
-    <div className="thermal-print-page min-h-screen bg-[#f3f1ed] px-4 py-6" data-thermal-print-page>
+    <div className="thermal-print-page min-h-screen bg-[#f3f1ed] px-4 py-6 print:min-h-0 print:h-auto print:px-0 print:py-0" data-thermal-print-page>
       <style dangerouslySetInnerHTML={{ __html: dynamicPageCss }} />
 
       <div data-print-chrome className="no-print mx-auto mb-6 max-w-lg space-y-4">

@@ -1,3 +1,5 @@
+import type { ThermalPaperSize } from '@/lib/thermal-print'
+
 export type ImageRotation = 0 | 90 | 180 | 270
 
 const ROTATIONS: ImageRotation[] = [0, 90, 180, 270]
@@ -11,9 +13,14 @@ export function nextRotation(current: ImageRotation, direction: 'cw' | 'ccw'): I
 /** Rasterise + optionally greyscale so mobile PDF/thermal print does not fail on huge PNGs or CSS filters. */
 export async function prepareThermalPrintImage(
   src: string,
-  options: { rotation?: ImageRotation; thermal?: boolean; maxWidth?: number } = {},
+  options: {
+    rotation?: ImageRotation
+    thermal?: boolean
+    maxWidth?: number
+    maxHeight?: number
+  } = {},
 ): Promise<string | null> {
-  const { rotation = 0, thermal = true, maxWidth = 800 } = options
+  const { rotation = 0, thermal = true, maxWidth = 640, maxHeight = 640 } = options
 
   return new Promise((resolve) => {
     const img = new Image()
@@ -30,7 +37,8 @@ export async function prepareThermalPrintImage(
         const swap = rotation === 90 || rotation === 270
         const basisW = swap ? naturalH : naturalW
         const basisH = swap ? naturalW : naturalH
-        const scale = Math.min(1, maxWidth / basisW)
+        // Fit inside one page — critical for 90°/270° so PDF does not spill to page 2.
+        const scale = Math.min(1, maxWidth / basisW, maxHeight / basisH)
         const outW = Math.max(1, Math.round(basisW * scale))
         const outH = Math.max(1, Math.round(basisH * scale))
         const drawW = Math.round(naturalW * scale)
