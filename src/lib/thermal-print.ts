@@ -81,11 +81,95 @@ export function thermalPrintPageLimits(paperSize: ThermalPaperSize): {
   }
 }
 
+function paperWidthMm(paperSize: ThermalPaperSize): number | null {
+  switch (paperSize) {
+    case '58mm':
+      return 58
+    case '80mm':
+      return 80
+    case '100mm':
+      return 100
+    default:
+      return null
+  }
+}
+
+/** Exact @page size from rasterised image pixels — one page, no split. */
+export function buildThermalImagePageCss(
+  paperSize: ThermalPaperSize,
+  imageWidthPx: number,
+  imageHeightPx: number,
+): string {
+  const widthMm = paperWidthMm(paperSize)
+  if (!widthMm || !imageWidthPx || !imageHeightPx) {
+    return buildThermalPageCss(paperSize)
+  }
+
+  const heightMm = Math.ceil(((widthMm * imageHeightPx) / imageWidthPx) * 10) / 10
+
+  return `
+@media print {
+  @page {
+    margin: 0;
+    size: ${widthMm}mm ${heightMm}mm;
+  }
+  html, body {
+    width: ${widthMm}mm !important;
+    height: ${heightMm}mm !important;
+    max-width: ${widthMm}mm !important;
+    max-height: ${heightMm}mm !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 16px !important;
+    -webkit-text-size-adjust: none !important;
+    text-size-adjust: none !important;
+  }
+  .thermal-print-page,
+  .thermal-print-root,
+  .thermal-print-root .sheet,
+  .thermal-print-root .page,
+  .thermal-print-root .print-image-frame {
+    width: ${widthMm}mm !important;
+    height: ${heightMm}mm !important;
+    max-width: ${widthMm}mm !important;
+    max-height: ${heightMm}mm !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .thermal-print-root .print-image {
+    width: ${widthMm}mm !important;
+    height: ${heightMm}mm !important;
+    max-width: ${widthMm}mm !important;
+    max-height: ${heightMm}mm !important;
+    object-fit: fill !important;
+    display: block !important;
+    margin: 0 !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+`
+}
+
 export function buildThermalPageCss(paperSize: ThermalPaperSize): string {
   const option = THERMAL_PAPER_OPTIONS.find((o) => o.id === paperSize) ?? THERMAL_PAPER_OPTIONS[0]
   const fullPage = paperSize === 'full'
-  // Use auto page height — fixed mm heights often break mobile Save-as-PDF.
-  const pageSize = fullPage ? 'auto' : `${option.previewWidth} auto`
+  const widthMm = paperWidthMm(paperSize)
+  const pageSize = fullPage ? 'auto' : widthMm ? `${widthMm}mm 200mm` : `${option.previewWidth} 200mm`
   return `
 @media print {
   @page {
@@ -117,10 +201,30 @@ export function buildThermalPageCss(paperSize: ThermalPaperSize): string {
     max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: visible !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
 `
+}
+
+const THERMAL_PRINT_IMAGE_PAGE_STYLE_ID = 'thermal-print-image-page'
+
+export function applyThermalImagePageCss(
+  paperSize: ThermalPaperSize,
+  imageWidthPx: number,
+  imageHeightPx: number,
+): void {
+  if (typeof document === 'undefined') return
+  const css = buildThermalImagePageCss(paperSize, imageWidthPx, imageHeightPx)
+  let styleEl = document.getElementById(THERMAL_PRINT_IMAGE_PAGE_STYLE_ID) as HTMLStyleElement | null
+  if (!styleEl) {
+    styleEl = document.createElement('style')
+    styleEl.id = THERMAL_PRINT_IMAGE_PAGE_STYLE_ID
+    document.head.appendChild(styleEl)
+  }
+  styleEl.textContent = css
 }
 
 export const THERMAL_PRINT_CSS = `
@@ -195,8 +299,12 @@ export const THERMAL_PRINT_CSS = `
       page-break-after: avoid !important;
       break-after: avoid !important;
     }
+    .thermal-print-root .print-image-frame,
     .thermal-print-root .print-image {
-      max-height: 100% !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    .thermal-print-root .print-image {
       object-fit: contain !important;
     }
     .thermal-print-root .page + .page {

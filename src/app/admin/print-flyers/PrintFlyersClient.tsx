@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import ThermalPrintImageSheet from '@/components/admin/ThermalPrintImageSheet'
 import { nextRotation, type ImageRotation } from '@/lib/thermal-print-image'
 import {
+  applyThermalImagePageCss,
   buildThermalPageCss,
   HANDY_MAN_PRINT_FLYERS,
   readStoredThermalPaperSize,
@@ -95,11 +96,17 @@ export default function PrintFlyersClient() {
           ]),
         ),
       )
+
+      const printImg = imgs[0]
+      if (printImg?.naturalWidth && printImg.naturalHeight) {
+        applyThermalImagePageCss(paperSize, printImg.naturalWidth, printImg.naturalHeight)
+      }
+
       window.print()
     } finally {
       setPrinting(false)
     }
-  }, [selectedFlyer, imagePreparing])
+  }, [selectedFlyer, imagePreparing, paperSize])
 
   const handlePreparedChange = useCallback((ready: boolean) => {
     setImagePreparing(!ready)
