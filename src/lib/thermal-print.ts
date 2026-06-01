@@ -166,15 +166,33 @@ export type ThermalPrintFlyer = {
 
 export const HANDY_MAN_PRINT_FLYERS: ThermalPrintFlyer[] = [
   {
-    id: 'flyer-1',
-    label: 'Services grid (with appliance icons)',
-    src: '/print/handy-man-flyer-1.png',
-    alt: 'Handy Man Computer Repairs services flyer with icons',
+    id: 'electrical',
+    label: 'Basic Electrical Repairs — R100',
+    src: '/print/one.png',
+    alt: 'Basic Electrical Repairs flyer',
   },
   {
-    id: 'flyer-2',
-    label: 'Services grid (large phone number)',
-    src: '/print/handy-man-flyer-2.png',
-    alt: 'Handy Man Computer Repairs services flyer with phone number',
+    id: 'laptop',
+    label: 'Laptop Repairs — R200 + expenses',
+    src: '/print/two.png',
+    alt: 'Laptop Repairs flyer',
+  },
+  {
+    id: 'ubuntu',
+    label: 'Ubuntu & Open Source Installation — R150',
+    src: '/print/three.png',
+    alt: 'Ubuntu and Open Source Installation flyer',
+  },
+  {
+    id: 'app-dev',
+    label: 'Application Development — from R1500',
+    src: '/print/four.png',
+    alt: 'Application Development flyer',
+  },
+  {
+    id: 'all-services',
+    label: 'All services (full grid)',
+    src: '/print/five.png',
+    alt: 'All Handy Man Computer Repairs services flyer',
   },
 ]

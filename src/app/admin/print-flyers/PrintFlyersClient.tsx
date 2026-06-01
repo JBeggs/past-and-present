@@ -25,8 +25,14 @@ export default function PrintFlyersClient() {
   const [printing, setPrinting] = useState(false)
   const [paperSize, setPaperSize] = useState<ThermalPaperSize>('80mm')
   const [thermalMode, setThermalMode] = useState(true)
+  const [selectedFlyerId, setSelectedFlyerId] = useState<string | null>(null)
 
   const isAuthorized = profile?.role === 'admin' || profile?.role === 'business_owner'
+
+  const selectedFlyer = useMemo(
+    () => HANDY_MAN_PRINT_FLYERS.find((f) => f.id === selectedFlyerId) ?? null,
+    [selectedFlyerId],
+  )
 
   useEffect(() => {
     setPaperSize(readStoredThermalPaperSize())
@@ -51,6 +57,7 @@ export default function PrintFlyersClient() {
   const dynamicPageCss = useMemo(() => buildThermalPageCss(paperSize), [paperSize])
 
   const handlePrint = useCallback(async () => {
+    if (!selectedFlyer) return
     setPrinting(true)
     try {
       const imgs = Array.from(document.querySelectorAll<HTMLImageElement>('.thermal-print-root img'))
@@ -84,7 +91,7 @@ export default function PrintFlyersClient() {
     } finally {
       setPrinting(false)
     }
-  }, [])
+  }, [selectedFlyer])
 
   if (authLoading || !isAuthorized) {
     return (
@@ -110,7 +117,7 @@ export default function PrintFlyersClient() {
           <button
             type="button"
             onClick={() => void handlePrint()}
-            disabled={printing}
+            disabled={printing || !selectedFlyer}
             className="inline-flex items-center gap-2 rounded-full bg-vintage-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             <Printer className="h-4 w-4" />
@@ -119,10 +126,49 @@ export default function PrintFlyersClient() {
         </div>
 
         <div className="rounded-2xl border border-[#e8e4df] bg-white p-4 text-sm text-[#141414] shadow-sm">
-          <p className="mb-1 font-semibold">Print Handy Man flyers</p>
+          <p className="mb-1 font-semibold">Print Handy Man flyer</p>
           <p className="mb-3 text-xs text-[#8a837a]">
-            Two flyers — each prints on its own page, full width for thermal output.
+            Select one flyer below, then print full width for thermal output.
           </p>
+
+          <fieldset className="mb-4">
+            <legend className="mb-2 block text-xs font-medium uppercase tracking-wide text-[#8a837a]">
+              Choose flyer <span className="text-red-600">*</span>
+            </legend>
+            <div className="space-y-2">
+              {HANDY_MAN_PRINT_FLYERS.map((flyer) => {
+                const selected = selectedFlyerId === flyer.id
+                return (
+                  <label
+                    key={flyer.id}
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
+                      selected
+                        ? 'border-vintage-primary bg-vintage-primary/5 ring-1 ring-vintage-primary'
+                        : 'border-[#e8e4df] bg-[#faf9f7] hover:border-[#d8d4cf]'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="flyer"
+                      value={flyer.id}
+                      checked={selected}
+                      onChange={() => setSelectedFlyerId(flyer.id)}
+                      className="h-4 w-4 shrink-0 accent-vintage-primary"
+                    />
+                    <img
+                      src={flyer.src}
+                      alt=""
+                      className="h-14 w-20 shrink-0 rounded border border-[#ece8e3] bg-white object-contain"
+                    />
+                    <span className="text-sm font-medium leading-snug">{flyer.label}</span>
+                  </label>
+                )
+              })}
+            </div>
+            {!selectedFlyer ? (
+              <p className="mt-2 text-xs text-[#8a837a]">Pick a flyer to enable printing.</p>
+            ) : null}
+          </fieldset>
 
           <label className="mb-3 block">
             <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#8a837a]">
@@ -164,14 +210,6 @@ export default function PrintFlyersClient() {
             </span>
           </label>
 
-          <ul className="mt-4 space-y-2 text-xs text-[#5c574f]">
-            {HANDY_MAN_PRINT_FLYERS.map((flyer) => (
-              <li key={flyer.id} className="rounded-lg bg-[#faf9f7] px-3 py-2">
-                {flyer.label}
-              </li>
-            ))}
-          </ul>
-
           <div className="mt-4 rounded-lg bg-[#faf9f7] p-3 text-xs leading-relaxed text-[#5c574f]">
             <p className="font-semibold text-[#141414]">In your print dialog:</p>
             <ul className="mt-2 list-disc space-y-1 pl-4">
@@ -183,12 +221,18 @@ export default function PrintFlyersClient() {
         </div>
       </div>
 
-      <ThermalPrintImageSheet
-        flyers={HANDY_MAN_PRINT_FLYERS}
-        paperSize={paperSize}
-        thermalMode={thermalMode}
-        previewWidth={paperOption.previewWidth}
-      />
+      {selectedFlyer ? (
+        <ThermalPrintImageSheet
+          flyers={[selectedFlyer]}
+          paperSize={paperSize}
+          thermalMode={thermalMode}
+          previewWidth={paperOption.previewWidth}
+        />
+      ) : (
+        <p className="no-print mx-auto max-w-lg text-center text-sm text-[#8a837a]">
+          Select a flyer above to see the print preview.
+        </p>
+      )}
     </div>
   )
 }
