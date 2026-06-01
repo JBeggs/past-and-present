@@ -523,6 +523,36 @@ input:-webkit-autofill:active {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+
+  /* Thermal flyer print page — only the images in PDF */
+  body:has([data-thermal-print-page]) header,
+  body:has([data-thermal-print-page]) footer,
+  body:has([data-thermal-print-page]) nav,
+  body:has([data-thermal-print-page]) [data-print-chrome],
+  body:has([data-thermal-print-page]) [data-cookie-consent],
+  body:has([data-thermal-print-page]) .no-print,
+  body.thermal-print-active header,
+  body.thermal-print-active footer,
+  body.thermal-print-active nav,
+  body.thermal-print-active [data-print-chrome],
+  body.thermal-print-active [data-cookie-consent],
+  body.thermal-print-active .no-print {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body:has([data-thermal-print-page]) .thermal-print-page,
+  body.thermal-print-active .thermal-print-page {
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
+    background: #fff !important;
+  }
 }
 
 /* High contrast mode support */
