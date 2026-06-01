@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ecommerceApi } from '@/lib/api'
 import { Product } from '@/lib/types'
-import { Edit2, Trash2, Loader2, Search, ExternalLink, Image as ImageIcon, ArrowLeft, Plus, Settings, Filter, Download, CheckSquare, Square, AlertCircle, Star, Printer } from 'lucide-react'
+import { Edit2, Trash2, Loader2, Search, ExternalLink, Image as ImageIcon, ArrowLeft, Plus, Settings, Filter, Download, CheckSquare, Square, AlertCircle, Star } from 'lucide-react'
 import { useToast } from '@/contexts/ToastContext'
 import ProductForm from '@/components/products/ProductForm'
 import CategoryManager from '@/components/products/CategoryManager'
@@ -311,10 +311,10 @@ export default function InventoryPage() {
               <Link
                 href="/admin/print-flyers"
                 className="btn btn-secondary btn-sm flex items-center gap-2"
-                title="Print Handy Man service flyers"
+                title="Download Handy Man service flyers"
               >
-                <Printer className="w-4 h-4" />
-                Print flyers
+                <Download className="w-4 h-4" />
+                Download flyers
               </Link>
               <button
                 onClick={handleExportCsv}

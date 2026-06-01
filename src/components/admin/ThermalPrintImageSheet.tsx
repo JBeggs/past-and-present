@@ -2,36 +2,25 @@
 
 import { useEffect, useState } from 'react'
 import {
-  prepareThermalPrintImage,
+  prepareFlyerImage,
   type ImageRotation,
-  type PreparedThermalPrintImage,
+  type PreparedFlyerImage,
 } from '@/lib/thermal-print-image'
-import {
-  THERMAL_PRINT_CSS,
-  thermalPrintPageLimits,
-  type ThermalPaperSize,
-  type ThermalPrintFlyer,
-} from '@/lib/thermal-print'
+import type { ThermalPrintFlyer } from '@/lib/thermal-print'
 
-type ThermalPrintImageSheetProps = {
+type FlyerImagePreviewProps = {
   flyer: ThermalPrintFlyer
   rotation?: ImageRotation
-  paperSize?: ThermalPaperSize
-  thermalMode?: boolean
-  previewWidth?: string
   onPreparedChange?: (ready: boolean) => void
-  onPreparedImage?: (image: PreparedThermalPrintImage | null) => void
+  onPreparedImage?: (image: PreparedFlyerImage | null) => void
 }
 
-export default function ThermalPrintImageSheet({
+export default function FlyerImagePreview({
   flyer,
   rotation = 0,
-  paperSize = '80mm',
-  thermalMode = true,
-  previewWidth = '80mm',
   onPreparedChange,
   onPreparedImage,
-}: ThermalPrintImageSheetProps) {
+}: FlyerImagePreviewProps) {
   const [preparedSrc, setPreparedSrc] = useState<string | null>(null)
   const [preparing, setPreparing] = useState(true)
 
@@ -42,14 +31,7 @@ export default function ThermalPrintImageSheet({
     onPreparedChange?.(false)
     onPreparedImage?.(null)
 
-    const { maxWidth, maxHeight } = thermalPrintPageLimits(paperSize)
-
-    void prepareThermalPrintImage(flyer.src, {
-      rotation,
-      thermal: thermalMode,
-      maxWidth,
-      maxHeight,
-    }).then((prepared) => {
+    void prepareFlyerImage(flyer.src, rotation).then((prepared) => {
       if (cancelled) return
       setPreparedSrc(prepared?.dataUrl ?? null)
       setPreparing(false)
@@ -60,33 +42,19 @@ export default function ThermalPrintImageSheet({
     return () => {
       cancelled = true
     }
-  }, [flyer.src, rotation, thermalMode, paperSize, onPreparedChange, onPreparedImage])
+  }, [flyer.src, rotation, onPreparedChange, onPreparedImage])
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: THERMAL_PRINT_CSS }} />
-      <div
-        className="thermal-print-root mx-auto"
-        data-thermal={thermalMode ? 'true' : 'false'}
-        data-rasterized="true"
-        data-paper={paperSize}
-        style={{ maxWidth: previewWidth, width: '100%' }}
-      >
-        <div className="sheet">
-          <section className="page">
-            <div className="print-image-frame">
-              {preparing ? (
-                <p className="no-print py-8 text-center text-sm text-[#8a837a]">Preparing image…</p>
-              ) : null}
-              {preparedSrc ? (
-                <img className="print-image" src={preparedSrc} alt={flyer.alt} />
-              ) : !preparing ? (
-                <img className="print-image" src={flyer.src} alt={flyer.alt} />
-              ) : null}
-            </div>
-          </section>
-        </div>
+    <div className="mx-auto w-full max-w-4xl">
+      <div className="rounded-xl border border-[#e8e4df] bg-white p-2 shadow-sm">
+        {preparing ? (
+          <p className="py-16 text-center text-sm text-[#8a837a]">Preparing preview…</p>
+        ) : preparedSrc ? (
+          <img className="mx-auto block h-auto w-full" src={preparedSrc} alt={flyer.alt} />
+        ) : (
+          <img className="mx-auto block h-auto w-full" src={flyer.src} alt={flyer.alt} />
+        )}
       </div>
-    </>
+    </div>
   )
 }

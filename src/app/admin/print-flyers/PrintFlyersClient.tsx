@@ -3,35 +3,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Loader2, Printer, RotateCcw, RotateCw } from 'lucide-react'
+import { ArrowLeft, Download, Loader2, RotateCcw, RotateCw } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import ThermalPrintImageSheet from '@/components/admin/ThermalPrintImageSheet'
-import { nextRotation, type ImageRotation } from '@/lib/thermal-print-image'
-import type { PreparedThermalPrintImage } from '@/lib/thermal-print-image'
+import FlyerImagePreview from '@/components/admin/ThermalPrintImageSheet'
 import {
-  buildThermalPageCss,
-  HANDY_MAN_PRINT_FLYERS,
-  printThermalImageOnly,
-  readStoredThermalPaperSize,
-  readStoredThermalPrintMode,
-  storeThermalPaperSize,
-  storeThermalPrintMode,
-  THERMAL_PAPER_OPTIONS,
-  type ThermalPaperSize,
-} from '@/lib/thermal-print'
-
-const THERMAL_PRINT_BODY_CLASS = 'thermal-print-active'
+  downloadPreparedImage,
+  nextRotation,
+  type ImageRotation,
+  type PreparedFlyerImage,
+} from '@/lib/thermal-print-image'
+import { HANDY_MAN_PRINT_FLYERS } from '@/lib/thermal-print'
 
 export default function PrintFlyersClient() {
   const { profile, loading: authLoading } = useAuth()
   const router = useRouter()
-  const [printing, setPrinting] = useState(false)
-  const [paperSize, setPaperSize] = useState<ThermalPaperSize>('80mm')
-  const [thermalMode, setThermalMode] = useState(true)
   const [selectedFlyerId, setSelectedFlyerId] = useState<string | null>(null)
   const [rotation, setRotation] = useState<ImageRotation>(0)
   const [imagePreparing, setImagePreparing] = useState(false)
-  const preparedImageRef = useRef<PreparedThermalPrintImage | null>(null)
+  const preparedImageRef = useRef<PreparedFlyerImage | null>(null)
 
   const isAuthorized = profile?.role === 'admin' || profile?.role === 'business_owner'
 
@@ -39,15 +28,6 @@ export default function PrintFlyersClient() {
     () => HANDY_MAN_PRINT_FLYERS.find((f) => f.id === selectedFlyerId) ?? null,
     [selectedFlyerId],
   )
-
-  useEffect(() => {
-    setPaperSize(readStoredThermalPaperSize())
-    setThermalMode(readStoredThermalPrintMode())
-    document.body.classList.add(THERMAL_PRINT_BODY_CLASS)
-    return () => {
-      document.body.classList.remove(THERMAL_PRINT_BODY_CLASS)
-    }
-  }, [])
 
   useEffect(() => {
     if (!authLoading && !isAuthorized) {
@@ -61,29 +41,18 @@ export default function PrintFlyersClient() {
     preparedImageRef.current = null
   }, [selectedFlyerId])
 
-  const paperOption = useMemo(
-    () => THERMAL_PAPER_OPTIONS.find((o) => o.id === paperSize) ?? THERMAL_PAPER_OPTIONS[0],
-    [paperSize],
-  )
-
-  const dynamicPageCss = useMemo(() => buildThermalPageCss(paperSize), [paperSize])
-
-  const handlePrint = useCallback(async () => {
+  const handleDownload = useCallback(() => {
     const prepared = preparedImageRef.current
     if (!selectedFlyer || imagePreparing || !prepared) return
-    setPrinting(true)
-    try {
-      await printThermalImageOnly(prepared, paperSize)
-    } finally {
-      setPrinting(false)
-    }
-  }, [selectedFlyer, imagePreparing, paperSize])
+    const suffix = rotation === 0 ? '' : `-${rotation}deg`
+    downloadPreparedImage(prepared, `${selectedFlyer.id}${suffix}.png`)
+  }, [selectedFlyer, imagePreparing, rotation])
 
   const handlePreparedChange = useCallback((ready: boolean) => {
     setImagePreparing(!ready)
   }, [])
 
-  const handlePreparedImage = useCallback((image: PreparedThermalPrintImage | null) => {
+  const handlePreparedImage = useCallback((image: PreparedFlyerImage | null) => {
     preparedImageRef.current = image
   }, [])
 
@@ -96,10 +65,8 @@ export default function PrintFlyersClient() {
   }
 
   return (
-    <div className="thermal-print-page min-h-screen bg-[#f3f1ed] px-4 py-6 print:min-h-0 print:h-auto print:px-0 print:py-0" data-thermal-print-page>
-      <style dangerouslySetInnerHTML={{ __html: dynamicPageCss }} />
-
-      <div data-print-chrome className="no-print mx-auto mb-6 max-w-lg space-y-4">
+    <div className="min-h-screen bg-[#f3f1ed] px-4 py-6">
+      <div className="mx-auto mb-6 max-w-lg space-y-4">
         <div className="flex items-center justify-between gap-3">
           <Link
             href="/admin/inventory"
@@ -110,19 +77,19 @@ export default function PrintFlyersClient() {
           </Link>
           <button
             type="button"
-            onClick={() => void handlePrint()}
-            disabled={printing || !selectedFlyer || imagePreparing}
+            onClick={handleDownload}
+            disabled={!selectedFlyer || imagePreparing}
             className="inline-flex items-center gap-2 rounded-full bg-vintage-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
-            <Printer className="h-4 w-4" />
-            {printing ? 'Preparing…' : 'Print / Save PDF'}
+            <Download className="h-4 w-4" />
+            Download PNG
           </button>
         </div>
 
         <div className="rounded-2xl border border-[#e8e4df] bg-white p-4 text-sm text-[#141414] shadow-sm">
-          <p className="mb-1 font-semibold">Print Handy Man flyer</p>
+          <p className="mb-1 font-semibold">Handy Man flyers</p>
           <p className="mb-3 text-xs text-[#8a837a]">
-            Select one flyer, rotate if needed, then print full width for thermal output.
+            Select a flyer, rotate if needed, then download the full-size PNG.
           </p>
 
           <fieldset className="mb-4">
@@ -160,12 +127,12 @@ export default function PrintFlyersClient() {
               })}
             </div>
             {!selectedFlyer ? (
-              <p className="mt-2 text-xs text-[#8a837a]">Pick a flyer to enable printing.</p>
+              <p className="mt-2 text-xs text-[#8a837a]">Pick a flyer to enable download.</p>
             ) : null}
           </fieldset>
 
           {selectedFlyer ? (
-            <div className="mb-4">
+            <div>
               <span className="mb-2 block text-xs font-medium uppercase tracking-wide text-[#8a837a]">
                 Rotation
               </span>
@@ -190,71 +157,19 @@ export default function PrintFlyersClient() {
               </div>
             </div>
           ) : null}
-
-          <label className="mb-3 block">
-            <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#8a837a]">
-              Paper width
-            </span>
-            <select
-              value={paperSize}
-              onChange={(e) => {
-                const value = e.target.value as ThermalPaperSize
-                setPaperSize(value)
-                storeThermalPaperSize(value)
-              }}
-              className="w-full rounded-lg border border-[#e8e4df] bg-white px-3 py-2 text-sm"
-            >
-              {THERMAL_PAPER_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <span className="mt-1 block text-xs text-[#8a837a]">{paperOption.hint}</span>
-          </label>
-
-          <label className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              checked={thermalMode}
-              onChange={(e) => {
-                setThermalMode(e.target.checked)
-                storeThermalPrintMode(e.target.checked)
-              }}
-              className="mt-1 h-4 w-4 rounded border-[#e8e4df]"
-            />
-            <span>
-              <span className="font-medium">Thermal printer mode</span>
-              <span className="mt-0.5 block text-xs text-[#8a837a]">
-                Greyscale + high contrast — baked into the image before print.
-              </span>
-            </span>
-          </label>
-
-          <div className="mt-4 rounded-lg bg-[#faf9f7] p-3 text-xs leading-relaxed text-[#5c574f]">
-            <p className="font-semibold text-[#141414]">In your print dialog:</p>
-            <ul className="mt-2 list-disc space-y-1 pl-4">
-              <li>Set margins to <strong>None</strong> (or minimum)</li>
-              <li>Turn off <strong>Headers &amp; footers</strong></li>
-              <li>Match paper size to your thermal printer width above</li>
-            </ul>
-          </div>
         </div>
       </div>
 
       {selectedFlyer ? (
-        <ThermalPrintImageSheet
+        <FlyerImagePreview
           flyer={selectedFlyer}
           rotation={rotation}
-          paperSize={paperSize}
-          thermalMode={thermalMode}
-          previewWidth={paperOption.previewWidth}
           onPreparedChange={handlePreparedChange}
           onPreparedImage={handlePreparedImage}
         />
       ) : (
-        <p className="no-print mx-auto max-w-lg text-center text-sm text-[#8a837a]">
-          Select a flyer above to see the print preview.
+        <p className="mx-auto max-w-lg text-center text-sm text-[#8a837a]">
+          Select a flyer above to see the preview.
         </p>
       )}
     </div>

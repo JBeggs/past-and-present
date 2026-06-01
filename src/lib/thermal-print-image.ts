@@ -1,5 +1,3 @@
-import type { ThermalPaperSize } from '@/lib/thermal-print'
-
 export type ImageRotation = 0 | 90 | 180 | 270
 
 const ROTATIONS: ImageRotation[] = [0, 90, 180, 270]
@@ -10,24 +8,17 @@ export function nextRotation(current: ImageRotation, direction: 'cw' | 'ccw'): I
   return ROTATIONS[next] ?? 0
 }
 
-export type PreparedThermalPrintImage = {
+export type PreparedFlyerImage = {
   dataUrl: string
   width: number
   height: number
 }
 
-/** Rasterise + optionally greyscale so mobile PDF/thermal print does not fail on huge PNGs or CSS filters. */
-export async function prepareThermalPrintImage(
+/** Rotate at full resolution — no downscale, no greyscale. */
+export async function prepareFlyerImage(
   src: string,
-  options: {
-    rotation?: ImageRotation
-    thermal?: boolean
-    maxWidth?: number
-    maxHeight?: number
-  } = {},
-): Promise<PreparedThermalPrintImage | null> {
-  const { rotation = 0, thermal = true, maxWidth = 640, maxHeight = 640 } = options
-
+  rotation: ImageRotation = 0,
+): Promise<PreparedFlyerImage | null> {
   return new Promise((resolve) => {
     const img = new Image()
     img.crossOrigin = 'anonymous'
@@ -41,13 +32,8 @@ export async function prepareThermalPrintImage(
         }
 
         const swap = rotation === 90 || rotation === 270
-        const basisW = swap ? naturalH : naturalW
-        const basisH = swap ? naturalW : naturalH
-        const scale = Math.min(1, maxWidth / basisW, maxHeight / basisH)
-        const outW = Math.max(1, Math.round(basisW * scale))
-        const outH = Math.max(1, Math.round(basisH * scale))
-        const drawW = Math.round(naturalW * scale)
-        const drawH = Math.round(naturalH * scale)
+        const outW = swap ? naturalH : naturalW
+        const outH = swap ? naturalW : naturalH
 
         const canvas = document.createElement('canvas')
         canvas.width = outW
@@ -60,18 +46,13 @@ export async function prepareThermalPrintImage(
 
         ctx.fillStyle = '#ffffff'
         ctx.fillRect(0, 0, outW, outH)
-
-        if (thermal) {
-          ctx.filter = 'grayscale(1) contrast(1.15)'
-        }
-
         ctx.save()
         ctx.translate(outW / 2, outH / 2)
         ctx.rotate((rotation * Math.PI) / 180)
-        ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH)
+        ctx.drawImage(img, -naturalW / 2, -naturalH / 2, naturalW, naturalH)
         ctx.restore()
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.88)
+        const dataUrl = canvas.toDataURL('image/png')
         if (!dataUrl.startsWith('data:image')) {
           resolve(null)
           return
@@ -84,4 +65,14 @@ export async function prepareThermalPrintImage(
     img.onerror = () => resolve(null)
     img.src = src
   })
+}
+
+export function downloadPreparedImage(image: PreparedFlyerImage, filename: string): void {
+  const link = document.createElement('a')
+  link.href = image.dataUrl
+  link.download = filename.endsWith('.png') ? filename : `${filename}.png`
+  link.rel = 'noopener'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
 }
