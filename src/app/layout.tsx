@@ -126,7 +126,8 @@ export default async function RootLayout({
 }) {
   const headersList = await headers()
   const pathname = headersList.get('x-pathname') || ''
-  const isThermalPrintPage = pathname.includes('/admin/print-flyers')
+  const isThermalPrintPage =
+    pathname.includes('/admin/print-flyers') || pathname.includes('/admin/share-flyers')
 
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`} data-scroll-behavior="smooth">
