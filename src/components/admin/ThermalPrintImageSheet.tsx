@@ -15,26 +15,37 @@ type FlyerImagePreviewProps = {
   onPreparedImage?: (image: PreparedFlyerImage | null) => void
 }
 
+type PrepareResult = {
+  key: string
+  preparedSrc: string | null
+  prepared: PreparedFlyerImage | null
+}
+
 export default function FlyerImagePreview({
   flyer,
   rotation = 0,
   onPreparedChange,
   onPreparedImage,
 }: FlyerImagePreviewProps) {
-  const [preparedSrc, setPreparedSrc] = useState<string | null>(null)
-  const [preparing, setPreparing] = useState(true)
+  const prepareKey = `${flyer.src}|${rotation}`
+  const [result, setResult] = useState<PrepareResult | null>(null)
+
+  const isCurrent = result?.key === prepareKey
+  const preparing = !isCurrent
+  const preparedSrc = isCurrent ? result.preparedSrc : null
 
   useEffect(() => {
     let cancelled = false
-    setPreparing(true)
-    setPreparedSrc(null)
     onPreparedChange?.(false)
     onPreparedImage?.(null)
 
     void prepareFlyerImage(flyer.src, rotation).then((prepared) => {
       if (cancelled) return
-      setPreparedSrc(prepared?.dataUrl ?? null)
-      setPreparing(false)
+      setResult({
+        key: prepareKey,
+        preparedSrc: prepared?.dataUrl ?? null,
+        prepared,
+      })
       onPreparedChange?.(Boolean(prepared))
       onPreparedImage?.(prepared)
     })
@@ -42,7 +53,7 @@ export default function FlyerImagePreview({
     return () => {
       cancelled = true
     }
-  }, [flyer.src, rotation, onPreparedChange, onPreparedImage])
+  }, [flyer.src, rotation, prepareKey, onPreparedChange, onPreparedImage])
 
   return (
     <div className="mx-auto w-full max-w-4xl">
