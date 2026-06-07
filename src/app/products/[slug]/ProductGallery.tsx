@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Product } from '@/lib/types'
 import { Clock, Sparkles } from 'lucide-react'
+import { hasVintageTag, isNewArrival } from '@/lib/product-utils'
 import {
   getProductBundleImages,
   getProductGalleryThumbImages,
@@ -20,7 +21,8 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0)
   const activeFull = fullImages[activeIndex] ?? fullImages[0] ?? ''
   const activeImage = activeFull ? getPublicImageUrl(activeFull) : ''
-  const isVintage = Array.isArray(product.tags) && product.tags.some(t => (typeof t === 'string' ? t : t.name) === 'vintage')
+  const isVintage = hasVintageTag(product)
+  const showNew = isNewArrival(product)
 
   if (fullImages.length === 0) {
     return (
@@ -49,9 +51,12 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
           onError={(e) => { (e.target as HTMLImageElement).src = '/images/products/default.svg' }}
         />
         <div className="absolute top-4 left-4 flex flex-col gap-2">
-          <span className={`tag ${isVintage ? 'tag-vintage' : 'tag-new'} shadow-md`}>
-            {isVintage ? 'Vintage' : 'New'}
-          </span>
+          {isVintage && (
+            <span className="tag tag-vintage shadow-md">Vintage</span>
+          )}
+          {showNew && (
+            <span className="tag tag-new shadow-md">New</span>
+          )}
           {product.featured && (
             <span className="tag tag-featured shadow-md">Featured</span>
           )}

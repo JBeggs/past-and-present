@@ -2,6 +2,54 @@ import type { CartItem, Product } from './types'
 
 type ProductLike = Product | CartItem | Record<string, any>
 
+/** Default new-arrival window when API does not expose company settings. */
+export const DEFAULT_NEW_ARRIVAL_DAYS = 14
+
+/** Products tagged vintage (string or Tag object shape). */
+export function hasVintageTag(product: ProductLike | null | undefined): boolean {
+  const tags = (product as any)?.tags
+  if (!Array.isArray(tags)) return false
+  return tags.some((t: string | { name?: string }) =>
+    (typeof t === 'string' ? t : t?.name) === 'vintage'
+  )
+}
+
+/** True when product qualifies for the New badge (within window, not vintage). */
+export function isNewArrival(
+  product: ProductLike | null | undefined,
+  days: number = DEFAULT_NEW_ARRIVAL_DAYS
+): boolean {
+  if (!product) return false
+  if (hasVintageTag(product)) return false
+  if (typeof (product as Product).is_new_arrival === 'boolean') {
+    return (product as Product).is_new_arrival === true
+  }
+  const createdAt = (product as any)?.created_at
+  if (!createdAt || !days) return false
+  const created = new Date(createdAt).getTime()
+  if (Number.isNaN(created)) return false
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000
+  return created >= cutoff
+}
+
+/** True when compare-at is set and greater than current price (Sale badge). */
+export function isOnSale(product: ProductLike | null | undefined): boolean {
+  if (!product) return false
+  const price = Number((product as any)?.price)
+  const compare = (product as any)?.compare_at_price
+  if (compare == null || compare === '') return false
+  const compareNum = Number(compare)
+  if (!Number.isFinite(price) || !Number.isFinite(compareNum)) return false
+  return compareNum > price
+}
+
+/** Display label for admin/about condition column. */
+export function getProductConditionLabel(product: ProductLike | null | undefined): string {
+  if (hasVintageTag(product)) return 'Vintage'
+  if (isNewArrival(product)) return 'New'
+  return '—'
+}
+
 /** Listings synced from Gumtree (supplier or source URL). */
 export function isGumtreeProduct(product: ProductLike | null | undefined): boolean {
   if (!product) return false

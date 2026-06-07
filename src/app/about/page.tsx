@@ -3,6 +3,7 @@ import Link from 'next/link'
 import PageHero from '@/components/hero/PageHero'
 import { getShareImage } from '@/lib/share-image'
 import { serverEcommerceApi, serverNewsApi } from '@/lib/api-server'
+import { getProductConditionLabel, hasVintageTag } from '@/lib/product-utils'
 import AboutPageClient, { AnimatedSection, AnimatedCard } from '@/components/about/AboutPageClient'
 import { Clock, Sparkles, Heart, Leaf, TrendingUp, Zap, Link2, Package } from 'lucide-react'
 
@@ -245,7 +246,7 @@ export default async function AboutPage() {
                   key={product.id}
                   href={`/products/${product.slug}`}
                   className={`group relative flex flex-col overflow-hidden rounded-xl border transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${
-                    Array.isArray(product.tags) && product.tags.some((t: any) => (typeof t === 'string' ? t : t?.name) === 'vintage')
+                    hasVintageTag(product)
                       ? 'product-card-vintage'
                       : 'product-card-modern'
                   }`}
@@ -262,13 +263,17 @@ export default async function AboutPage() {
                         <Package className="w-12 h-12 text-vintage-primary/30" />
                       </div>
                     )}
-                    <span className={`tag absolute top-2 left-2 ${
-                      Array.isArray(product.tags) && product.tags.some((t: any) => (typeof t === 'string' ? t : t?.name) === 'vintage')
-                        ? 'tag-vintage'
-                        : 'tag-new'
-                    }`}>
-                      {Array.isArray(product.tags) && product.tags.some((t: any) => (typeof t === 'string' ? t : t?.name) === 'vintage') ? 'Vintage' : 'New'}
-                    </span>
+                    {(() => {
+                      const conditionLabel = getProductConditionLabel(product)
+                      if (conditionLabel === '—') return null
+                      return (
+                        <span className={`tag absolute top-2 left-2 ${
+                          conditionLabel === 'Vintage' ? 'tag-vintage' : 'tag-new'
+                        }`}>
+                          {conditionLabel}
+                        </span>
+                      )
+                    })()}
                   </div>
                   <div className="p-4 flex-1 flex flex-col">
                     <h3 className="font-semibold text-text group-hover:text-vintage-primary transition-colors line-clamp-1">

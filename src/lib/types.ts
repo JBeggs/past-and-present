@@ -164,6 +164,7 @@ export interface Product {
    in_stock: boolean
    image?: string // Flattened image URL for public API
   is_expired?: boolean // Admin: true when product is active but older than product_expiry_days
+  is_new_arrival?: boolean // Public: true when within new_arrival_days and not vintage-tagged
  }
 
 export interface ProductImage {

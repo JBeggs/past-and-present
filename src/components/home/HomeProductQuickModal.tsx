@@ -12,7 +12,9 @@ import {
   formatCountdown,
   getMinQuantity,
   getStockQuantity,
+  hasVintageTag,
   isBundleProduct,
+  isOnSale,
 } from '@/lib/product-utils'
 import { getProductCardImages, IMAGE_DIM } from '@/lib/image-utils'
 
@@ -153,7 +155,8 @@ export default function HomeProductQuickModal({ product, open, onClose }: HomePr
 
   if (!open) return null
 
-  const isVintage = Array.isArray(product.tags) && product.tags.some((t) => (typeof t === 'string' ? t : t.name) === 'vintage')
+  const isVintage = hasVintageTag(product)
+  const onSale = isOnSale(product)
 
   return (
     <div
@@ -203,7 +206,7 @@ export default function HomeProductQuickModal({ product, open, onClose }: HomePr
               <span className={`text-2xl font-bold ${isVintage ? 'text-vintage-primary' : 'text-modern-primary'}`}>
                 R{Number(product.price).toFixed(2)}
               </span>
-              {product.compare_at_price && Number(product.compare_at_price) > Number(product.price) && (
+              {onSale && (
                 <span className="text-lg text-text-muted line-through">R{Number(product.compare_at_price).toFixed(2)}</span>
               )}
             </div>

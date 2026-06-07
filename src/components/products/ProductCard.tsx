@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { ecommerceApi } from '@/lib/api'
 import { useToast } from '@/contexts/ToastContext'
 import { useRouter } from 'next/navigation'
-import { formatCountdown, getMinQuantity, isBundleProduct, isTimedProduct } from '@/lib/product-utils'
+import { formatCountdown, getMinQuantity, hasVintageTag, isBundleProduct, isNewArrival, isOnSale, isTimedProduct } from '@/lib/product-utils'
 import { getProductCardImages, IMAGE_DIM } from '@/lib/image-utils'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import HomeProductQuickModal from '@/components/home/HomeProductQuickModal'
@@ -29,7 +29,9 @@ export default function ProductCard({ product, homeQuickView = false, imageLoadi
   const { showSuccess, showError } = useToast()
   const router = useRouter()
   const isAuthorized = profile?.role === 'admin' || profile?.role === 'business_owner'
-  const isVintage = Array.isArray(product.tags) && product.tags.some(t => (typeof t === 'string' ? t : t.name) === 'vintage')
+  const isVintage = hasVintageTag(product)
+  const showNew = isNewArrival(product)
+  const onSale = isOnSale(product)
   const isBundle = isBundleProduct(product)
   const isTimed = isTimedProduct(product)
   const minQty = getMinQuantity(product)
@@ -183,9 +185,12 @@ export default function ProductCard({ product, homeQuickView = false, imageLoadi
           </Link>
           
           <div className="absolute top-2 left-2 z-10 pointer-events-none flex flex-col gap-2">
-            <span className={`tag ${isVintage ? 'tag-vintage' : 'tag-new'}`}>
-              {isVintage ? 'Vintage' : 'New'}
-            </span>
+            {isVintage && (
+              <span className="tag tag-vintage">Vintage</span>
+            )}
+            {showNew && (
+              <span className="tag tag-new">New</span>
+            )}
             {isBundle && (
               <span className="tag bg-blue-600 text-white flex items-center gap-1">
                 <Package className="w-3 h-3" />
@@ -200,7 +205,7 @@ export default function ProductCard({ product, homeQuickView = false, imageLoadi
             )}
           </div>
           
-          {product.compare_at_price && product.compare_at_price > product.price && (
+          {onSale && (
             <span className="tag tag-sale absolute top-2 right-2 z-10 pointer-events-none">Sale</span>
           )}
 
@@ -273,7 +278,7 @@ export default function ProductCard({ product, homeQuickView = false, imageLoadi
             <span className={`price ${isVintage ? '' : 'text-modern-primary'}`}>
               R{Number(product.price).toFixed(2)}
             </span>
-            {product.compare_at_price && Number(product.compare_at_price) > Number(product.price) && (
+            {onSale && (
               <span className="price-original">R{Number(product.compare_at_price).toFixed(2)}</span>
             )}
           </div>

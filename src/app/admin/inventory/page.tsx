@@ -13,6 +13,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
+import { getProductConditionLabel } from '@/lib/product-utils'
 
 export default function InventoryPage() {
   const { profile, loading: authLoading } = useAuth()
@@ -563,7 +564,7 @@ export default function InventoryPage() {
                     <div className="flex flex-col">
                       <span className="text-text-muted font-bold text-[8px] uppercase tracking-wider">Condition</span>
                       <span className="font-medium text-text-light capitalize">
-                        {Array.isArray(product.tags) && product.tags.some(t => (typeof t === 'string' ? t : t.name) === 'vintage') ? 'Vintage' : 'New'}
+                        {getProductConditionLabel(product)}
                       </span>
                     </div>
                     <div className="hidden md:flex flex-col">

@@ -210,7 +210,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             : isOtherProductCategory
               ? 'Products in this category.'
               : isNew
-                ? 'Fresh finds and modern essentials. Bundles and dedicated category shelves use their own filters.'
+                ? 'Fresh finds listed in the last 14 days. Bundles and dedicated category shelves use their own filters.'
                 : isFeatured
                   ? 'Hand-picked favorites and standout items'
                   : 'Browse our complete collection of products'
@@ -341,7 +341,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 <Filter className="w-5 h-5 flex-shrink-0" />
                 <span>
                   Category chips list every storefront category that currently has active products (A–Z). The New filter
-                  omits featured listings; hardware and consumables omit bundles and the vintage / new / others tags.
+                  shows products listed in the last 14 days; hardware and consumables omit bundles and the vintage / new / others tags.
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">

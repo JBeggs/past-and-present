@@ -30,7 +30,7 @@ export default function ProductForm({ product, onClose, onSuccess, inline = fals
     description: product?.description || '',
     short_description: product?.short_description || '',
     price: product?.price || 0,
-    compare_at_price: product?.compare_at_price || 0,
+    compare_at_price: product?.compare_at_price ?? null as number | null,
     cost_price: product?.cost_price || 0,
     sku: product?.sku || '',
     barcode: product?.barcode || '',
@@ -180,6 +180,9 @@ export default function ProductForm({ product, onClose, onSuccess, inline = fals
 
       const payload = {
         ...formData,
+        compare_at_price: formData.compare_at_price == null || formData.compare_at_price === ('' as unknown as number)
+          ? null
+          : formData.compare_at_price,
         image: featuredImage!.url,
         images: additionalImages.map(m => m.url),
         category: formData.category_id,
@@ -389,18 +392,19 @@ export default function ProductForm({ product, onClose, onSuccess, inline = fals
 
                 <div className="space-y-2">
                   <label className="form-label text-xs uppercase tracking-wider font-bold text-text-light">
-                    Sale Price (R)
+                    Compare-at price (was)
                   </label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.compare_at_price ?? ''}
                     onChange={(e) => {
-                      const val = e.target.value === '' ? 0 : parseFloat(e.target.value)
-                      setFormData({ ...formData, compare_at_price: isNaN(val) ? 0 : val })
+                      const val = e.target.value === '' ? null : parseFloat(e.target.value)
+                      setFormData({ ...formData, compare_at_price: val == null || isNaN(val) ? null : val })
                     }}
                     className="w-full pl-4 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-md focus:bg-white focus:ring-4 focus:ring-vintage-primary/10 transition-all outline-none font-mono text-vintage-accent"
                   />
+                  <p className="text-xs text-text-muted">Leave empty to remove the Sale badge on the storefront.</p>
                 </div>
 
                 <div className="space-y-2">

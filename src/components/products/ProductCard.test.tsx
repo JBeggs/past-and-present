@@ -89,11 +89,22 @@ describe('ProductCard', () => {
     const product = { ...baseProduct, tags: ['vintage'] };
     await renderProductCard(product);
     expect(screen.getByText('Vintage')).toBeInTheDocument();
+    expect(screen.queryByText('New')).not.toBeInTheDocument();
   });
 
-  it('shows New tag when product has no vintage tag', async () => {
-    await renderProductCard(baseProduct);
+  it('shows New tag when product is a recent arrival', async () => {
+    const product = {
+      ...baseProduct,
+      is_new_arrival: true,
+      created_at: new Date().toISOString(),
+    };
+    await renderProductCard(product);
     expect(screen.getByText('New')).toBeInTheDocument();
+  });
+
+  it('does not show New tag when product is not a recent arrival', async () => {
+    await renderProductCard(baseProduct);
+    expect(screen.queryByText('New')).not.toBeInTheDocument();
   });
 
   it('shows Sale tag when compare_at_price is greater than price', async () => {

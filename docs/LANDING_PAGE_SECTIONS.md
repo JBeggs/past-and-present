@@ -100,19 +100,17 @@ The landing page is a single Next.js Server Component. It renders all sections d
 
 ### New Arrivals
 
-**Logic:** Products that are not vintage and not featured.
+**Logic:** Products created within the last 14 days (not vintage-tagged).
 
 - **API call:** `serverEcommerceApi.products.list()` with:
   - `is_active: true`
+  - `condition: 'new'`
   - `exclude_featured: true`
   - `page_size: 100`
-  - No `tags` filter
 
 - **Post-fetch:**
   - Drop archived products.
-  - Filter to products whose tags do not include `'vintage'` (handles both `string` and `{ name: string }` shapes).
-  - Shuffle with `shuffleArray()`.
-  - Slice to 20 items.
+  - Products expose `is_new_arrival` from the API for badge display.
 
 ### Tag Handling (Client-side)
 
@@ -169,11 +167,17 @@ export interface Tag {
 ### Vintage vs New
 
 - **Vintage:** Product has a tag whose `name` (or string value) is `'vintage'`.
-- **New:** Product has no `'vintage'` tag. This is enforced in the frontend logic, not by a dedicated tag.
+- **New:** Product was created within the last **14 days** (`new_arrival_days` on company integration settings) and is not tagged vintage. The public API exposes `is_new_arrival`; the storefront uses [`isNewArrival`](../../src/lib/product-utils.ts).
+- **Sale:** Shown when `compare_at_price` is set and greater than `price`. Admin can clear compare-at in the product form; scraper re-sync must not restore a cleared value.
+
+### Sale badge
+
+- Controlled by `compare_at_price` vs `price` via [`isOnSale`](../../src/lib/product-utils.ts).
+- Admin **Compare-at price (was)** field: leave empty to remove the Sale badge.
 
 ---
 
-## 4. API & Data Fetching
+## 4. API & Data Fetching (legacy notes)
 
 ### API Client
 
