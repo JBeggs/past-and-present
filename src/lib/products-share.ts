@@ -246,3 +246,30 @@ export function buildProductsWhatsAppMessage(input: {
     .filter(Boolean)
     .join('\n\n')
 }
+
+export function buildProductWhatsAppMessage(input: {
+  product: Product
+  companyName: string
+  pageUrl: string
+}): string {
+  const { product, companyName, pageUrl } = input
+  const desc = (product.short_description || product.description || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const price = Number(product.price)
+  const compare = product.compare_at_price != null ? Number(product.compare_at_price) : null
+  const priceLine =
+    compare != null && compare > price
+      ? `R${price.toFixed(2)} (was R${compare.toFixed(2)})`
+      : `R${price.toFixed(2)}`
+
+  return [
+    `Discover ${product.name}${companyName ? ` from ${companyName}` : ''}`,
+    desc,
+    priceLine,
+    pageUrl,
+    companyName ? `Love ${companyName}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Product } from '@/lib/types'
 import {
+  buildProductWhatsAppMessage,
   buildProductsListShareImageUrls,
   buildProductsPageOgImageUrl,
   buildProductsWhatsAppMessage,
@@ -64,6 +65,45 @@ describe('buildProductsWhatsAppMessage', () => {
     expect(msg).toContain('https://past-and-present.co.za/products?category=print-on-anything')
     expect(msg).toContain('Categories:')
     expect(msg).toContain('Print on Anything · Welding machines')
+  })
+})
+
+describe('buildProductWhatsAppMessage', () => {
+  it('builds a product message with normalized description and sale pricing', () => {
+    const msg = buildProductWhatsAppMessage({
+      product: baseProduct({
+        name: 'Vintage Radio',
+        price: '450.00',
+        compare_at_price: '600.00',
+        short_description: '  Restored \n collector piece  ',
+      }),
+      companyName: 'Past and Present',
+      pageUrl: 'https://past-and-present.co.za/products/vintage-radio',
+    })
+
+    expect(msg).toContain('Discover Vintage Radio from Past and Present')
+    expect(msg).toContain('Restored collector piece')
+    expect(msg).toContain('R450.00 (was R600.00)')
+    expect(msg).toContain('https://past-and-present.co.za/products/vintage-radio')
+    expect(msg).toContain('Love Past and Present')
+  })
+
+  it('omits description and brand signoff when unavailable', () => {
+    const msg = buildProductWhatsAppMessage({
+      product: baseProduct({
+        name: 'Hand Tool Kit',
+        price: '199.00',
+        compare_at_price: null,
+        short_description: '',
+        description: '',
+      }),
+      companyName: '',
+      pageUrl: 'https://past-and-present.co.za/products/hand-tool-kit',
+    })
+
+    expect(msg).toContain('Discover Hand Tool Kit')
+    expect(msg).toContain('R199.00')
+    expect(msg).not.toContain('Love ')
   })
 })
 
