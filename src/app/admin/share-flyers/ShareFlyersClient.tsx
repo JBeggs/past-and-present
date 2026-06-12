@@ -80,7 +80,7 @@ export default function ShareFlyersClient() {
     try {
       await shareFlyerOnWhatsApp({
         message: msg,
-        flyerSrc: selectedFlyer.src,
+        flyerSrc: selectedFlyer.shareSrc,
         flyerId: selectedFlyer.id,
         origin,
         rotation,
@@ -144,7 +144,7 @@ export default function ShareFlyersClient() {
                       className="h-4 w-4 shrink-0 accent-vintage-primary"
                     />
                     <img
-                      src={flyer.src}
+                      src={flyer.shareSrc}
                       alt=""
                       className="h-14 w-20 shrink-0 rounded border border-[#ece8e3] bg-white object-contain"
                     />
@@ -245,6 +245,7 @@ export default function ShareFlyersClient() {
           </p>
           <FlyerImagePreview
             flyer={selectedFlyer}
+            imageSrc={selectedFlyer.shareSrc}
             rotation={rotation}
             onPreparedChange={handlePreparedChange}
             onPreparedImage={handlePreparedImage}

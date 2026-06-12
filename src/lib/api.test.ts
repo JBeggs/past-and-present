@@ -268,4 +268,18 @@ describe('apiClient', () => {
       );
     });
   });
+
+  describe('cart.checkoutVisit', () => {
+    it('POSTs to /v1/carts/me/checkout-visit/', async () => {
+      const fetchMock = vi.fn().mockResolvedValue(createMockResponse({ success: true, data: { notified: true } }))
+      vi.stubGlobal('fetch', fetchMock)
+      await authApi.login('u', 'p')
+
+      await ecommerceApi.cart.checkoutVisit()
+
+      const call = fetchMock.mock.calls.find((c: [string]) => c[0].includes('/v1/carts/me/checkout-visit/'))
+      expect(call).toBeDefined()
+      expect((call?.[1] as RequestInit).method).toBe('POST')
+    })
+  })
 });

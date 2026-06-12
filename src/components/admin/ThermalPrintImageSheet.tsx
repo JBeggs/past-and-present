@@ -10,6 +10,7 @@ import type { ThermalPrintFlyer } from '@/lib/thermal-print'
 
 type FlyerImagePreviewProps = {
   flyer: ThermalPrintFlyer
+  imageSrc?: string
   rotation?: ImageRotation
   onPreparedChange?: (ready: boolean) => void
   onPreparedImage?: (image: PreparedFlyerImage | null) => void
@@ -23,11 +24,12 @@ type PrepareResult = {
 
 export default function FlyerImagePreview({
   flyer,
+  imageSrc = flyer.src,
   rotation = 0,
   onPreparedChange,
   onPreparedImage,
 }: FlyerImagePreviewProps) {
-  const prepareKey = `${flyer.src}|${rotation}`
+  const prepareKey = `${imageSrc}|${rotation}`
   const [result, setResult] = useState<PrepareResult | null>(null)
 
   const isCurrent = result?.key === prepareKey
@@ -39,7 +41,7 @@ export default function FlyerImagePreview({
     onPreparedChange?.(false)
     onPreparedImage?.(null)
 
-    void prepareFlyerImage(flyer.src, rotation).then((prepared) => {
+    void prepareFlyerImage(imageSrc, rotation).then((prepared) => {
       if (cancelled) return
       setResult({
         key: prepareKey,
@@ -53,7 +55,7 @@ export default function FlyerImagePreview({
     return () => {
       cancelled = true
     }
-  }, [flyer.src, rotation, prepareKey, onPreparedChange, onPreparedImage])
+  }, [imageSrc, rotation, prepareKey, onPreparedChange, onPreparedImage])
 
   return (
     <div className="mx-auto w-full max-w-4xl">
@@ -63,7 +65,7 @@ export default function FlyerImagePreview({
         ) : preparedSrc ? (
           <img className="mx-auto block h-auto w-full" src={preparedSrc} alt={flyer.alt} />
         ) : (
-          <img className="mx-auto block h-auto w-full" src={flyer.src} alt={flyer.alt} />
+          <img className="mx-auto block h-auto w-full" src={imageSrc} alt={flyer.alt} />
         )}
       </div>
     </div>

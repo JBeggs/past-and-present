@@ -991,6 +991,7 @@ export const ecommerceApi = {
 
   cart: {
     get: () => apiClient.get('/v1/carts/me/'),
+    checkoutVisit: () => apiClient.post('/v1/carts/me/checkout-visit/', {}),
     addItem: (productId: string, quantity: number) =>
       apiClient.post('/v1/carts/items/', { product_id: productId, quantity }),
     updateItem: (productId: string, quantity: number) =>

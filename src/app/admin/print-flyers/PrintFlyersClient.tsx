@@ -89,7 +89,7 @@ export default function PrintFlyersClient() {
         <div className="rounded-2xl border border-[#e8e4df] bg-white p-4 text-sm text-[#141414] shadow-sm">
           <p className="mb-1 font-semibold">Handy Man flyers</p>
           <p className="mb-3 text-xs text-[#8a837a]">
-            Select a flyer, rotate if needed, then download the full-size PNG.
+            Select a flyer, rotate if needed, then download the thermal print PNG.
           </p>
 
           <fieldset className="mb-4">
@@ -117,7 +117,7 @@ export default function PrintFlyersClient() {
                       className="h-4 w-4 shrink-0 accent-vintage-primary"
                     />
                     <img
-                      src={flyer.src}
+                      src={flyer.printSrc}
                       alt=""
                       className="h-14 w-20 shrink-0 rounded border border-[#ece8e3] bg-white object-contain"
                     />
@@ -163,6 +163,7 @@ export default function PrintFlyersClient() {
       {selectedFlyer ? (
         <FlyerImagePreview
           flyer={selectedFlyer}
+          imageSrc={selectedFlyer.printSrc}
           rotation={rotation}
           onPreparedChange={handlePreparedChange}
           onPreparedImage={handlePreparedImage}

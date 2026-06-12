@@ -67,6 +67,7 @@ export default function CheckoutPage() {
   const { showError } = useToast()
   const router = useRouter()
   const deliveryMethodRef = useRef(deliveryMethod)
+  const checkoutVisitSentRef = useRef(false)
   deliveryMethodRef.current = deliveryMethod
 
   const [formData, setFormData] = useState({
@@ -168,6 +169,9 @@ export default function CheckoutPage() {
 
       if (!cartData || !cartData.items || cartData.items.length === 0) {
         router.push('/cart')
+      } else if (!checkoutVisitSentRef.current) {
+        checkoutVisitSentRef.current = true
+        ecommerceApi.cart.checkoutVisit().catch(() => {})
       }
     } catch (error) {
       console.error('Error fetching cart:', error)

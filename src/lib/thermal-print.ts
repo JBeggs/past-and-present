@@ -413,6 +413,8 @@ export type ThermalPrintFlyer = {
   id: string
   label: string
   src: string
+  printSrc: string
+  shareSrc: string
   alt: string
 }
 
@@ -420,31 +422,41 @@ export const HANDY_MAN_PRINT_FLYERS: ThermalPrintFlyer[] = [
   {
     id: 'electrical',
     label: 'Basic Electrical Repairs — R100',
-    src: '/print/one.png',
+    src: '/print/electrical.png',
+    printSrc: '/print/electrical_low.png',
+    shareSrc: '/print/electrical_small.png',
     alt: 'Basic Electrical Repairs flyer',
   },
   {
     id: 'laptop',
     label: 'Laptop Repairs — R200 + expenses',
-    src: '/print/two.png',
+    src: '/print/laptop.png',
+    printSrc: '/print/laptop_low.png',
+    shareSrc: '/print/laptop_small.png',
     alt: 'Laptop Repairs flyer',
   },
   {
     id: 'ubuntu',
     label: 'Ubuntu & Open Source Installation — R150',
-    src: '/print/three.png',
+    src: '/print/ubuntu.png',
+    printSrc: '/print/ubuntu_low.png',
+    shareSrc: '/print/ubuntu_small.png',
     alt: 'Ubuntu and Open Source Installation flyer',
   },
   {
     id: 'app-dev',
     label: 'Application Development — from R1500',
-    src: '/print/four.png',
+    src: '/print/application.png',
+    printSrc: '/print/application_low.png',
+    shareSrc: '/print/application_small.png',
     alt: 'Application Development flyer',
   },
   {
     id: 'all-services',
     label: 'All services (full grid)',
-    src: '/print/five.png',
+    src: '/print/flyer_all.png',
+    printSrc: '/print/flyer_all_low.png',
+    shareSrc: '/print/flyer_all_small.png',
     alt: 'All Handy Man Computer Repairs services flyer',
   },
 ]
