@@ -460,3 +460,38 @@ export const HANDY_MAN_PRINT_FLYERS: ThermalPrintFlyer[] = [
     alt: 'All Handy Man Computer Repairs services flyer',
   },
 ]
+
+export const INVESTMENT_PRINT_FLYERS: ThermalPrintFlyer[] = [
+  {
+    id: 'invest-solar-camera',
+    label: 'Solar IP Camera — investment project',
+    src: '/print/invest_solar_camera.png',
+    printSrc: '/print/invest_solar_camera_low.png',
+    shareSrc: '/print/invest_solar_camera_small.png',
+    alt: 'Solar-charged IP camera investment flyer',
+  },
+  {
+    id: 'invest-riverside-herald',
+    label: 'Riverside Herald — invest in local digital news',
+    src: '/print/invest_riverside_herald.png',
+    printSrc: '/print/invest_riverside_herald_low.png',
+    shareSrc: '/print/invest_riverside_herald_small.png',
+    alt: 'Riverside Herald local digital news investment flyer',
+  },
+  {
+    id: 'invest-3-pillars',
+    label: '3 Pillars — news, shops, delivery platform',
+    src: '/print/invest_3_pillars.png',
+    printSrc: '/print/invest_3_pillars_low.png',
+    shareSrc: '/print/invest_3_pillars_small.png',
+    alt: '3 Pillars platform concept investment flyer',
+  },
+  {
+    id: 'invest-business-portal',
+    label: 'Business Portal — ecommerce + delivery',
+    src: '/print/invest_business_portal.png',
+    printSrc: '/print/invest_business_portal_low.png',
+    shareSrc: '/print/invest_business_portal_small.png',
+    alt: 'Business portal ecommerce and delivery investment flyer',
+  },
+]

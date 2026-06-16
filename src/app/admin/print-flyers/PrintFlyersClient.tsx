@@ -12,7 +12,7 @@ import {
   type ImageRotation,
   type PreparedFlyerImage,
 } from '@/lib/thermal-print-image'
-import { HANDY_MAN_PRINT_FLYERS } from '@/lib/thermal-print'
+import { HANDY_MAN_PRINT_FLYERS, INVESTMENT_PRINT_FLYERS } from '@/lib/thermal-print'
 
 export default function PrintFlyersClient() {
   const { profile, loading: authLoading } = useAuth()
@@ -25,7 +25,10 @@ export default function PrintFlyersClient() {
   const isAuthorized = profile?.role === 'admin' || profile?.role === 'business_owner'
 
   const selectedFlyer = useMemo(
-    () => HANDY_MAN_PRINT_FLYERS.find((f) => f.id === selectedFlyerId) ?? null,
+    () =>
+      [...HANDY_MAN_PRINT_FLYERS, ...INVESTMENT_PRINT_FLYERS].find(
+        (f) => f.id === selectedFlyerId,
+      ) ?? null,
     [selectedFlyerId],
   )
 
@@ -96,8 +99,41 @@ export default function PrintFlyersClient() {
             <legend className="mb-2 block text-xs font-medium uppercase tracking-wide text-[#8a837a]">
               Choose flyer <span className="text-red-600">*</span>
             </legend>
+            <p className="mb-1 text-xs font-semibold text-[#141414]">Handy Man services</p>
             <div className="space-y-2">
               {HANDY_MAN_PRINT_FLYERS.map((flyer) => {
+                const selected = selectedFlyerId === flyer.id
+                return (
+                  <label
+                    key={flyer.id}
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
+                      selected
+                        ? 'border-vintage-primary bg-vintage-primary/5 ring-1 ring-vintage-primary'
+                        : 'border-[#e8e4df] bg-[#faf9f7] hover:border-[#d8d4cf]'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="flyer"
+                      value={flyer.id}
+                      checked={selected}
+                      onChange={() => setSelectedFlyerId(flyer.id)}
+                      className="h-4 w-4 shrink-0 accent-vintage-primary"
+                    />
+                    <img
+                      src={flyer.printSrc}
+                      alt=""
+                      className="h-14 w-20 shrink-0 rounded border border-[#ece8e3] bg-white object-contain"
+                    />
+                    <span className="text-sm font-medium leading-snug">{flyer.label}</span>
+                  </label>
+                )
+              })}
+            </div>
+
+            <p className="mb-1 mt-4 text-xs font-semibold text-[#141414]">Investment</p>
+            <div className="space-y-2">
+              {INVESTMENT_PRINT_FLYERS.map((flyer) => {
                 const selected = selectedFlyerId === flyer.id
                 return (
                   <label
