@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import PageHero from '@/components/hero/PageHero'
 import {
+  buildProductsListShareImageUrls,
   buildProductsPageOgImageUrl,
   resolveProductsPageTitle,
 } from '@/lib/products-share'
@@ -178,7 +179,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   if (params.delivery_group) searchParamsForNav.delivery_group = params.delivery_group
 
   const title = resolveProductsPageTitle(params, filterCategories)
-  const shareImageUrl = buildProductsPageOgImageUrl(title, productsOgFilterParams(params), siteOrigin)
+  const shareImageUrls = buildProductsListShareImageUrls(products, siteOrigin)
 
   const isAllShelves =
     !params.condition &&
@@ -512,7 +513,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               <div className="mt-10 pt-8 border-t border-gray-200">
                 <ProductsWhatsAppShareButton
                   title={title}
-                  shareImageUrl={shareImageUrl}
+                  shareImageUrls={shareImageUrls}
                   products={products}
                   categories={filterCategories}
                 />

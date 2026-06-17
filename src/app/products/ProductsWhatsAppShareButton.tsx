@@ -3,13 +3,13 @@
 import { useState } from 'react'
 import type { Product } from '@/lib/types'
 import { buildProductsWhatsAppMessage } from '@/lib/products-share'
-import WhatsAppShareDialog from '@/components/share/WhatsAppShareDialog'
+import ProductsListWhatsAppShareDialog from '@/app/products/ProductsListWhatsAppShareDialog'
 
 interface ProductsWhatsAppShareButtonProps {
   title: string
   companyName?: string
-  /** OG collage or other single share image (same as link preview). */
-  shareImageUrl: string
+  /** Proxied product thumbnail URLs for Web Share (not the og-products collage). */
+  shareImageUrls: string[]
   products: Product[]
   categories: { name: string; slug: string }[]
 }
@@ -17,7 +17,7 @@ interface ProductsWhatsAppShareButtonProps {
 export default function ProductsWhatsAppShareButton({
   title,
   companyName = 'Past and Present',
-  shareImageUrl,
+  shareImageUrls,
   products,
   categories,
 }: ProductsWhatsAppShareButtonProps) {
@@ -51,13 +51,11 @@ export default function ProductsWhatsAppShareButton({
         </svg>
         Share on WhatsApp
       </a>
-      <WhatsAppShareDialog
+      <ProductsListWhatsAppShareDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         initialMessage={messageDraft}
-        shareImageUrls={shareImageUrl}
-        imageFilename="products.jpg"
-        title="Share this product list"
+        shareImageUrls={shareImageUrls}
       />
     </>
   )
