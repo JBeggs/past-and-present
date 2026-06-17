@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest'
-import { buildWhatsAppShareUrl, isMobileDevice, resolveShareImageFetchUrl } from '@/lib/share-with-image'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import {
+  buildWhatsAppShareUrl,
+  isMobileDevice,
+  resolveShareImageFetchUrl,
+  shareTextWithOptionalImage,
+} from '@/lib/share-with-image'
 
 describe('isMobileDevice', () => {
   it('detects iPhone user agents', () => {
@@ -43,5 +48,75 @@ describe('resolveShareImageFetchUrl', () => {
     } else {
       expect(resolved).toBe('/api/media?src=%2Fmedia%2Fa.jpg')
     }
+  })
+})
+
+describe('shareTextWithOptionalImage', () => {
+  const originalNavigator = globalThis.navigator
+  const originalFetch = globalThis.fetch
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        blob: async () => new Blob(['fake'], { type: 'image/jpeg' }),
+        headers: { get: () => 'image/jpeg' },
+      })),
+    )
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    Object.defineProperty(globalThis, 'navigator', {
+      value: originalNavigator,
+      configurable: true,
+    })
+    globalThis.fetch = originalFetch
+  })
+
+  it('shares text with image, not image-only', async () => {
+    const share = vi.fn(async (data: ShareData) => {
+      expect(data.text).toBe('Hello from Past and Present')
+      expect(data.files?.length).toBe(1)
+    })
+    const canShare = vi.fn((data: ShareData) => Boolean(data.files?.length || data.text))
+
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { share, canShare },
+      configurable: true,
+    })
+
+    const ok = await shareTextWithOptionalImage(
+      'Hello from Past and Present',
+      '/api/og-products?title=Test',
+      'products.jpg',
+    )
+
+    expect(ok).toBe(true)
+    expect(share).toHaveBeenCalledTimes(1)
+    expect(share.mock.calls[0][0].text).toBe('Hello from Past and Present')
+  })
+
+  it('falls back to text-only share when text+files is rejected', async () => {
+    const share = vi.fn(async (data: ShareData) => {
+      if (data.files?.length && data.text) {
+        throw new DOMException('Not allowed', 'NotAllowedError')
+      }
+    })
+    const canShare = vi.fn((data: ShareData) => {
+      if (data.files?.length && data.text) return false
+      return Boolean(data.text)
+    })
+
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { share, canShare },
+      configurable: true,
+    })
+
+    const ok = await shareTextWithOptionalImage('Caption only', '/api/og-products?title=Test')
+
+    expect(ok).toBe(true)
+    expect(canShare).toHaveBeenCalledWith({ text: 'Caption only' })
   })
 })

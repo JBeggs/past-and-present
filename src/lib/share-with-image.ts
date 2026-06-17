@@ -104,17 +104,16 @@ export async function shareTextWithOptionalImage(
     }
 
     if (files.length) {
-      // WhatsApp on Android often drops images when text+files are shared together.
+      // Always attach the message when sharing files — image-only share succeeds but drops the text.
       if (files.length === 1) {
-        if (await tryShareFiles([files[0]], false)) return true
         if (await tryShareFiles([files[0]], true)) return true
       } else {
-        if (await tryShareFiles(files, false)) return true
         if (await tryShareFiles(files, true)) return true
-        if (await tryShareFiles([files[0]], false)) return true
+        if (await tryShareFiles([files[0]], true)) return true
       }
     }
 
+    // Text-only share sheet (caller falls back to wa.me / whatsapp:// if this returns false).
     if (await tryNavigatorShare({ text: message })) return true
     return false
   } catch (err) {
