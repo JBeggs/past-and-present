@@ -1,3 +1,5 @@
+import { inferImageContentType, sniffImageContentType } from '@/lib/media-proxy'
+
 /** Share text plus optional image(s) via Web Share API; returns true when handled. */
 
 export function isMobileDevice(userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : ''): boolean {
@@ -81,10 +83,15 @@ export async function shareTextWithOptionalImage(
       if (!res.ok) continue
       const blob = await res.blob()
       if (!blob.size) continue
-      const ext = blob.type.includes('png') ? 'png' : 'jpg'
+      const buf = new Uint8Array(await blob.arrayBuffer())
+      const mime = sniffImageContentType(
+        buf,
+        inferImageContentType(fetchUrl, blob.type || res.headers.get('content-type')),
+      )
+      const ext = mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : 'jpg'
       files.push(
-        new File([blob], urls.length > 1 ? `share-${i + 1}.${ext}` : filename, {
-          type: blob.type || 'image/jpeg',
+        new File([blob], urls.length > 1 ? `share-${i + 1}.${ext}` : filename.replace(/\.[^.]+$/, `.${ext}`), {
+          type: mime,
         }),
       )
     }

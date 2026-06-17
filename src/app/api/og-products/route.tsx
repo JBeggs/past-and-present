@@ -4,7 +4,6 @@
  */
 
 import { ImageResponse } from 'next/og'
-import { fetchProxiedMedia } from '@/lib/fetch-proxied-media'
 import { parseAllowedMediaSrc } from '@/lib/media-proxy'
 import {
   fetchProductsForOgCollage,
@@ -17,7 +16,7 @@ export const runtime = 'nodejs'
 
 const OG_SIZE = { width: 1200, height: 630 }
 
-async function loadImageDataUrl(mediaUrl: string): Promise<string | null> {
+function resolveCollageImageUrl(mediaUrl: string): string | null {
   let upstreamUrl = mediaUrl
   try {
     const parsed = new URL(mediaUrl)
@@ -33,19 +32,7 @@ async function loadImageDataUrl(mediaUrl: string): Promise<string | null> {
   }
 
   const upstream = parseAllowedMediaSrc(upstreamUrl)
-  if (!upstream) return null
-  try {
-    const res = await fetchProxiedMedia(upstream)
-    if (res.status !== 200) return null
-    const contentType = res.headers.get('Content-Type') || 'image/jpeg'
-    const buf = await res.arrayBuffer()
-    const bytes = new Uint8Array(buf)
-    let binary = ''
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
-    return `data:${contentType};base64,${btoa(binary)}`
-  } catch {
-    return null
-  }
+  return upstream ? upstream.toString() : null
 }
 
 function collageLayout(count: number): Array<{ left: number; top: number; width: number; height: number }> {
@@ -146,7 +133,7 @@ export async function GET(request: Request) {
 
   const loaded: string[] = []
   for (const url of mediaUrls) {
-    const src = await loadImageDataUrl(url)
+    const src = resolveCollageImageUrl(url)
     if (src) loaded.push(src)
   }
 
@@ -183,7 +170,6 @@ export async function GET(request: Request) {
                   top: slot.top,
                   width: slot.width,
                   height: slot.height,
-                  objectFit: 'cover',
                 }}
               />
             )

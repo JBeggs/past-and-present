@@ -1,6 +1,8 @@
 import {
+  inferImageContentType,
   mediaProxyUserAgent,
   parseAllowedMediaSrc,
+  sniffImageContentType,
 } from '@/lib/media-proxy'
 
 /** Fetch upstream media bytes for API route handlers. */
@@ -17,8 +19,12 @@ export async function fetchProxiedMedia(upstreamUrl: URL): Promise<Response> {
     return new Response('Not Found', { status: 404 })
   }
 
-  const contentType = upstream.headers.get('content-type') || 'image/jpeg'
   const buf = await upstream.arrayBuffer()
+  const bytes = new Uint8Array(buf)
+  const contentType = sniffImageContentType(
+    bytes,
+    inferImageContentType(upstreamUrl.toString(), upstream.headers.get('content-type')),
+  )
   return new Response(buf, {
     status: 200,
     headers: { 'Content-Type': contentType },

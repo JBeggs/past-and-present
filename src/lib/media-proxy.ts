@@ -120,3 +120,40 @@ export function mediaProxyUserAgent(): string {
     `${slug}-MediaProxy/1.0`
   )
 }
+
+/** Django often serves .webp as application/octet-stream — normalize for OG + Web Share. */
+export function inferImageContentType(pathOrUrl: string, upstreamType?: string | null): string {
+  const ct = (upstreamType || '').split(';')[0].trim().toLowerCase()
+  if (ct.startsWith('image/')) return ct
+
+  let path = (pathOrUrl || '').split('?')[0].toLowerCase()
+  try {
+    path = new URL(pathOrUrl).pathname.toLowerCase()
+  } catch {
+    /* use raw path fragment */
+  }
+
+  if (path.endsWith('.webp')) return 'image/webp'
+  if (path.endsWith('.png')) return 'image/png'
+  if (path.endsWith('.gif')) return 'image/gif'
+  if (path.endsWith('.svg')) return 'image/svg+xml'
+  if (path.endsWith('.jpg') || path.endsWith('.jpeg')) return 'image/jpeg'
+  return ct || 'image/jpeg'
+}
+
+/** Sniff image MIME from magic bytes when path/extension is ambiguous. */
+export function sniffImageContentType(bytes: Uint8Array, fallback = 'image/jpeg'): string {
+  if (bytes.length >= 12
+    && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46
+    && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+    return 'image/webp'
+  }
+  if (bytes.length >= 8
+    && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    return 'image/png'
+  }
+  if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xd8) {
+    return 'image/jpeg'
+  }
+  return fallback
+}
