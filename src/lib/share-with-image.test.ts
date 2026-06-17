@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildWhatsAppShareUrl, isMobileDevice } from '@/lib/share-with-image'
+import { buildWhatsAppShareUrl, isMobileDevice, resolveShareImageFetchUrl } from '@/lib/share-with-image'
 
 describe('isMobileDevice', () => {
   it('detects iPhone user agents', () => {
@@ -24,5 +24,24 @@ describe('buildWhatsAppShareUrl', () => {
   it('uses wa.me on desktop', () => {
     const url = buildWhatsAppShareUrl('Hello world', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)')
     expect(url).toBe('https://wa.me/?text=Hello%20world')
+  })
+})
+
+describe('resolveShareImageFetchUrl', () => {
+  it('rewrites absolute media URLs to the current origin path', () => {
+    const resolved = resolveShareImageFetchUrl(
+      'https://past-and-present.co.za/api/og-products?title=Hardware&category=hardware',
+    )
+    expect(resolved).toMatch(/\/api\/og-products\?title=Hardware&category=hardware$/)
+    expect(resolved).not.toContain('past-and-present.co.za')
+  })
+
+  it('prefixes relative paths with window origin when available', () => {
+    const resolved = resolveShareImageFetchUrl('/api/media?src=%2Fmedia%2Fa.jpg')
+    if (typeof window !== 'undefined') {
+      expect(resolved).toBe(`${window.location.origin}/api/media?src=%2Fmedia%2Fa.jpg`)
+    } else {
+      expect(resolved).toBe('/api/media?src=%2Fmedia%2Fa.jpg')
+    }
   })
 })

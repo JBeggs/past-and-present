@@ -8,7 +8,8 @@ import WhatsAppShareDialog from '@/components/share/WhatsAppShareDialog'
 interface ProductsWhatsAppShareButtonProps {
   title: string
   companyName?: string
-  shareImageUrls: string[]
+  /** OG collage or other single share image (same as link preview). */
+  shareImageUrl: string
   products: Product[]
   categories: { name: string; slug: string }[]
 }
@@ -16,7 +17,7 @@ interface ProductsWhatsAppShareButtonProps {
 export default function ProductsWhatsAppShareButton({
   title,
   companyName = 'Past and Present',
-  shareImageUrls,
+  shareImageUrl,
   products,
   categories,
 }: ProductsWhatsAppShareButtonProps) {
@@ -54,7 +55,7 @@ export default function ProductsWhatsAppShareButton({
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         initialMessage={messageDraft}
-        shareImageUrls={shareImageUrls}
+        shareImageUrls={shareImageUrl}
         imageFilename="products.jpg"
         title="Share this product list"
       />

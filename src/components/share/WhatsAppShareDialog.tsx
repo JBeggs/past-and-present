@@ -105,7 +105,7 @@ export default function WhatsAppShareDialog({
             {title}
           </h2>
           <p className="text-sm text-text-muted mb-4">
-            Edit your message before sharing. WhatsApp image attachment is included on supported devices.
+            Edit your message, then share. On mobile, pick WhatsApp from the share sheet — the product collage image is attached when your browser supports it.
           </p>
 
           <label htmlFor="whatsapp-share-message" className="mb-2 block text-xs font-medium uppercase tracking-wide text-[#8a837a]">

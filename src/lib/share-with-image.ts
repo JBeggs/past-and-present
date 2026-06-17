@@ -36,6 +36,25 @@ export function openWhatsAppWithText(message: string): void {
   window.open(url, '_blank', 'noopener,noreferrer')
 }
 
+/** Resolve SSR absolute URLs against the current browser origin for same-origin fetch + Web Share. */
+export function resolveShareImageFetchUrl(mediaPath: string): string {
+  if (!mediaPath) return ''
+  if (mediaPath.startsWith('http://') || mediaPath.startsWith('https://')) {
+    try {
+      const parsed = new URL(mediaPath)
+      if (typeof window !== 'undefined') {
+        return `${window.location.origin}${parsed.pathname}${parsed.search}`
+      }
+    } catch {
+      return mediaPath
+    }
+  }
+  if (typeof window !== 'undefined' && mediaPath.startsWith('/')) {
+    return `${window.location.origin}${mediaPath}`
+  }
+  return mediaPath
+}
+
 async function tryNavigatorShare(shareData: ShareData): Promise<boolean> {
   if (typeof navigator === 'undefined' || !('share' in navigator)) return false
   if (navigator.canShare && !navigator.canShare(shareData)) return false
@@ -56,7 +75,9 @@ export async function shareTextWithOptionalImage(
   try {
     const files: File[] = []
     for (let i = 0; i < urls.length; i++) {
-      const res = await fetch(urls[i], { cache: 'no-store', credentials: 'same-origin' })
+      const fetchUrl = resolveShareImageFetchUrl(urls[i])
+      if (!fetchUrl) continue
+      const res = await fetch(fetchUrl, { cache: 'no-store', credentials: 'same-origin' })
       if (!res.ok) continue
       const blob = await res.blob()
       if (!blob.size) continue
