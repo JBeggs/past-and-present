@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ecommerceApi } from '@/lib/api'
@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { Cart, CartItem, SupplierDeliveryBreakdownItem, type GumtreeFulfillmentMethod } from '@/lib/types'
 import { ArrowLeft, CreditCard, Truck, Shield, Lock, MapPin, Package } from 'lucide-react'
-import { getCartItemImages, isCourierGuyCartItem, normalizeCartResponse } from '@/lib/cart-utils'
+import { COURIER_GUY_IMPORT_SURCHARGE_SLUGS, getCartItemImages, groupCartItems, isCourierGuyCartItem, normalizeCartResponse } from '@/lib/cart-utils'
 import { getProductCardImages, IMAGE_DIM } from '@/lib/image-utils'
 import { getApiErrorMessage } from '@/lib/api'
 import { type PudoLocation } from '@/components/checkout/PudoLocationSelector'
@@ -87,7 +87,27 @@ export default function CheckoutPage() {
 
   const showDeliveryMethods = addressChecked
   const breakdown: SupplierDeliveryBreakdownItem[] = cart?.supplier_delivery_breakdown || []
-  const belowThresholdGroups = breakdown.filter((b) => (b.amount_to_free_delivery || 0) > 0)
+  const cartGroups = useMemo(() => groupCartItems(cart?.items ?? []), [cart?.items])
+  const belowThresholdGroups = useMemo(() => {
+    return breakdown
+      .filter((b) => {
+        const slug = (b.supplier_slug || '').trim().toLowerCase()
+        const group = cartGroups.find((g) => g.slug === slug)
+        const retailAmount = COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(slug)
+          ? (group?.amountToFreeDelivery ?? 0)
+          : (b.amount_to_free_delivery ?? 0)
+        return retailAmount > 0 || group?.belowThreshold
+      })
+      .map((b) => {
+        const slug = (b.supplier_slug || '').trim().toLowerCase()
+        const group = cartGroups.find((g) => g.slug === slug)
+        if (COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(slug) && group) {
+          return { ...b, amount_to_free_delivery: group.amountToFreeDelivery }
+        }
+        return b
+      })
+      .filter((b) => (b.amount_to_free_delivery ?? 0) > 0)
+  }, [breakdown, cartGroups])
   const supplierDelivery = Number(cart?.supplier_delivery || 0)
   const courierShipping =
     !hasCourierGuyItems
@@ -1039,7 +1059,7 @@ export default function CheckoutPage() {
                       {belowThresholdGroups.map((group) => (
                         <div key={`${group.supplier_slug}-threshold`} className="py-1">
                           <p>
-                            Add <strong>R{Number(group.amount_to_free_delivery || 0).toFixed(2)}</strong> more from this supplier to unlock free delivery.
+                            Add <strong>R{Number(group.amount_to_free_delivery || 0).toFixed(2)}</strong> more from this supplier (at our prices) to unlock free delivery.
                           </p>
                           <Link href={`/products?supplier_slug=${encodeURIComponent(group.supplier_slug)}`} className="text-vintage-primary hover:underline">
                             Browse this supplier&apos;s products

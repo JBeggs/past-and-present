@@ -377,11 +377,13 @@ export default function CartPage() {
                 const breakdownAmountToFree = groupBreakdown.find((e) => (e.amount_to_free_delivery ?? 0) > 0)?.amount_to_free_delivery
                 const breakdownThresholdUnavailable = groupBreakdown.some((e) => e.threshold_unavailable === true)
                 const thresholdMet = breakdownThresholdMet || (group.threshold != null && !group.belowThreshold)
-                const amountToFree = breakdownAmountToFree ?? group.amountToFreeDelivery ?? 0
+                const hasImportSurcharge = COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(group.slug)
+                const amountToFree = hasImportSurcharge
+                  ? (group.amountToFreeDelivery ?? 0)
+                  : (breakdownAmountToFree ?? group.amountToFreeDelivery ?? 0)
                 const showBelowThreshold = !thresholdMet && (amountToFree > 0 || group.belowThreshold)
                 const thresholdUnavailable =
                   breakdownThresholdUnavailable || (group as { thresholdUnavailable?: boolean }).thresholdUnavailable === true
-                const hasImportSurcharge = COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(group.slug)
                 const pureCourierImport = group.isImport && !hasImportSurcharge
                 const hasWeightCost = weightBasedEntry && (weightBasedEntry.total_weight_kg ?? 0) > 0 && (weightBasedEntry.delivery_cost ?? 0) > 0
                 const showGroupHeader = group.isImport || deliveryCost > 0 || showBelowThreshold || hasWeightCost
@@ -422,7 +424,7 @@ export default function CartPage() {
                           ) : (
                             <p className="supplier-threshold-note">
                               {hasImportSurcharge
-                                ? <>Add R{Number(amountToFree).toFixed(2)} more from this supplier to unlock free delivery.</>
+                                ? <>Add R{Number(amountToFree).toFixed(2)} more from this supplier (at our prices) to unlock free delivery.</>
                                 : <>Add R{Number(amountToFree).toFixed(2)} more to unlock free delivery for this group.</>}
                             </p>
                           )}

@@ -2,7 +2,7 @@
  * Cart utils unit tests — free-delivery threshold vs supplier cost subtotal (matches API).
  */
 import { describe, it, expect } from 'vitest'
-import { groupCartItems, getCartExtraDelivery, isCourierGuyCartItem } from './cart-utils'
+import { groupCartItems, getCartExtraDelivery, isCourierGuyCartItem, sourceShortfallToRetailSpend } from './cart-utils'
 import type { CartItem } from './types'
 
 function makeItem(overrides: Partial<CartItem> & { price: number; quantity: number }): CartItem {
@@ -157,7 +157,7 @@ describe('groupCartItems', () => {
     expect(g.deliveryCharge).toBe(0)
   })
 
-  it('SHEIN below threshold charges import surcharge while staying Courier Guy eligible', () => {
+  it('SHEIN shows retail spend needed while eligibility uses source cost subtotal', () => {
     const items: CartItem[] = [
       makeItem({
         id: 'shein-1',
@@ -174,8 +174,34 @@ describe('groupCartItems', () => {
     const g = groups.find((x) => x.slug === 'shein')!
     expect(g.isCourierGuy).toBe(true)
     expect(g.belowThreshold).toBe(true)
+    expect(g.thresholdSubtotal).toBe(80)
     expect(g.deliveryCharge).toBe(150)
-    expect(g.amountToFreeDelivery).toBe(970)
+    expect(g.amountToFreeDelivery).toBe(2425)
+  })
+
+  it('SHEIN past-and-present mold: R56.64 retail, R40 source, R1050 supplier threshold', () => {
+    const items: CartItem[] = [
+      makeItem({
+        id: 'shein-mold',
+        product_id: 'pmold',
+        price: 56.64,
+        quantity: 1,
+        cost_price: 40,
+        supplier_slug: 'shein',
+        free_delivery_threshold: 1050,
+        supplier_delivery_cost: 150,
+      }),
+    ]
+    const g = groupCartItems(items).find((x) => x.slug === 'shein')!
+    expect(g.thresholdSubtotal).toBe(40)
+    expect(g.displaySubtotal).toBe(56.64)
+    expect(g.amountToFreeDelivery).toBeCloseTo(1430.16, 1)
+  })
+})
+
+describe('sourceShortfallToRetailSpend', () => {
+  it('scales source shortfall by retail/source ratio', () => {
+    expect(sourceShortfallToRetailSpend(1010, 56.64, 40)).toBeCloseTo(1430.16, 1)
   })
 })
 

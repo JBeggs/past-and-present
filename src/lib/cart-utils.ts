@@ -103,6 +103,20 @@ export function getGroupCostSubtotal(items: CartItem[]): { total: number; unavai
   return { total, unavailable: false }
 }
 
+/**
+ * Import suppliers (SHEIN) waive surcharge when source-cost subtotal hits free_delivery_threshold
+ * (e.g. R1050 at shein_price). Customers must see how much more to spend at retail on the site.
+ */
+export function sourceShortfallToRetailSpend(
+  sourceShortfall: number,
+  displaySubtotal: number,
+  thresholdSubtotal: number,
+): number {
+  if (sourceShortfall <= 0) return 0
+  if (thresholdSubtotal <= 0 || displaySubtotal <= 0) return sourceShortfall
+  return sourceShortfall * (displaySubtotal / thresholdSubtotal)
+}
+
 export function groupCartItems(items: CartItem[]) {
   const groups = new Map<string, CartItem[]>()
   items.forEach((item) => {
@@ -130,8 +144,11 @@ export function groupCartItems(items: CartItem[]) {
         : belowThreshold || threshold == null
           ? supplierDeliveryCost
           : 0
-    const amountToFreeDelivery =
+    const sourceShortfall =
       belowThreshold && threshold != null ? Math.max(0, threshold - thresholdSubtotal) : 0
+    const amountToFreeDelivery = hasImportSurcharge
+      ? sourceShortfallToRetailSpend(sourceShortfall, displaySubtotal, thresholdSubtotal)
+      : sourceShortfall
     return {
       slug,
       items: groupItems,
