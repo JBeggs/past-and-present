@@ -8,7 +8,7 @@ import { useToast } from '@/contexts/ToastContext'
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Clock, Sparkles, Package, TimerReset, Truck, Shield } from 'lucide-react'
-import { formatCartCountdown, getCartItemImages, getCartItemKey, getItemMinQuantity, getItemStockQuantity, groupCartItems, normalizeCartResponse, OTHER_GROUP } from '@/lib/cart-utils'
+import { formatCartCountdown, getCartItemImages, getCartItemKey, getItemMinQuantity, getItemStockQuantity, groupCartItems, normalizeCartResponse, OTHER_GROUP, COURIER_GUY_IMPORT_SURCHARGE_SLUGS } from '@/lib/cart-utils'
 import { isBundleProduct } from '@/lib/product-utils'
 import { getProductCardImages } from '@/lib/image-utils'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -379,6 +379,8 @@ export default function CartPage() {
                 const amountToFree = breakdownAmountToFree ?? group.amountToFreeDelivery ?? 0
                 const showBelowThreshold = !thresholdMet && (amountToFree > 0 || group.belowThreshold)
                 const thresholdUnavailable = (group as { thresholdUnavailable?: boolean }).thresholdUnavailable === true
+                const hasImportSurcharge = COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(group.slug)
+                const pureCourierImport = group.isImport && !hasImportSurcharge
                 const hasWeightCost = weightBasedEntry && (weightBasedEntry.total_weight_kg ?? 0) > 0 && (weightBasedEntry.delivery_cost ?? 0) > 0
                 const showGroupHeader = group.isImport || deliveryCost > 0 || showBelowThreshold || hasWeightCost
                 const headerLabel = deliveryCost > 0
@@ -389,36 +391,57 @@ export default function CartPage() {
                 <section key={group.slug} className="cart-supplier-group">
                   {showGroupHeader && (
                     <div className="cart-supplier-group-header">
-                      {group.isImport ? (
+                      {pureCourierImport && (
                         <p className="flex items-center gap-2 text-sm text-text-muted">
                           <Truck className="h-4 w-4" />
                           Courier Guy handles this delivery group. Delivery selected at checkout.
                         </p>
-                      ) : (
+                      )}
+                      {!group.isImport && (
+                        <h3 className="cart-supplier-header">{headerLabel}</h3>
+                      )}
+                      {hasImportSurcharge && group.isImport && (
+                        <p className="flex items-center gap-2 text-sm text-text-muted">
+                          <Truck className="h-4 w-4" />
+                          Courier Guy handles final delivery. Delivery selected at checkout.
+                          {deliveryCost > 0 && !thresholdMet && (
+                            <span className="block w-full pt-1">
+                              Import delivery surcharge R{deliveryCost.toFixed(2)} applies until the free-delivery threshold is met.
+                            </span>
+                          )}
+                        </p>
+                      )}
+                      {showBelowThreshold && group.threshold != null && (
                         <>
-                          <h3 className="cart-supplier-header">{headerLabel}</h3>
-                          {showBelowThreshold && group.threshold != null && (
-                            <>
-                              {thresholdUnavailable ? (
-                                <p className="supplier-threshold-note text-amber-700">
-                                  Free delivery threshold unavailable (cost price not set for some products).
-                                </p>
-                              ) : (
-                                <p className="supplier-threshold-note">
-                                  Add R{Number(amountToFree).toFixed(2)} more to unlock free delivery for this group.
-                                </p>
-                              )}
-                              <Link href={getDeliveryGroupUrl(group.slug)} className="supplier-group-link">
-                                View all products in this delivery group
-                              </Link>
-                            </>
+                          {thresholdUnavailable ? (
+                            <p className="supplier-threshold-note text-amber-700">
+                              Free delivery threshold unavailable (cost price not set for some products).
+                            </p>
+                          ) : (
+                            <p className="supplier-threshold-note">
+                              {hasImportSurcharge
+                                ? <>Add R{Number(amountToFree).toFixed(2)} more from this supplier to unlock free delivery.</>
+                                : <>Add R{Number(amountToFree).toFixed(2)} more to unlock free delivery for this group.</>}
+                            </p>
                           )}
-                          {deliveryCost > 0 && group.slug !== OTHER_GROUP && !showBelowThreshold && (
-                            <Link href={getDeliveryGroupUrl(group.slug)} className="supplier-group-link">
-                              Browse more products from this supplier
-                            </Link>
-                          )}
+                          <Link
+                            href={
+                              hasImportSurcharge
+                                ? `/products?supplier_slug=${encodeURIComponent(group.slug)}`
+                                : getDeliveryGroupUrl(group.slug)
+                            }
+                            className="supplier-group-link"
+                          >
+                            {hasImportSurcharge
+                              ? "Browse this supplier's products"
+                              : 'View all products in this delivery group'}
+                          </Link>
                         </>
+                      )}
+                      {!group.isImport && deliveryCost > 0 && group.slug !== OTHER_GROUP && !showBelowThreshold && (
+                        <Link href={getDeliveryGroupUrl(group.slug)} className="supplier-group-link">
+                          Browse more products from this supplier
+                        </Link>
                       )}
                     </div>
                   )}
