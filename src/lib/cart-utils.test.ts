@@ -158,6 +158,26 @@ describe('groupCartItems', () => {
     expect(g.amountToFreeDelivery).toBe(0)
     expect(g.deliveryCharge).toBe(0)
   })
+
+  it('SHEIN below threshold charges import surcharge while staying Courier Guy eligible', () => {
+    const items: CartItem[] = [
+      makeItem({
+        id: 'shein-1',
+        product_id: 'pshein',
+        price: 200,
+        quantity: 1,
+        supplier_slug: 'shein',
+        free_delivery_threshold: 1050,
+        supplier_delivery_cost: 150,
+      }),
+    ]
+    const groups = groupCartItems(items)
+    const g = groups.find((x) => x.slug === 'shein')!
+    expect(g.isCourierGuy).toBe(true)
+    expect(g.belowThreshold).toBe(true)
+    expect(g.deliveryCharge).toBe(150)
+    expect(g.amountToFreeDelivery).toBe(850)
+  })
 })
 
 describe('isCourierGuyCartItem', () => {
@@ -168,6 +188,7 @@ describe('isCourierGuyCartItem', () => {
 
   it('returns true for import slugs', () => {
     expect(isCourierGuyCartItem(makeItem({ supplier_slug: 'temu', price: 100, quantity: 1 }))).toBe(true)
+    expect(isCourierGuyCartItem(makeItem({ supplier_slug: 'shein', price: 100, quantity: 1 }))).toBe(true)
     expect(isCourierGuyCartItem(makeItem({ supplier_slug: 'gumtree', price: 100, quantity: 1 }))).toBe(true)
     expect(isCourierGuyCartItem(makeItem({ supplier_slug: ' AliExpress ', price: 100, quantity: 1 }))).toBe(true)
   })

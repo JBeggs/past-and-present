@@ -7,7 +7,9 @@ import {
   MAX_BUNDLE_PRODUCT_IMAGES,
 } from './image-utils'
 
-export const COURIER_GUY_SLUGS = new Set(['temu', 'aliexpress', 'ubuy', 'gumtree'])
+export const COURIER_GUY_SLUGS = new Set(['temu', 'aliexpress', 'ubuy', 'gumtree', 'shein'])
+/** SHEIN uses Courier Guy plus supplier_delivery_cost when below free_delivery_threshold. */
+export const COURIER_GUY_IMPORT_SURCHARGE_SLUGS = new Set(['shein'])
 export const OTHER_GROUP = '__other__'
 
 function normalizeSupplierSlug(item: CartItem): string {
@@ -15,7 +17,7 @@ function normalizeSupplierSlug(item: CartItem): string {
 }
 
 /**
- * Return true if the cart item ships via Courier Guy. Imports (temu/aliexpress/ubuy)
+ * Return true if the cart item ships via Courier Guy. Imports (temu/aliexpress/ubuy/shein)
  * and gumtree always qualify; first-party storefront items (blank supplier_slug)
  * also qualify — priced from the company address using product weight/dimensions.
  * Mirrors `uses_courier_guy_or_first_party` in django-crm/ecommerce/constants.py.
@@ -95,11 +97,13 @@ export function groupCartItems(items: CartItem[]) {
     const displaySubtotal = groupItems.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
     const threshold = slug === OTHER_GROUP ? null : getGroupThreshold(groupItems)
     const isCourierGuy = COURIER_GUY_SLUGS.has(slug)
-    const belowThreshold = !isCourierGuy && threshold != null && displaySubtotal < threshold
+    const hasImportSurcharge = COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(slug)
+    const belowThreshold =
+      threshold != null && displaySubtotal < threshold && (!isCourierGuy || hasImportSurcharge)
     const supplierDeliveryCost = getSupplierDeliveryCost(groupItems)
     const deliveryCharge = slug === OTHER_GROUP
       ? 0
-      : isCourierGuy
+      : isCourierGuy && !hasImportSurcharge
         ? 0
         : belowThreshold || threshold == null
           ? supplierDeliveryCost

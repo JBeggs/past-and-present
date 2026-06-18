@@ -24,7 +24,7 @@ type CollectionAddress = {
   province?: string
 }
 
-const OTHER_COURIER_SLUGS = new Set(['temu', 'aliexpress', 'ubuy']) // Courier Guy but not Gumtree
+const OTHER_COURIER_SLUGS = new Set(['temu', 'aliexpress', 'ubuy', 'shein']) // Courier Guy but not Gumtree
 const GUMTREE_DELIVERY_BLOCK_MESSAGE = 'Item cannot be delivered. Please contact support.'
 const PROVINCES = [
   { value: 'EC', label: 'Eastern Cape' },

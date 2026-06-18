@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { X, ShoppingCart, Plus, Minus, Package, TimerReset } from 'lucide-react'
@@ -30,6 +31,7 @@ export default function HomeProductQuickModal({ product, open, onClose }: HomePr
   const { user } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [countdown, setCountdown] = useState(() => formatCountdown(product.timed_expires_at))
 
   const minQty = getMinQuantity(product)
@@ -48,6 +50,10 @@ export default function HomeProductQuickModal({ product, open, onClose }: HomePr
     const urls = getProductCardImages(product)
     return urls[0] || product.image || ''
   }, [product])
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -153,12 +159,12 @@ export default function HomeProductQuickModal({ product, open, onClose }: HomePr
     }
   }
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
   const isVintage = hasVintageTag(product)
   const onSale = isOnSale(product)
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center overscroll-contain bg-black/45 backdrop-blur-sm p-4 animate-in fade-in duration-200"
       role="dialog"
@@ -286,6 +292,7 @@ export default function HomeProductQuickModal({ product, open, onClose }: HomePr
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

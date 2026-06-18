@@ -17,7 +17,7 @@ function normalizeSupplierSlug(raw: string | null | undefined): string {
 /**
  * Mirrors django-crm eligibility:
  * - first-party blank supplier_slug => Courier Guy
- * - import suppliers temu/aliexpress/ubuy/gumtree => Courier Guy
+ * - import suppliers temu/aliexpress/ubuy/shein/gumtree => Courier Guy
  * - gumtree is excluded when fulfillment split is collect
  * - collect-only orders do not require a shipment
  */
@@ -39,7 +39,7 @@ export function requiresCourierGuyShipment(order: ShipmentEligibilityOrder | nul
       hasNonGumtreeCourierItem = true
       continue
     }
-    if (slug === 'temu' || slug === 'aliexpress' || slug === 'ubuy') {
+    if (slug === 'temu' || slug === 'aliexpress' || slug === 'ubuy' || slug === 'shein') {
       hasNonGumtreeCourierItem = true
       continue
     }
