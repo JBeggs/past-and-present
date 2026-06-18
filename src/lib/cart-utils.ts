@@ -87,7 +87,7 @@ export function getSupplierDeliveryCost(items: CartItem[]): number {
 
 function getItemCostPrice(item: CartItem): number | null {
   const raw = item.cost_price ?? (item.product as { cost_price?: number | null } | undefined)?.cost_price
-  if (raw == null || raw === '') return null
+  if (raw == null) return null
   const parsed = typeof raw === 'number' ? raw : parseFloat(String(raw))
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
 }
