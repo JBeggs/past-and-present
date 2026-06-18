@@ -410,7 +410,7 @@ export default function CartPage() {
                           Courier Guy handles final delivery. Delivery selected at checkout.
                           {deliveryCost > 0 && !thresholdMet && (
                             <span className="block w-full pt-1">
-                              Import delivery surcharge R{deliveryCost.toFixed(2)} applies until the free-delivery threshold is met.
+                              Import delivery surcharge R{deliveryCost.toFixed(2)} applies until the threshold is met.
                             </span>
                           )}
                         </p>
@@ -424,7 +424,7 @@ export default function CartPage() {
                           ) : (
                             <p className="supplier-threshold-note">
                               {hasImportSurcharge
-                                ? <>Add R{Number(amountToFree).toFixed(2)} more from this supplier (at our prices) to unlock free delivery.</>
+                                ? <>R{Number(amountToFree).toFixed(2)} more from this supplier to unlock an extra R{Number(deliveryCost || group.deliveryCharge || 0).toFixed(2)} discount.</>
                                 : <>Add R{Number(amountToFree).toFixed(2)} more to unlock free delivery for this group.</>}
                             </p>
                           )}

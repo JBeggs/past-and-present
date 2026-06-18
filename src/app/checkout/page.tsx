@@ -1056,16 +1056,26 @@ export default function CheckoutPage() {
                   )}
                   {belowThresholdGroups.length > 0 && (
                     <div className="rounded-lg bg-vintage-background/40 p-3 text-xs text-text-muted">
-                      {belowThresholdGroups.map((group) => (
+                      {belowThresholdGroups.map((group) => {
+                        const slug = (group.supplier_slug || '').trim().toLowerCase()
+                        const isImportSurcharge = COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(slug)
+                        const discount = Number(group.delivery_cost ?? 0)
+                        const amount = Number(group.amount_to_free_delivery || 0)
+                        return (
                         <div key={`${group.supplier_slug}-threshold`} className="py-1">
                           <p>
-                            Add <strong>R{Number(group.amount_to_free_delivery || 0).toFixed(2)}</strong> more from this supplier (at our prices) to unlock free delivery.
+                            {isImportSurcharge ? (
+                              <>R{amount.toFixed(2)} more from this supplier to unlock an extra R{discount.toFixed(2)} discount.</>
+                            ) : (
+                              <>Add <strong>R{amount.toFixed(2)}</strong> more to unlock free delivery for this group.</>
+                            )}
                           </p>
                           <Link href={`/products?supplier_slug=${encodeURIComponent(group.supplier_slug)}`} className="text-vintage-primary hover:underline">
                             Browse this supplier&apos;s products
                           </Link>
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                   <div className="divider my-4" />
