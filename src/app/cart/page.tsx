@@ -8,7 +8,7 @@ import { useToast } from '@/contexts/ToastContext'
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Clock, Sparkles, Package, TimerReset, Truck, Shield } from 'lucide-react'
-import { formatCartCountdown, getCartItemImages, getCartItemKey, getItemMinQuantity, getItemStockQuantity, groupCartItems, normalizeCartResponse, OTHER_GROUP, COURIER_GUY_IMPORT_SURCHARGE_SLUGS } from '@/lib/cart-utils'
+import { COURIER_GUY_IMPORT_SURCHARGE_SLUGS, formatCartCountdown, getCartItemImages, getCartItemKey, getImportSurchargeDiscount, getItemMinQuantity, getItemStockQuantity, groupCartItems, normalizeCartResponse, OTHER_GROUP } from '@/lib/cart-utils'
 import { isBundleProduct } from '@/lib/product-utils'
 import { getProductCardImages } from '@/lib/image-utils'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -384,6 +384,7 @@ export default function CartPage() {
                 const showBelowThreshold = !thresholdMet && (amountToFree > 0 || group.belowThreshold)
                 const thresholdUnavailable =
                   breakdownThresholdUnavailable || (group as { thresholdUnavailable?: boolean }).thresholdUnavailable === true
+                const importSurchargeDiscount = hasImportSurcharge ? getImportSurchargeDiscount(group) : 0
                 const pureCourierImport = group.isImport && !hasImportSurcharge
                 const hasWeightCost = weightBasedEntry && (weightBasedEntry.total_weight_kg ?? 0) > 0 && (weightBasedEntry.delivery_cost ?? 0) > 0
                 const showGroupHeader = group.isImport || deliveryCost > 0 || showBelowThreshold || hasWeightCost
@@ -408,9 +409,9 @@ export default function CartPage() {
                         <p className="flex items-center gap-2 text-sm text-text-muted">
                           <Truck className="h-4 w-4" />
                           Courier Guy handles final delivery. Delivery selected at checkout.
-                          {deliveryCost > 0 && !thresholdMet && (
+                          {importSurchargeDiscount > 0 && !thresholdMet && (
                             <span className="block w-full pt-1">
-                              Import delivery surcharge R{deliveryCost.toFixed(2)} applies until the threshold is met.
+                              Import delivery surcharge R{importSurchargeDiscount.toFixed(2)} applies until the threshold is met.
                             </span>
                           )}
                         </p>
@@ -424,7 +425,7 @@ export default function CartPage() {
                           ) : (
                             <p className="supplier-threshold-note">
                               {hasImportSurcharge
-                                ? <>R{Number(amountToFree).toFixed(2)} more from this supplier to unlock an extra R{Number(deliveryCost || group.deliveryCharge || 0).toFixed(2)} discount.</>
+                                ? <>R{Number(amountToFree).toFixed(2)} more from this supplier to unlock an extra R{importSurchargeDiscount.toFixed(2)} discount.</>
                                 : <>Add R{Number(amountToFree).toFixed(2)} more to unlock free delivery for this group.</>}
                             </p>
                           )}

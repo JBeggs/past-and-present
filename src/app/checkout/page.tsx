@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { Cart, CartItem, SupplierDeliveryBreakdownItem, type GumtreeFulfillmentMethod } from '@/lib/types'
 import { ArrowLeft, CreditCard, Truck, Shield, Lock, MapPin, Package } from 'lucide-react'
-import { COURIER_GUY_IMPORT_SURCHARGE_SLUGS, getCartItemImages, groupCartItems, isCourierGuyCartItem, normalizeCartResponse } from '@/lib/cart-utils'
+import { COURIER_GUY_IMPORT_SURCHARGE_SLUGS, getCartItemImages, getImportSurchargeDiscount, groupCartItems, isCourierGuyCartItem, normalizeCartResponse } from '@/lib/cart-utils'
 import { getProductCardImages, IMAGE_DIM } from '@/lib/image-utils'
 import { getApiErrorMessage } from '@/lib/api'
 import { type PudoLocation } from '@/components/checkout/PudoLocationSelector'
@@ -102,7 +102,11 @@ export default function CheckoutPage() {
         const slug = (b.supplier_slug || '').trim().toLowerCase()
         const group = cartGroups.find((g) => g.slug === slug)
         if (COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(slug) && group) {
-          return { ...b, amount_to_free_delivery: group.amountToFreeDelivery }
+          return {
+            ...b,
+            amount_to_free_delivery: group.amountToFreeDelivery,
+            delivery_cost: getImportSurchargeDiscount(group),
+          }
         }
         return b
       })

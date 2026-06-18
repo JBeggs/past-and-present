@@ -79,10 +79,21 @@ export function getGroupThreshold(items: CartItem[]): number | null {
 }
 
 export function getSupplierDeliveryCost(items: CartItem[]): number {
-  const raw = items.find((item) => item.supplier_delivery_cost != null)?.supplier_delivery_cost
-  if (raw == null) return 0
-  const parsed = typeof raw === 'number' ? raw : parseFloat(String(raw))
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+  for (const item of items) {
+    const raw = item.supplier_delivery_cost
+      ?? (item.product as { supplier_delivery_cost?: number | null } | undefined)?.supplier_delivery_cost
+    if (raw == null) continue
+    const parsed = typeof raw === 'number' ? raw : parseFloat(String(raw))
+    if (Number.isFinite(parsed) && parsed > 0) return parsed
+  }
+  return 0
+}
+
+/** Import surcharge from product supplier_delivery_cost (synced from products/scraper_config). */
+export function getImportSurchargeDiscount(
+  group: { items: CartItem[]; deliveryCharge: number },
+): number {
+  return group.deliveryCharge > 0 ? group.deliveryCharge : getSupplierDeliveryCost(group.items)
 }
 
 function getItemCostPrice(item: CartItem): number | null {
