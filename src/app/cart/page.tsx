@@ -375,10 +375,12 @@ export default function CartPage() {
                 const deliveryCost = getDeliveryCostFromBreakdown(group.slug)
                 const breakdownThresholdMet = groupBreakdown.some((e) => e.threshold_met === true)
                 const breakdownAmountToFree = groupBreakdown.find((e) => (e.amount_to_free_delivery ?? 0) > 0)?.amount_to_free_delivery
+                const breakdownThresholdUnavailable = groupBreakdown.some((e) => e.threshold_unavailable === true)
                 const thresholdMet = breakdownThresholdMet || (group.threshold != null && !group.belowThreshold)
                 const amountToFree = breakdownAmountToFree ?? group.amountToFreeDelivery ?? 0
                 const showBelowThreshold = !thresholdMet && (amountToFree > 0 || group.belowThreshold)
-                const thresholdUnavailable = (group as { thresholdUnavailable?: boolean }).thresholdUnavailable === true
+                const thresholdUnavailable =
+                  breakdownThresholdUnavailable || (group as { thresholdUnavailable?: boolean }).thresholdUnavailable === true
                 const hasImportSurcharge = COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(group.slug)
                 const pureCourierImport = group.isImport && !hasImportSurcharge
                 const hasWeightCost = weightBasedEntry && (weightBasedEntry.total_weight_kg ?? 0) > 0 && (weightBasedEntry.delivery_cost ?? 0) > 0

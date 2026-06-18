@@ -185,7 +185,9 @@ export interface SupplierDeliveryBreakdownItem {
   total_weight_kg?: number
   free_delivery_threshold?: number
   group_subtotal?: number
+  group_cost_subtotal?: number
   threshold_met?: boolean
+  threshold_unavailable?: boolean
   amount_to_free_delivery?: number
 }
 

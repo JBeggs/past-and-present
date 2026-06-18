@@ -85,6 +85,24 @@ export function getSupplierDeliveryCost(items: CartItem[]): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
 }
 
+function getItemCostPrice(item: CartItem): number | null {
+  const raw = item.cost_price ?? (item.product as { cost_price?: number | null } | undefined)?.cost_price
+  if (raw == null || raw === '') return null
+  const parsed = typeof raw === 'number' ? raw : parseFloat(String(raw))
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
+}
+
+/** Sum cost_price × qty for threshold checks; unavailable when any line lacks cost. */
+export function getGroupCostSubtotal(items: CartItem[]): { total: number; unavailable: boolean } {
+  let total = 0
+  for (const item of items) {
+    const cost = getItemCostPrice(item)
+    if (cost == null) return { total: 0, unavailable: true }
+    total += cost * item.quantity
+  }
+  return { total, unavailable: false }
+}
+
 export function groupCartItems(items: CartItem[]) {
   const groups = new Map<string, CartItem[]>()
   items.forEach((item) => {
@@ -95,11 +113,15 @@ export function groupCartItems(items: CartItem[]) {
   })
   return Array.from(groups.entries()).map(([slug, groupItems]) => {
     const displaySubtotal = groupItems.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
+    const { total: thresholdSubtotal, unavailable: thresholdUnavailable } = getGroupCostSubtotal(groupItems)
     const threshold = slug === OTHER_GROUP ? null : getGroupThreshold(groupItems)
     const isCourierGuy = COURIER_GUY_SLUGS.has(slug)
     const hasImportSurcharge = COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(slug)
     const belowThreshold =
-      threshold != null && displaySubtotal < threshold && (!isCourierGuy || hasImportSurcharge)
+      !thresholdUnavailable &&
+      threshold != null &&
+      thresholdSubtotal < threshold &&
+      (!isCourierGuy || hasImportSurcharge)
     const supplierDeliveryCost = getSupplierDeliveryCost(groupItems)
     const deliveryCharge = slug === OTHER_GROUP
       ? 0
@@ -109,14 +131,14 @@ export function groupCartItems(items: CartItem[]) {
           ? supplierDeliveryCost
           : 0
     const amountToFreeDelivery =
-      belowThreshold && threshold != null ? Math.max(0, threshold - displaySubtotal) : 0
+      belowThreshold && threshold != null ? Math.max(0, threshold - thresholdSubtotal) : 0
     return {
       slug,
       items: groupItems,
       subtotal: displaySubtotal,
       displaySubtotal,
-      thresholdSubtotal: displaySubtotal,
-      thresholdUnavailable: false,
+      thresholdSubtotal,
+      thresholdUnavailable,
       threshold,
       belowThreshold,
       isImport: isCourierGuy,
