@@ -8,7 +8,7 @@ import { useToast } from '@/contexts/ToastContext'
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Clock, Sparkles, Package, TimerReset, Truck, Shield } from 'lucide-react'
-import { COURIER_GUY_IMPORT_SURCHARGE_SLUGS, formatCartCountdown, getCartItemImages, getCartItemKey, getImportSurchargeDiscount, getItemMinQuantity, getItemStockQuantity, groupCartItems, normalizeCartResponse, OTHER_GROUP } from '@/lib/cart-utils'
+import { formatCartCountdown, getCartItemImages, getCartItemKey, getImportSurchargeDiscount, getItemMinQuantity, getItemStockQuantity, groupCartItems, normalizeCartResponse, OTHER_GROUP } from '@/lib/cart-utils'
 import { isBundleProduct } from '@/lib/product-utils'
 import { getProductCardImages } from '@/lib/image-utils'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
@@ -377,7 +377,7 @@ export default function CartPage() {
                 const breakdownAmountToFree = groupBreakdown.find((e) => (e.amount_to_free_delivery ?? 0) > 0)?.amount_to_free_delivery
                 const breakdownThresholdUnavailable = groupBreakdown.some((e) => e.threshold_unavailable === true)
                 const thresholdMet = breakdownThresholdMet || (group.threshold != null && !group.belowThreshold)
-                const hasImportSurcharge = COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(group.slug)
+                const hasImportSurcharge = group.hasImportSurcharge === true
                 const amountToFree = hasImportSurcharge
                   ? (group.amountToFreeDelivery ?? 0)
                   : (breakdownAmountToFree ?? group.amountToFreeDelivery ?? 0)

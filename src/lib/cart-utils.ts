@@ -8,12 +8,26 @@ import {
 } from './image-utils'
 
 export const COURIER_GUY_SLUGS = new Set(['temu', 'aliexpress', 'ubuy', 'gumtree', 'shein'])
-/** SHEIN uses Courier Guy plus supplier_delivery_cost when below free_delivery_threshold. */
-export const COURIER_GUY_IMPORT_SURCHARGE_SLUGS = new Set(['shein'])
+/** Overseas imports — Courier Guy; may carry supplier surcharge when product has delivery fields. */
+export const IMPORT_SUPPLIER_SLUGS = new Set(['temu', 'aliexpress', 'ubuy', 'shein'])
 export const OTHER_GROUP = '__other__'
 
 function normalizeSupplierSlug(item: CartItem): string {
   return String(item.supplier_slug ?? item.supplierSlug ?? '').trim().toLowerCase()
+}
+
+export function isImportSupplier(slug: string): boolean {
+  return IMPORT_SUPPLIER_SLUGS.has(String(slug ?? '').trim().toLowerCase())
+}
+
+/** True when group products carry supplier flat delivery and/or free-delivery threshold. */
+export function groupHasSupplierDeliveryFields(items: CartItem[]): boolean {
+  return getSupplierDeliveryCost(items) > 0 || getGroupThreshold(items) != null
+}
+
+/** Import with product-level surcharge/threshold (same rules for shein, temu, etc. when configured). */
+export function hasImportSurchargeGroup(slug: string, items: CartItem[]): boolean {
+  return isImportSupplier(slug) && groupHasSupplierDeliveryFields(items)
 }
 
 /**
@@ -115,8 +129,7 @@ export function getGroupCostSubtotal(items: CartItem[]): { total: number; unavai
 }
 
 /**
- * Import suppliers (SHEIN) waive surcharge when source-cost subtotal hits free_delivery_threshold
- * (e.g. R1050 at shein_price). Customers must see how much more to spend at retail on the site.
+ * Imports with surcharge: show retail spend needed while eligibility uses source cost subtotal.
  */
 export function sourceShortfallToRetailSpend(
   sourceShortfall: number,
@@ -141,7 +154,7 @@ export function groupCartItems(items: CartItem[]) {
     const { total: thresholdSubtotal, unavailable: thresholdUnavailable } = getGroupCostSubtotal(groupItems)
     const threshold = slug === OTHER_GROUP ? null : getGroupThreshold(groupItems)
     const isCourierGuy = COURIER_GUY_SLUGS.has(slug)
-    const hasImportSurcharge = COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(slug)
+    const hasImportSurcharge = hasImportSurchargeGroup(slug, groupItems)
     const belowThreshold =
       !thresholdUnavailable &&
       threshold != null &&
@@ -171,6 +184,7 @@ export function groupCartItems(items: CartItem[]) {
       belowThreshold,
       isImport: isCourierGuy,
       isCourierGuy,
+      hasImportSurcharge,
       amountToFreeDelivery,
       deliveryCharge,
     }

@@ -139,7 +139,7 @@ describe('groupCartItems', () => {
     expect(g.thresholdSubtotal).toBe(160)
   })
 
-  it('Courier Guy groups have no threshold logic', () => {
+  it('Courier Guy groups without delivery fields have no threshold logic', () => {
     const items: CartItem[] = [
       makeItem({
         id: 'a',
@@ -157,7 +157,7 @@ describe('groupCartItems', () => {
     expect(g.deliveryCharge).toBe(0)
   })
 
-  it('SHEIN shows retail spend needed while eligibility uses source cost subtotal', () => {
+  it('imports with delivery fields use import surcharge path (shein)', () => {
     const items: CartItem[] = [
       makeItem({
         id: 'shein-1',
@@ -173,10 +173,48 @@ describe('groupCartItems', () => {
     const groups = groupCartItems(items)
     const g = groups.find((x) => x.slug === 'shein')!
     expect(g.isCourierGuy).toBe(true)
+    expect(g.hasImportSurcharge).toBe(true)
     expect(g.belowThreshold).toBe(true)
     expect(g.thresholdSubtotal).toBe(80)
     expect(g.deliveryCharge).toBe(150)
     expect(g.amountToFreeDelivery).toBe(2425)
+  })
+
+  it('imports with delivery fields use same import surcharge path (temu)', () => {
+    const items: CartItem[] = [
+      makeItem({
+        id: 'temu-1',
+        product_id: 'ptemu',
+        price: 200,
+        quantity: 1,
+        cost_price: 80,
+        supplier_slug: 'temu',
+        free_delivery_threshold: 1050,
+        supplier_delivery_cost: 150,
+      }),
+    ]
+    const g = groupCartItems(items).find((x) => x.slug === 'temu')!
+    expect(g.hasImportSurcharge).toBe(true)
+    expect(g.belowThreshold).toBe(true)
+    expect(g.deliveryCharge).toBe(150)
+    expect(g.amountToFreeDelivery).toBe(2425)
+  })
+
+  it('pure temu import without delivery fields has no surcharge', () => {
+    const items: CartItem[] = [
+      makeItem({
+        id: 'a',
+        product_id: 'pa',
+        price: 100,
+        quantity: 1,
+        supplier_slug: 'temu',
+        free_delivery_threshold: undefined,
+        supplier_delivery_cost: undefined,
+      }),
+    ]
+    const g = groupCartItems(items).find((x) => x.slug === 'temu')!
+    expect(g.hasImportSurcharge).toBe(false)
+    expect(g.deliveryCharge).toBe(0)
   })
 
   it('SHEIN past-and-present mold: R56.64 retail, R40 source, R1050 supplier threshold', () => {

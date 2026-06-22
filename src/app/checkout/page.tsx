@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { Cart, CartItem, SupplierDeliveryBreakdownItem, type GumtreeFulfillmentMethod } from '@/lib/types'
 import { ArrowLeft, CreditCard, Truck, Shield, Lock, MapPin, Package } from 'lucide-react'
-import { COURIER_GUY_IMPORT_SURCHARGE_SLUGS, getCartItemImages, getImportSurchargeDiscount, groupCartItems, isCourierGuyCartItem, normalizeCartResponse } from '@/lib/cart-utils'
+import { getCartItemImages, getImportSurchargeDiscount, groupCartItems, isCourierGuyCartItem, normalizeCartResponse } from '@/lib/cart-utils'
 import { getProductCardImages, IMAGE_DIM } from '@/lib/image-utils'
 import { getApiErrorMessage } from '@/lib/api'
 import { type PudoLocation } from '@/components/checkout/PudoLocationSelector'
@@ -93,7 +93,7 @@ export default function CheckoutPage() {
       .filter((b) => {
         const slug = (b.supplier_slug || '').trim().toLowerCase()
         const group = cartGroups.find((g) => g.slug === slug)
-        const retailAmount = COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(slug)
+        const retailAmount = group?.hasImportSurcharge
           ? (group?.amountToFreeDelivery ?? 0)
           : (b.amount_to_free_delivery ?? 0)
         return retailAmount > 0 || group?.belowThreshold
@@ -101,14 +101,15 @@ export default function CheckoutPage() {
       .map((b) => {
         const slug = (b.supplier_slug || '').trim().toLowerCase()
         const group = cartGroups.find((g) => g.slug === slug)
-        if (COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(slug) && group) {
+        if (group?.hasImportSurcharge && group) {
           return {
             ...b,
             amount_to_free_delivery: group.amountToFreeDelivery,
             delivery_cost: getImportSurchargeDiscount(group),
+            is_import_surcharge: true,
           }
         }
-        return b
+        return { ...b, is_import_surcharge: false }
       })
       .filter((b) => (b.amount_to_free_delivery ?? 0) > 0)
   }, [breakdown, cartGroups])
@@ -1061,8 +1062,7 @@ export default function CheckoutPage() {
                   {belowThresholdGroups.length > 0 && (
                     <div className="rounded-lg bg-vintage-background/40 p-3 text-xs text-text-muted">
                       {belowThresholdGroups.map((group) => {
-                        const slug = (group.supplier_slug || '').trim().toLowerCase()
-                        const isImportSurcharge = COURIER_GUY_IMPORT_SURCHARGE_SLUGS.has(slug)
+                        const isImportSurcharge = (group as { is_import_surcharge?: boolean }).is_import_surcharge === true
                         const discount = Number(group.delivery_cost ?? 0)
                         const amount = Number(group.amount_to_free_delivery || 0)
                         return (
